@@ -172,6 +172,11 @@ app.all('/api/*', (req, res) => {
   });
 });
 
+// Điều hướng rõ ràng cho trang đăng nhập
+app.get(['/login', '/login.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 // SPA Fallback: điều hướng request trang về index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
