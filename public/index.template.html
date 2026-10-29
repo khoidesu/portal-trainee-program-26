@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f19" id="themeColorMeta">
+  <title>Cổng thông tin Sinh viên & Trainee Program | UIT</title>
+  <meta name="description"
+    content="Cổng thông tin theo dõi sinh viên và thực tập sinh trong chương trình Trainee Program UIT. Bảng xếp hạng, tiến độ học tập và đánh giá năng lực.">
+
+  <!-- Early Theme Initializer to prevent white overscroll & flashes -->
+  <script>
+    (function () {
+      try {
+        var mode = localStorage.getItem('uit_portal_theme_mode') || 'dark';
+        var isDark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark-theme');
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.style.backgroundColor = '#0b0f19';
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.add('light-theme');
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.backgroundColor = '#f4f6fa';
+          document.documentElement.style.colorScheme = 'light';
+        }
+      } catch (e) { }
+    })();
+  </script>
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/duolingo.css">
+</head>
+
+<body class="dark-theme">
+
+  <!-- ==================== APP CONTAINER ==================== -->
+  <div class="app-layout" id="appLayout">
+
+    <!-- include: components/sidebar.html -->
+
+    <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+    <div class="main-wrapper">
+
+      <!-- include: components/navbar.html -->
+
+      <!-- Main Body Container -->
+      <main class="main-body" id="mainContent">
+
+        <!-- include: components/view-dashboard.html -->
+        <!-- include: components/view-profile.html -->
+        <!-- include: components/view-schedule.html -->
+        <!-- include: components/view-leaderboard.html -->
+        <!-- include: components/view-grades.html -->
+        <!-- include: components/view-assignments.html -->
+        <!-- include: components/view-leave.html -->
+        <!-- include: components/view-questions.html -->
+        <!-- include: components/view-admin.html -->
+      </main>
+    </div>
+
+  </div>
+
+
+  <!-- include: components/modals.html -->
+
+  <!-- JavaScript Modular Components -->
+  <script src="js/api.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/scheduleData.js"></script>
+  <script src="js/duolingo.js"></script>
+  <script src="js/modules/core.js"></script>
+  <script src="js/modules/auth.js"></script>
+  <script src="js/modules/navigation.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/leaderboard.js"></script>
+  <script src="js/modules/profile.js"></script>
+  <script src="js/modules/schedule.js"></script>
+  <script src="js/modules/grades.js"></script>
+  <script src="js/modules/leave.js"></script>
+  <script src="js/modules/qa.js"></script>
+  <script src="js/modules/admin.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+
+</html>

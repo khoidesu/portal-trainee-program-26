@@ -1,0 +1,156 @@
+<!-- ==============================================================================
+ * COMPONENT: TAB VIEW: TIMETABLE & MONTHLY SCHEDULE (Thời Khóa Biểu & Lịch Học Trực Tuyến)
+ * CHỨC NĂNG CHÍNH: Hiển thị lịch học trực tuyến MS Teams dạng tháng và dạng lịch trình chi tiết.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/schedule.js, public/js/scheduleData.js, public/css/style.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - Thanh công cụ: Bộ lọc tháng/năm học, chuyển đổi chế độ xem (Lịch tháng / Danh sách)
+ *   - Nút tải file Excel thời khóa biểu và tải đề cương môn học
+ *   - Nút đồng bộ Google Calendar
+ *   - Nút Thêm/Chỉnh sửa buổi học (chỉ dành riêng cho Admin)
+ *   - Khung lịch trực quan chứa link Microsoft Teams vào học trực tiếp
+ * ============================================================================== -->
+
+        <!-- ======================================================== -->
+        <!-- TAB: THỜI KHÓA BIỂU & LỊCH HỌC TRỰC TUYẾN THEO THÁNG (MS TEAMS) -->
+        <!-- ======================================================== -->
+        <section class="tab-view active" id="viewSchedule">
+
+          <!-- Schedule Header Box -->
+          <div class="schedule-header-box">
+            <div class="schedule-title-area">
+              <div class="schedule-breadcrumb">
+                <span>Cổng Sinh viên</span>
+                <span class="breadcrumb-sep">&rsaquo;</span>
+                <span class="breadcrumb-current">Thời khóa biểu trực tuyến</span>
+              </div>
+              <h2 class="schedule-page-title">Thời Khóa Biểu & Lịch Học Trực Tuyến</h2>
+              <p class="schedule-page-desc">
+                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program UIT. Lịch được tổng hợp
+                chung theo tháng, học viên bấm nút <strong>"Vào học"</strong> để tham gia lớp học trực tuyến.
+              </p>
+            </div>
+            <div class="schedule-header-actions">
+              <!-- Nút tải dữ liệu: Cho phép TẤT CẢ người dùng (Sinh viên, Khách, Admin) tải về -->
+              <button type="button" class="btn btn-outline" id="btnDownloadScheduleExcel"
+                title="Tải toàn bộ lịch học tháng dạng file Excel/CSV">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Tải Excel</span>
+              </button>
+              <button type="button" class="btn btn-outline" id="btnGoogleCalendar"
+                title="Đồng bộ lịch học tháng vào Google Calendar / Tải iCal (.ics)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>Google Calendar</span>
+              </button>
+              <button type="button" class="btn btn-outline" id="btnDownloadSyllabus"
+                title="Tải toàn bộ đề cương môn học và hướng dẫn buổi học">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                  <path d="m9 10 3 3 3-3" />
+                  <path d="M12 13V7" />
+                </svg>
+                <span>Tải đề cương</span>
+              </button>
+              <!-- Nút Thêm / Chỉnh sửa lịch: CHỈ ADMIN MỚI THẤY VÀ CÓ QUYỀN SỬ DỤNG -->
+              <button type="button" class="btn btn-primary admin-only-element" id="btnOpenScheduleEditor"
+                style="display: none;" title="Thêm hoặc chỉnh sửa buổi học trong thời khóa biểu (Chỉ Admin)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>+ Thêm buổi học mới</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bộ lọc Tháng & Năm học -->
+          <div class="schedule-filter-card">
+            <div class="filter-card-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              <span>Chọn Tháng & Chế độ xem</span>
+            </div>
+
+            <form class="filter-controls-form" id="scheduleFilterForm">
+              <div class="filter-control-item">
+                <label for="filterScheduleMonth" class="filter-control-label">Tháng học</label>
+                <div class="filter-select-box">
+                  <select id="filterScheduleMonth" class="filter-native-select">
+                    <option value="9">Tháng 9 / 2026</option>
+                    <option value="10" selected>Tháng 10 / 2026 (Hiện tại)</option>
+                    <option value="11">Tháng 11 / 2026</option>
+                    <option value="12">Tháng 12 / 2026</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="filter-control-item">
+                <label for="filterAcademicYear" class="filter-control-label">Năm học</label>
+                <div class="filter-select-box">
+                  <select id="filterAcademicYear" class="filter-native-select">
+                    <option value="2026-2027" selected>2026 - 2027</option>
+                    <option value="2025-2026">2025 - 2026</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="filter-control-item filter-btn-item">
+                <button type="submit" class="btn btn-apply-filter" id="btnApplyScheduleFilter">
+                  Áp dụng
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Dòng Chuyển chế độ xem & Chú thích -->
+          <div class="schedule-toolbar-row">
+            <div class="schedule-mode-toggle">
+              <button type="button" class="mode-toggle-btn active" id="btnModeAgenda" data-mode="agenda"
+                title="Hiển thị tất cả buổi học của tháng trong 1 lần">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                <span>Toàn bộ buổi học tháng</span>
+              </button>
+              <button type="button" class="mode-toggle-btn" id="btnModeCalendar" data-mode="calendar"
+                title="Xem theo dạng lưới lịch 31 ngày">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>Lưới lịch tháng</span>
+              </button>
+            </div>
+
+            <div class="schedule-legend-bar">
+              <span class="legend-title">Chú thích:</span>
+              <span class="legend-chip chip-online">💻 Học trực tuyến</span>
+              <span class="legend-chip chip-teams-link">🌐 Đã có link Teams</span>
+              <span class="legend-chip chip-teams-missing">⏳ Link gán sau</span>
+              <span class="legend-chip chip-live">🔴 Đang diễn ra</span>
+            </div>
+          </div>
+
+          <!-- Khung hiển thị Lịch học theo tháng chính (Tất cả buổi học trong 1 lần) -->
+          <div class="schedule-month-container" id="scheduleMonthContainer">
+            <!-- Nạp động qua JavaScript bằng ScheduleManager -->
+          </div>
+
+        </section>
+

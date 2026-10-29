@@ -1,0 +1,1194 @@
+/* ========================================================
+   DUOLINGO ASSIGNMENT LEARNING PATH STYLES
+   ======================================================== */
+
+.duo-page-container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 10px 16px 60px 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ================= Top Duolingo Stats Bar ================= */
+.duo-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  padding: 10px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.duo-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.duo-nav-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 2px solid #84d8ff;
+  background: #ddf4ff;
+  color: #1cb0f6;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.duo-nav-pill-btn:hover {
+  background: #bfeaff;
+}
+
+.duo-topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duo-tab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #777777;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+
+.duo-tab-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #4b4b4b;
+}
+
+.duo-topbar-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.duo-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 800;
+  font-size: 14.5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.duo-stat-streak {
+  color: #ff9600;
+}
+
+.duo-stat-gems {
+  color: #ff4b4b;
+}
+
+.duo-stat-xp {
+  color: #ffc800;
+}
+
+.duo-stat-flag {
+  width: 26px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ================= Main Grid Layout ================= */
+.duo-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .duo-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================= Unit Header Banner (Duolingo Green) ================= */
+.duo-unit-banner {
+  background: #58cc02;
+  border-radius: 18px;
+  padding: 22px 24px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 0 #46a302, 0 15px 25px rgba(88, 204, 2, 0.25);
+  margin-bottom: 45px;
+  position: relative;
+  overflow: hidden;
+}
+
+.duo-unit-banner::after {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 140px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.duo-unit-left {
+  max-width: 70%;
+}
+
+.duo-unit-tag {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.duo-unit-desc {
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.95;
+  line-height: 1.4;
+}
+
+.duo-guidebook-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 13.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+.duo-guidebook-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+  transform: translateY(-2px);
+}
+
+.duo-guidebook-btn:active {
+  transform: translateY(2px);
+}
+
+/* ================= The Duolingo Learning Path ================= */
+.duo-path-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 60px 0;
+  min-height: 1200px;
+}
+
+/* Background winding SVG line */
+.duo-path-svg-bg {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.duo-path-curve {
+  fill: none;
+  stroke: #e5e5e5;
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 6 12;
+}
+
+body.dark-theme .duo-path-curve {
+  stroke: #334155;
+}
+
+/* Stepping Stones / Path Nodes */
+.duo-path-step {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.duo-path-step.has-current-bubble {
+  margin-top: 28px;
+  margin-bottom: 44px;
+}
+
+/* Winding offsets matching screenshot */
+.offset-center { transform: translateX(0); }
+.offset-right-1 { transform: translateX(38px); }
+.offset-right-2 { transform: translateX(72px); }
+.offset-right-3 { transform: translateX(36px); }
+.offset-left-1 { transform: translateX(-38px); }
+.offset-left-2 { transform: translateX(-72px); }
+.offset-left-3 { transform: translateX(-36px); }
+
+/* 3D Circular Button Base */
+.duo-node-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Gold / Completed Nodes (Unit finished lessons) */
+.duo-node-gold {
+  background: #ffc800;
+  box-shadow: 0 8px 0 #e5a500, 0 14px 20px rgba(255, 200, 0, 0.3);
+  color: #ffffff;
+}
+
+.duo-node-gold:hover {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 0 #e5a500, 0 18px 24px rgba(255, 200, 0, 0.35);
+}
+
+.duo-node-gold:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 #e5a500, 0 6px 10px rgba(255, 200, 0, 0.2);
+}
+
+/* Green / Active Current Node */
+.duo-node-green {
+  background: #58cc02;
+  box-shadow: 0 8px 0 #46a302, 0 14px 20px rgba(88, 204, 2, 0.35);
+  color: #ffffff;
+}
+
+.duo-node-green:hover {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 0 #46a302, 0 18px 24px rgba(88, 204, 2, 0.4);
+}
+
+.duo-node-green:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 #46a302, 0 6px 10px rgba(88, 204, 2, 0.2);
+}
+
+/* Active Ring Pulse Effect */
+.duo-node-active-ring {
+  position: absolute;
+  inset: -8px;
+  border: 4px solid #58cc02;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: duoPulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  pointer-events: none;
+}
+
+@keyframes duoPulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
+}
+
+/* Floating START Speech Bubble Badge */
+.duo-start-bubble {
+  position: absolute;
+  top: -46px;
+  background: #ffc800;
+  color: #7b5000;
+  font-weight: 900;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #e5a500, 0 8px 16px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: duoBob 1.6s infinite ease-in-out;
+  cursor: pointer;
+  z-index: 5;
+  white-space: nowrap;
+}
+
+.duo-start-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid #ffc800;
+}
+
+@keyframes duoBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Treasure Chest Milestone Node */
+.duo-chest-node {
+  width: 82px;
+  height: 64px;
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  border-radius: 14px;
+  box-shadow: 0 8px 0 #78350f, 0 14px 20px rgba(180, 83, 9, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.duo-chest-node:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 10px 0 #78350f, 0 18px 24px rgba(180, 83, 9, 0.4);
+}
+
+.duo-chest-node:active {
+  transform: translateY(6px) scale(0.98);
+  box-shadow: 0 2px 0 #78350f;
+}
+
+.duo-chest-lock {
+  width: 14px;
+  height: 18px;
+  background: #fef08a;
+  border: 2px solid #ca8a04;
+  border-radius: 3px;
+  position: relative;
+}
+
+.duo-chest-lock::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 3px;
+  width: 4px;
+  height: 4px;
+  background: #78350f;
+  border-radius: 50%;
+}
+
+/* Grey / Locked Nodes */
+.duo-node-grey {
+  background: #e5e5e5;
+  box-shadow: 0 8px 0 #cccccc, 0 10px 14px rgba(0, 0, 0, 0.05);
+  color: #afafaf;
+  cursor: pointer;
+}
+
+body.dark-theme .duo-node-grey {
+  background: #334155;
+  box-shadow: 0 8px 0 #1e293b, 0 10px 14px rgba(0, 0, 0, 0.2);
+  color: #64748b;
+}
+
+.duo-node-grey:hover {
+  filter: brightness(1.03);
+  transform: translateY(-2px);
+}
+
+.duo-node-grey:active {
+  transform: translateY(6px);
+  box-shadow: 0 2px 0 #cccccc;
+}
+
+body.dark-theme .duo-node-grey:active {
+  box-shadow: 0 2px 0 #1e293b;
+}
+
+/* Icons inside Nodes */
+.duo-node-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duo-node-icon svg {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* ================= Mascots (Duo the Green Owl) ================= */
+.duo-mascot {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.12));
+  transition: transform 0.3s ease;
+}
+
+/* Mascot 1: Reading book on left */
+.duo-mascot-left {
+  left: 55px;
+  top: 330px;
+  width: 110px;
+  height: auto;
+  animation: duoFloatSlow 4s infinite ease-in-out;
+}
+
+/* Mascot 2: Holding gem on right */
+.duo-mascot-right {
+  right: 55px;
+  top: 760px;
+  width: 105px;
+  height: auto;
+  animation: duoFloatSlow 4.5s infinite ease-in-out reverse;
+}
+
+@keyframes duoFloatSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@media (max-width: 768px) {
+  .duo-mascot-left {
+    left: 10px;
+    width: 85px;
+  }
+  .duo-mascot-right {
+    right: 10px;
+    width: 85px;
+  }
+}
+
+/* Floating Practice Button (Bottom Left Dumbbell) */
+.duo-practice-btn {
+  position: absolute;
+  bottom: 10px;
+  left: 20px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--bg-card, #ffffff);
+  border: 2px solid #e5e5e5;
+  box-shadow: 0 4px 0 #e5e5e5, 0 8px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1cb0f6;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 4;
+}
+
+.duo-practice-btn:hover {
+  transform: translateY(-2px);
+  border-color: #84d8ff;
+  color: #0b8ecb;
+  box-shadow: 0 6px 0 #84d8ff, 0 10px 20px rgba(28, 176, 246, 0.2);
+}
+
+.duo-practice-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 transparent;
+}
+
+/* ================= Right Sidebar Widgets ================= */
+.duo-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.duo-card {
+  background: var(--bg-card, #ffffff);
+  border: 2px solid var(--border-color, #e5e5e5);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}
+
+body.dark-theme .duo-card {
+  border-color: #334155;
+}
+
+.duo-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.duo-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary, #1e293b);
+  letter-spacing: -0.3px;
+}
+
+.duo-card-action {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #1cb0f6;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.duo-card-action:hover {
+  color: #0b8ecb;
+  text-decoration: underline;
+}
+
+/* XP Progress Widget */
+.duo-goal-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.duo-chest-icon-wrap {
+  width: 54px;
+  height: 54px;
+  background: #fef3c7;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 0 #fde68a;
+}
+
+.duo-goal-info {
+  flex: 1;
+}
+
+.duo-goal-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 6px;
+}
+
+.duo-progress-bar-bg {
+  width: 100%;
+  height: 14px;
+  background: #e5e5e5;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+body.dark-theme .duo-progress-bar-bg {
+  background: #334155;
+}
+
+.duo-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffc800 0%, #ff9600 100%);
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* XP Chart Area */
+.duo-chart-container {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-color, #e5e5e5);
+}
+
+.duo-chart-svg {
+  width: 100%;
+  height: 140px;
+  display: block;
+}
+
+.duo-chart-axis-line {
+  stroke: #f1f5f9;
+  stroke-width: 1;
+}
+
+body.dark-theme .duo-chart-axis-line {
+  stroke: #1e293b;
+}
+
+.duo-chart-axis-text {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #94a3b8;
+}
+
+.duo-chart-line {
+  fill: none;
+  stroke: #ffc800;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.duo-chart-area-fill {
+  fill: url(#duoChartGrad);
+  opacity: 0.25;
+}
+
+.duo-chart-point {
+  fill: #ffc800;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  cursor: pointer;
+  transition: r 0.2s;
+}
+
+.duo-chart-point:hover {
+  r: 6;
+  fill: #ff9600;
+}
+
+/* Next Achievement Widget */
+.duo-achievement-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.duo-achievement-badge-box {
+  width: 58px;
+  height: 64px;
+  background: #ef4444;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 0 #b91c1c;
+  padding: 4px;
+}
+
+.duo-achievement-icon {
+  font-size: 22px;
+}
+
+.duo-achievement-level {
+  font-size: 9.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.duo-achievement-details {
+  flex: 1;
+}
+
+.duo-achievement-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+/* ================= Modal: Assignment Preview & Link Launch ================= */
+.duo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: duoFadeIn 0.2s ease-out forwards;
+}
+
+.duo-modal-overlay.active {
+  display: flex !important;
+  z-index: 999999 !important;
+}
+
+@keyframes duoFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.duo-modal-card {
+  background: var(--bg-card, #ffffff);
+  border-radius: 24px;
+  max-width: 480px;
+  width: 100%;
+  padding: 32px 28px 28px 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color, #e2e8f0);
+  position: relative;
+  text-align: center;
+}
+
+.duo-modal-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  font-size: 20px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.duo-modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+}
+
+.duo-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.duo-modal-badge.gold {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.duo-modal-badge.green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.duo-modal-badge.grey {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.duo-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary, #1e293b);
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.duo-modal-desc {
+  font-size: 14.5px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.5;
+  margin-bottom: 22px;
+}
+
+.duo-modal-rewards-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--bg-hover, #f8fafc);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 24px;
+}
+
+.duo-reward-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.duo-reward-xp { color: #ff9600; }
+.duo-reward-gem { color: #ff4b4b; }
+.duo-reward-score { color: #58cc02; }
+
+/* Big 3D Duolingo Action Button */
+.duo-btn-launch {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 16px;
+  border: none;
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.duo-btn-launch.green {
+  background: #58cc02;
+  color: #ffffff;
+  box-shadow: 0 6px 0 #46a302, 0 10px 16px rgba(88, 204, 2, 0.3);
+}
+
+.duo-btn-launch.green:hover {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 #46a302, 0 14px 20px rgba(88, 204, 2, 0.35);
+}
+
+.duo-btn-launch.green:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #46a302;
+}
+
+.duo-btn-launch.gold {
+  background: #ffc800;
+  color: #ffffff;
+  box-shadow: 0 6px 0 #e5a500, 0 10px 16px rgba(255, 200, 0, 0.3);
+}
+
+.duo-btn-launch.gold:hover {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 #e5a500, 0 14px 20px rgba(255, 200, 0, 0.35);
+}
+
+.duo-btn-launch.gold:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #e5a500;
+}
+
+.duo-btn-launch.disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: 0 4px 0 #cbd5e1;
+  cursor: not-allowed;
+}
+
+/* User configurable link field in modal */
+.duo-link-edit-box {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-color, #e2e8f0);
+  text-align: left;
+}
+
+.duo-link-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 6px;
+}
+
+.duo-link-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+
+.duo-link-input {
+  flex: 1;
+  height: 38px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-color, #cbd5e1);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #0f172a);
+  outline: none;
+}
+
+.duo-link-input:focus {
+  border-color: #1cb0f6;
+  box-shadow: 0 0 0 3px rgba(28, 176, 246, 0.15);
+}
+
+.duo-link-save-btn {
+  padding: 0 14px;
+  height: 38px;
+  border-radius: 8px;
+  border: none;
+  background: #1cb0f6;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.duo-link-save-btn:hover {
+  background: #0b8ecb;
+}
+
+/* ========================================================
+   DEADLINE COUNTDOWN & STEP TIMER STYLES
+   ======================================================== */
+
+/* Nhãn đếm thời gian dưới mỗi nút bài tập trên cây Duolingo */
+.duo-step-timer {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.2s ease;
+  z-index: 3;
+}
+
+.duo-step-timer.timer-green {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.duo-step-timer.timer-warning {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+  animation: duoPulseTimer 2s infinite ease-in-out;
+}
+
+.duo-step-timer.timer-urgent {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  animation: duoPulseUrgent 1.2s infinite ease-in-out;
+}
+
+.duo-step-timer.timer-expired {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.duo-step-timer.timer-none {
+  background: rgba(0, 0, 0, 0.04);
+  color: #94a3b8;
+  border: 1px dashed #cbd5e1;
+  font-weight: 600;
+}
+
+body.dark-theme .duo-step-timer.timer-green {
+  background: rgba(22, 163, 74, 0.22);
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+body.dark-theme .duo-step-timer.timer-warning {
+  background: rgba(217, 119, 6, 0.22);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+body.dark-theme .duo-step-timer.timer-urgent {
+  background: rgba(225, 29, 72, 0.25);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+body.dark-theme .duo-step-timer.timer-expired {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+body.dark-theme .duo-step-timer.timer-none {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #475569;
+  color: #64748b;
+}
+
+@keyframes duoPulseTimer {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes duoPulseUrgent {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.06); filter: brightness(1.1); }
+}
+
+/* Hộp đồng hồ đếm ngược chi tiết trong Modal */
+.duo-countdown-box {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1.5px solid #93c5fd;
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+body.dark-theme .duo-countdown-box {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(30, 41, 59, 0.5) 100%);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.duo-countdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.duo-countdown-icon {
+  font-size: 15px;
+}
+
+.duo-countdown-label {
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #1e40af;
+  letter-spacing: 0.5px;
+}
+
+body.dark-theme .duo-countdown-label {
+  color: #60a5fa;
+}
+
+.duo-countdown-deadline-text {
+  font-weight: 700;
+  font-size: 11.5px;
+  color: #3b82f6;
+}
+
+.duo-countdown-segments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.duo-countdown-seg {
+  background: #ffffff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 6px 10px;
+  min-width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-theme .duo-countdown-seg {
+  background: #1e293b;
+  border-color: #3b82f6;
+}
+
+.duo-countdown-num {
+  font-size: 18px;
+  font-weight: 900;
+  font-family: 'Plus Jakarta Sans', monospace, sans-serif;
+  color: #1d4ed8;
+  line-height: 1;
+}
+
+body.dark-theme .duo-countdown-num {
+  color: #93c5fd;
+}
+
+.duo-countdown-unit {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.duo-countdown-colon {
+  font-size: 18px;
+  font-weight: 900;
+  color: #3b82f6;
+  margin: 0 1px;
+}
+
+.duo-countdown-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+body.dark-theme .duo-countdown-bar-wrap {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.duo-countdown-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+

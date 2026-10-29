@@ -1,0 +1,130 @@
+<!-- ==============================================================================
+ * COMPONENT: TAB VIEW: LEADERBOARD (Bảng Xếp Hạng Thực Tập Sinh)
+ * CHỨC NĂNG CHÍNH: Vinh danh Top 3 thực tập sinh xuất sắc và hiển thị bảng xếp hạng toàn bộ sinh viên.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/leaderboard.js, public/css/style.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - Hero Banner thống kê tổng quan (tổng số thực tập sinh, sao cao nhất, điểm trung bình)
+ *   - Podium Top 3: Bục vinh danh Vàng - Bạc - Đồng tương tác đẹp mắt
+ *   - Thanh tìm kiếm theo MSSV/họ tên và bộ lọc chuyên ban (AI, Frontend, Backend, Data, etc.)
+ *   - Bảng danh sách xếp hạng chi tiết, có nút bấm xem hồ sơ cá nhân từng sinh viên
+ * ============================================================================== -->
+
+        <!-- ======================================================== -->
+        <!-- TAB: BẢNG XẾP HẠNG SINH VIÊN (LEADERBOARD) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewLeaderboard">
+
+          <!-- Leaderboard Hero Header -->
+          <div class="leaderboard-header-box">
+            <div class="header-content">
+              <h2 class="leaderboard-title">Bảng Xếp Hạng Thực Tập Sinh</h2>
+              <p class="leaderboard-desc">
+                Theo dõi tiến độ, điểm đánh giá tổng hợp và bảng xếp hạng thành tích của các sinh viên trong Trainee
+                Program.
+              </p>
+            </div>
+            <div class="header-stats-summary" id="leaderboardSummaryStats">
+              <!-- Dynamically populated stats -->
+            </div>
+          </div>
+
+          <!-- Podium Top 3 Trainees -->
+          <div class="podium-section" id="podiumSection">
+            <!-- 2nd Place -->
+            <div class="podium-card rank-2" id="podiumRank2">
+              <div class="podium-medal">🥈 Hạng 2</div>
+              <div class="podium-avatar-wrap">
+                <img src="" alt="" class="podium-avatar-img" id="podium2Avatar">
+              </div>
+              <h4 class="podium-name" id="podium2Name">--</h4>
+              <div class="podium-meta" id="podium2Track">--</div>
+              <div class="podium-score-tag">
+                <span class="label">⭐ Sao tích lũy:</span>
+                <span class="val" id="podium2Score">--</span>
+              </div>
+            </div>
+
+            <!-- 1st Place -->
+            <div class="podium-card rank-1" id="podiumRank1">
+              <div class="podium-crown">👑</div>
+              <div class="podium-medal">🥇 Quán Quân</div>
+              <div class="podium-avatar-wrap">
+                <img src="" alt="" class="podium-avatar-img" id="podium1Avatar">
+              </div>
+              <h4 class="podium-name" id="podium1Name">--</h4>
+              <div class="podium-meta" id="podium1Track">--</div>
+              <div class="podium-score-tag">
+                <span class="label">⭐ Sao tích lũy:</span>
+                <span class="val highlight" id="podium1Score">--</span>
+              </div>
+            </div>
+
+            <!-- 3rd Place -->
+            <div class="podium-card rank-3" id="podiumRank3">
+              <div class="podium-medal">🥉 Hạng 3</div>
+              <div class="podium-avatar-wrap">
+                <img src="" alt="" class="podium-avatar-img" id="podium3Avatar">
+              </div>
+              <h4 class="podium-name" id="podium3Name">--</h4>
+              <div class="podium-meta" id="podium3Track">--</div>
+              <div class="podium-score-tag">
+                <span class="label">⭐ Sao tích lũy:</span>
+                <span class="val" id="podium3Score">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toolbar: Search, Filters, Sorting -->
+          <div class="table-toolbar">
+            <div class="search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="leaderboardSearchInput" placeholder="Tìm theo tên, MSSV, email...">
+            </div>
+
+            <div class="filter-group">
+              <button class="filter-pill active" data-track="all">Tất cả khoa</button>
+              <button class="filter-pill" data-track="Khoa học Máy tính">KH Máy tính</button>
+              <button class="filter-pill" data-track="Kỹ thuật Phần mềm">Kỹ thuật PM</button>
+              <button class="filter-pill" data-track="Hệ thống Thông tin">Hệ thống TT</button>
+              <button class="filter-pill" data-track="Mạng Máy tính">An toàn TT</button>
+            </div>
+
+            <div class="sort-box">
+              <select id="leaderboardSortSelect" class="sort-select" aria-label="Sắp xếp danh sách">
+                <option value="stars_desc">⭐ Số sao nhiều nhất (Mặc định)</option>
+                <option value="stars_asc">⭐ Số sao ít nhất</option>
+                <option value="attended_desc">📅 Số buổi tham gia nhiều nhất</option>
+                <option value="name_asc">🔤 Tên sinh viên (A - Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Full Table Card -->
+          <div class="portal-card table-card">
+            <div class="table-responsive">
+              <table class="leaderboard-table" id="leaderboardTable">
+                <thead>
+                  <tr>
+                    <th class="th-rank" style="width: 75px; text-align: center;">Hạng</th>
+                    <th class="th-student">Sinh viên / Trainee</th>
+                    <th class="th-track">Chuyên ngành / Lớp</th>
+                    <th class="th-stars" style="text-align: center;">Sao tích lũy ⭐</th>
+                    <th class="th-sessions" style="text-align: center;">Số buổi học 📅</th>
+                    <th class="th-absent" style="text-align: center;">Buổi vắng ⚠️</th>
+                    <th class="th-assignment" style="text-align: center;">Điểm bài tập 📝</th>
+                    <th class="th-status" style="text-align: center;">Trạng thái</th>
+                    <th class="th-actions" style="text-align: center;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboardTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+

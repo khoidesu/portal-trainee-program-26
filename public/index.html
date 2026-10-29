@@ -1,0 +1,3536 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f19" id="themeColorMeta">
+  <title>Cổng thông tin Sinh viên & Trainee Program | UIT</title>
+  <meta name="description"
+    content="Cổng thông tin theo dõi sinh viên và thực tập sinh trong chương trình Trainee Program UIT. Bảng xếp hạng, tiến độ học tập và đánh giá năng lực.">
+
+  <!-- Early Theme Initializer to prevent white overscroll & flashes -->
+  <script>
+    (function () {
+      try {
+        var mode = localStorage.getItem('uit_portal_theme_mode') || 'dark';
+        var isDark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark-theme');
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.style.backgroundColor = '#0b0f19';
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.add('light-theme');
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.backgroundColor = '#f4f6fa';
+          document.documentElement.style.colorScheme = 'light';
+        }
+      } catch (e) { }
+    })();
+  </script>
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/duolingo.css">
+</head>
+
+<body class="dark-theme">
+
+  <!-- ==================== APP CONTAINER ==================== -->
+  <div class="app-layout" id="appLayout">
+
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-badge">
+            <span class="badge-num">20</span>
+            <span class="badge-sub">UIT</span>
+          </div>
+          <div class="brand-text">
+            <h1 class="brand-title">Cổng thông tin</h1>
+            <span class="brand-subtitle">Trainee Program</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+        <!-- CÁC MỤC DÀNH CHO SINH VIÊN / USER THƯỜNG (ADMIN SẼ ẨN TOÀN BỘ) -->
+        <div class="student-only-nav-sections" id="studentOnlyNavSections">
+          <!-- ================= NHÓM HỌC VỤ ================= -->
+          <div class="nav-group-label">HỌC VỤ</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#schedule" class="nav-link active" id="navSchedule" data-tab="schedule">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </span>
+                <span class="nav-text">Thời khóa biểu</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#leaderboard" class="nav-link" id="navLeaderboard" data-tab="leaderboard">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                    <path d="M4 22h16" />
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                  </svg>
+                </span>
+                <span class="nav-text">Bảng xếp hạng</span>
+                <span class="nav-badge" id="traineeCountBadge">8</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#grades" class="nav-link" id="navGrades" data-tab="grades">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                  </svg>
+                </span>
+                <span class="nav-text">Bảng điểm</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#leave" class="nav-link" id="navLeave" data-tab="leave">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" />
+                    <path d="m9 14 2 2 4-4" />
+                  </svg>
+                </span>
+                <span class="nav-text">Xin nghỉ</span>
+                <span class="nav-badge" style="background: rgba(37,99,235,0.12); color: var(--primary-blue); font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 6px;">FORM</span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- ================= NHÓM 3: THI CỬ ================= -->
+          <div class="nav-group-label">THI CỬ &amp; RÈN LUYỆN</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#assignments" class="nav-link" id="navAssignments" data-tab="assignments">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                </span>
+                <span class="nav-text">Bài tập</span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- ================= NHÓM 4: TRỢ GIÚP ================= -->
+          <div class="nav-group-label">TRỢ GIÚP &amp; HỎI ĐÁP</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#questions" class="nav-link" id="navQuestions" data-tab="questions">
+                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg></span>
+                <span class="nav-text">Đặt câu hỏi</span>
+                <span class="nav-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 6px;">HỎI ĐÁP</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- ================= NHÓM ADMIN: QUẢN TRỊ HỆ THỐNG (CHỈ ADMIN MỚI THẤY VÀ TRUY CẬP ĐƯỢC) ================= -->
+        <div class="nav-group-label admin-only-element" id="adminNavGroupLabel" style="display: none;">QUẢN TRỊ HỆ THỐNG
+        </div>
+        <ul class="nav-list admin-only-element" id="adminNavList" style="display: none;">
+          <li class="nav-item">
+            <a href="#admin" class="nav-link admin-nav-link" id="navAdmin" data-tab="admin">
+              <span class="nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </span>
+              <span class="nav-text">Quản trị Admin</span>
+              <span class="nav-badge admin-badge">ADMIN</span>
+            </a>
+          </li>
+        </ul>
+
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="collapse-toggle-btn" id="collapseSidebarBtn" title="Thu gọn thanh điều hướng">
+          <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <path d="M9 3v18" />
+            <path d="m14 9-3 3 3 3" />
+          </svg>
+          <span class="collapse-text">Thu gọn</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+    <div class="main-wrapper">
+
+      <!-- Top Navbar -->
+      <header class="top-navbar">
+        <div class="top-nav-left">
+          <button class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Mở menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="page-title-box">
+            <h2 class="page-main-title" id="pageMainTitle">Thời khóa biểu</h2>
+            <span class="page-sub-breadcrumb" id="pageSubBreadcrumb">Danh sách lớp đã đăng ký học phần và lịch học theo
+              tuần</span>
+          </div>
+        </div>
+
+        <div class="top-nav-right">
+          <!-- Hidden helper select to preserve JS compatibility -->
+          <select id="traineeSelect" style="display: none;"></select>
+
+          <!-- Theme Mode Dropdown (Phục hồi Chế độ Giao diện: Sáng / Tối / Hệ thống) -->
+          <div class="theme-mode-wrapper" id="themeModeWrapper">
+            <button class="header-action-btn theme-toggle-btn" id="themeToggleBtn" title="Chế độ giao diện (Sáng / Tối)"
+              aria-label="Chế độ giao diện" aria-expanded="false">
+              <!-- Mode icon: system (default), sun, moon -->
+              <svg class="theme-btn-icon icon-system" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <svg class="theme-btn-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg class="theme-btn-icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="display: none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu: Sáng / Tối / Hệ thống -->
+            <div class="theme-dropdown-menu" id="themeDropdownMenu">
+              <div class="theme-dropdown-header">CHẾ ĐỘ GIAO DIỆN</div>
+              <div class="theme-options-list">
+                <button type="button" class="theme-option-item" data-mode="light">
+                  <div class="theme-option-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="5"></circle>
+                      <line x1="12" y1="1" x2="12" y2="3"></line>
+                      <line x1="12" y1="21" x2="12" y2="23"></line>
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                      <line x1="1" y1="12" x2="3" y2="12"></line>
+                      <line x1="21" y1="12" x2="23" y2="12"></line>
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                  </div>
+                  <div class="theme-option-info">
+                    <div class="theme-option-title">Sáng</div>
+                    <div class="theme-option-desc">Nền trắng, chữ đậm</div>
+                  </div>
+                </button>
+                <button type="button" class="theme-option-item" data-mode="dark">
+                  <div class="theme-option-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                  </div>
+                  <div class="theme-option-info">
+                    <div class="theme-option-title">Tối</div>
+                    <div class="theme-option-desc">Dịu mắt buổi tối</div>
+                  </div>
+                </button>
+                <button type="button" class="theme-option-item active" data-mode="system">
+                  <div class="theme-option-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                  </div>
+                  <div class="theme-option-info">
+                    <div class="theme-option-title">Hệ thống</div>
+                    <div class="theme-option-desc">Theo cài đặt máy</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ô nhỏ Đăng nhập Admin duy nhất -->
+          <a href="/login" class="header-action-btn login-header-btn" id="openLoginModalBtn"
+            title="Đăng nhập Quản trị viên (Admin)"
+            style="text-decoration: none; padding: 7px 16px; font-weight: 600; font-size: 13.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: var(--primary-blue); color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+            <span class="btn-text">Đăng nhập Admin</span>
+          </a>
+
+          <!-- Trạng thái khi Admin đã đăng nhập -->
+          <div class="admin-only-element" id="headerAdminStatus" style="display: none; align-items: center; gap: 8px;">
+            <a href="#admin"
+              style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
+              <span>🛡️ Admin UIT</span>
+            </a>
+            <button type="button" class="header-action-btn logout-header-btn" id="headerLogoutBtn"
+              title="Đăng xuất khỏi tài khoản Quản trị"
+              style="padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;">
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Body Container -->
+      <main class="main-body" id="mainContent">
+
+        <!-- ======================================================== -->
+        <!-- TAB 1: TRANG CHỦ (ĐÃ ẨN THEO YÊU CẦU) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewDashboard" style="display: none !important;">
+
+          <!-- Trainee Profile Card Banner -->
+          <div class="student-profile-card" id="studentProfileCard">
+            <div class="profile-left">
+              <div class="student-avatar-wrap">
+                <img src="" alt="Ảnh đại diện sinh viên" class="student-avatar-img" id="studentAvatar">
+                <div class="avatar-fallback" id="studentAvatarFallback">SV</div>
+              </div>
+              <div class="student-details">
+                <div class="greeting-tag">XIN CHÀO,</div>
+                <h2 class="student-name" id="studentName">Khôi Trương Trần Anh</h2>
+                <div class="student-meta-line">
+                  <span class="meta-item student-id" id="studentId">25520918</span>
+                  <span class="meta-dot">·</span>
+                  <span class="meta-item student-batch" id="studentBatch">KHMT2025.2</span>
+                  <span class="meta-dot">·</span>
+                  <span class="meta-item student-track" id="studentTrack">Khoa Khoa học Máy tính</span>
+                  <span class="meta-dot">·</span>
+                  <span class="meta-item student-email" id="studentEmail">khoi.tta@trainee.uit.edu.vn</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-right">
+              <div class="badge-tag status-active" id="studentStatusBadge">Đang học</div>
+              <div class="badge-tag cohort-badge" id="studentCohortBadge">2025</div>
+              <div class="badge-tag year-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span id="studentAcademicYear">2026-2027</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 KPI Metrics Row -->
+          <div class="metrics-grid">
+            <!-- Card 1: SAO TÍCH LŨY (Thay thế GPA tích lũy) -->
+            <div class="metric-card" id="cardMetricStars">
+              <div class="metric-content">
+                <div class="metric-header-row">
+                  <span class="metric-title">SAO TÍCH LŨY</span>
+                  <div class="metric-icon-box yellow-bg">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <polygon
+                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="metric-value-box">
+                  <span class="metric-large-num" id="metricStars">28 ⭐</span>
+                </div>
+                <div class="metric-classification">
+                  Danh hiệu: <strong id="metricStarClass">Hạng Vàng</strong>
+                </div>
+                <div class="metric-trend-tag" id="metricStarTrendWrap">
+                  <span class="trend-badge positive" id="metricStarTrend">
+                    <span class="trend-arrow">↗</span>
+                    <span id="metricStarTrendText">+4 sao tuần này</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: SỐ BUỔI HỌC ĐÃ THAM GIA (Thay thế Số TC tích lũy) -->
+            <div class="metric-card" id="cardMetricAttendance">
+              <div class="metric-content">
+                <div class="metric-header-row">
+                  <span class="metric-title">SỐ BUỔI HỌC ĐÃ THAM GIA</span>
+                  <div class="metric-icon-box cyan-bg">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                      <path d="m9 16 2 2 4-4" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="metric-value-box">
+                  <span class="metric-large-num" id="metricAttendedSessions">42 / 45</span>
+                </div>
+                <div class="metric-classification">
+                  Chuyên cần: <strong id="metricAttendanceRate">93.3%</strong> tổng số buổi
+                </div>
+                <div class="metric-subdetail" id="metricAttendanceDetail">
+                  Đã tham gia: <span>42</span> buổi · Vắng: <span>3</span> buổi (có phép)
+                </div>
+                <!-- Visual Attendance Progress Bar -->
+                <div class="progress-bar-container">
+                  <div class="progress-bar-fill" id="metricAttendanceBar" style="width: 93.3%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: ĐIỂM BÀI TẬP (Thay thế Điểm rèn luyện) -->
+            <div class="metric-card" id="cardMetricAssignment">
+              <div class="metric-content">
+                <div class="metric-header-row">
+                  <span class="metric-title">ĐIỂM BÀI TẬP</span>
+                  <div class="metric-icon-box green-bg">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <line x1="10" y1="9" x2="8" y2="9" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="metric-value-box">
+                  <span class="metric-large-num" id="metricAssignmentScore">9.6 / 10</span>
+                </div>
+                <div class="metric-classification">
+                  Xếp loại: <strong id="metricAssignmentClass">Xuất sắc</strong>
+                </div>
+                <div class="metric-subdetail text-muted" id="metricAssignmentDetail">
+                  Đạt 14/15 bài tập · Đạt yêu cầu 100%
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 4: THỨ HẠNG XẾP LOẠI (Thay thế GPA học kỳ trước) -->
+            <div class="metric-card" id="cardMetricRank">
+              <div class="metric-content">
+                <div class="metric-header-row">
+                  <span class="metric-title">THỨ HẠNG XẾP LOẠI</span>
+                  <div class="metric-icon-box purple-bg">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                      <path d="M4 22h16" />
+                      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="metric-value-box">
+                  <span class="metric-large-num" id="metricRank">#1</span>
+                </div>
+                <div class="metric-classification">
+                  Danh hiệu: <strong id="metricRankClass">🥇 Quán quân Trainee</strong>
+                </div>
+                <div class="metric-subdetail text-muted" id="metricRankNote">
+                  Hạng 1 / 12 sinh viên · Dẫn đầu toàn khóa
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main 2-Column Content Grid -->
+          <div class="content-dashboard-grid">
+
+            <!-- Left Column: Schedule & Tasks (~62%) -->
+            <div class="grid-col left-col">
+
+              <!-- Section: Thời khóa biểu hôm nay -->
+              <div class="portal-card" id="cardSchedule">
+                <div class="card-header">
+                  <div class="header-left">
+                    <span class="header-icon blue-text">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </span>
+                    <h3 class="card-title">Thời khóa biểu hôm nay</h3>
+                  </div>
+                  <span class="card-badge" id="scheduleCountBadge">1 buổi</span>
+                </div>
+                <div class="card-subtitle" id="currentDateSubtitle">Thứ Ba · 27/10/2026</div>
+
+                <div class="card-body">
+                  <div class="schedule-list" id="scheduleListContainer">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section: Dịch vụ đang xử lý -->
+              <div class="portal-card" id="cardPendingServices">
+                <div class="card-header">
+                  <div class="header-left">
+                    <span class="header-icon blue-text">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h9" />
+                        <polyline points="22,6 12,13 2,6" />
+                        <path d="m19 16 3 3-3 3" />
+                      </svg>
+                    </span>
+                    <h3 class="card-title">Dịch vụ đang xử lý</h3>
+                  </div>
+                  <a href="javascript:void(0)" class="header-action-link" id="viewAllServicesBtn">Tất cả →</a>
+                </div>
+                <div class="card-subtitle">Các phiếu yêu cầu chưa hoàn tất — bấm để xem tiến độ.</div>
+
+                <div class="card-body">
+                  <div class="pending-requests-list" id="pendingRequestsContainer">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Column: Mentor, GPA Chart, News (~38%) -->
+            <div class="grid-col right-col">
+
+              <!-- Section: Trainer & Mentor -->
+              <div class="portal-card" id="cardMentor">
+                <div class="card-header">
+                  <div class="header-left">
+                    <span class="header-icon blue-text">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                    </span>
+                    <h3 class="card-title">Trainer</h3>
+                  </div>
+                </div>
+                <div class="card-subtitle">Liên hệ khi cần hỗ trợ chuyên môn & học vụ.</div>
+
+                <div class="card-body">
+                  <div class="mentor-box">
+                    <div class="mentor-avatar-circle" id="mentorAvatar">NV</div>
+                    <div class="mentor-info">
+                      <div class="mentor-name" id="mentorName">Võ Thị Xuân Quỳnh</div>
+                      <div class="mentor-role-badge" id="mentorRole"
+                        style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; margin-bottom:4px;">
+                        Trainer Trainee Program</div>
+                      <div class="mentor-contact-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <rect width="20" height="16" x="2" y="4" rx="2" />
+                          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                        <a href="mailto:vannb@uit.edu.vn" id="mentorEmail">vannb@uit.edu.vn</a>
+                      </div>
+                      <div class="mentor-contact-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2">
+                          <path
+                            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                        <a href="tel:0904607220" id="mentorPhone">0904607220</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section: Diễn biến sao Chart -->
+              <div class="portal-card" id="cardGpaChart">
+                <div class="card-header">
+                  <div class="header-left">
+                    <span class="header-icon blue-text">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor"
+                        stroke-width="1.5">
+                        <polygon
+                          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    </span>
+                    <h3 class="card-title">Diễn biến sao</h3>
+                  </div>
+                </div>
+                <div class="card-subtitle">Số sao đạt được theo các tuần đào tạo — đường liền = Sao tuần, đường nét đứt
+                  = Tích lũy ⭐
+                </div>
+
+                <div class="card-body">
+                  <!-- Custom SVG Chart Container -->
+                  <div class="gpa-chart-container" id="gpaChartContainer">
+                    <svg class="gpa-svg-chart" id="gpaSvgChart" viewBox="0 0 460 210" preserveAspectRatio="none">
+                      <!-- Rendered by chart.js -->
+                    </svg>
+                    <div class="chart-tooltip" id="chartTooltip"></div>
+                  </div>
+
+                  <!-- Chart Legend -->
+                  <div class="chart-legend">
+                    <div class="legend-item">
+                      <span class="legend-line solid-line" style="background:#3b82f6;"></span>
+                      <span class="legend-text">Sao tuần</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-line dashed-line" style="background:#f59e0b; border-color:#f59e0b;"></span>
+                      <span class="legend-text">Tích lũy ⭐</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section: Tin tức mới nhất -->
+              <div class="portal-card" id="cardNews">
+                <div class="card-header">
+                  <div class="header-left">
+                    <span class="header-icon blue-text">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path
+                          d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+                        <path d="M18 14h-8" />
+                        <path d="M15 18h-5" />
+                        <path d="M10 6h8v4h-8V6Z" />
+                      </svg>
+                    </span>
+                    <h3 class="card-title">Tin tức mới nhất</h3>
+                  </div>
+                </div>
+                <div class="card-subtitle">Thông báo, sự kiện từ Cổng tin UIT.</div>
+
+                <div class="card-body">
+                  <div class="news-list" id="newsListContainer">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: HỒ SƠ CÁ NHÂN & CÀI ĐẶT TÀI KHOẢN (ĐÃ ẨN THEO YÊU CẦU) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewProfile" style="display: none !important;">
+
+          <!-- Profile Page Header -->
+          <div class="profile-header-card">
+            <div class="profile-header-content">
+              <div class="profile-breadcrumb">
+                <span>Cổng Sinh viên</span>
+                <span class="breadcrumb-sep">&rsaquo;</span>
+                <span class="breadcrumb-current">Hồ sơ cá nhân</span>
+              </div>
+              <h2 class="profile-page-title">Hồ Sơ Cá Nhân & Quản Trị Tài Khoản</h2>
+              <p class="profile-page-desc">
+                Quản lý và cập nhật thông tin họ tên, email, ảnh đại diện và mật khẩu của bạn. Dữ liệu được lưu trữ và
+                cập nhật trực tiếp trên cơ sở dữ liệu MongoDB Atlas.
+              </p>
+            </div>
+            <div class="profile-header-actions">
+              <div class="admin-db-status-chip">
+                <span class="db-chip-dot pulse"></span>
+                <span class="db-chip-text">MongoDB Atlas Active</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile Main Content Grid -->
+          <div class="profile-grid-container">
+
+            <!-- Left Column: Avatar & Overview Card -->
+            <div class="profile-col-sidebar">
+              <div class="portal-card profile-avatar-card">
+                <div class="profile-card-header">
+                  <h3 class="card-title">Ảnh Đại Diện</h3>
+                </div>
+
+                <div class="profile-avatar-display-wrap">
+                  <div class="profile-avatar-large" id="profileAvatarLarge">
+                    <img id="profileAvatarImg" src="" alt="Ảnh đại diện" style="display: none;">
+                    <div id="profileAvatarInitials" class="profile-avatar-initials">SV</div>
+                  </div>
+
+                  <div class="avatar-upload-actions">
+                    <input type="file" id="profileAvatarFileInput" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnUploadProfileAvatar">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <span>Tải ảnh mới</span>
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" id="btnRemoveProfileAvatar"
+                      title="Gỡ ảnh về chữ viết tắt">
+                      <span>🗑️ Gỡ ảnh</span>
+                    </button>
+                  </div>
+                  <p class="profile-avatar-hint">
+                    Hỗ trợ định dạng JPG, PNG, WebP (tối đa 5MB). Ảnh được cập nhật và lưu trực tiếp lên cơ sở dữ liệu
+                    MongoDB Atlas.
+                  </p>
+                </div>
+
+                <div class="profile-badge-summary">
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Mã số học viên:</span>
+                    <strong class="badge-value" id="profileBadgeId">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Vai trò:</span>
+                    <span class="badge badge-success" id="profileBadgeRole">Sinh viên UIT</span>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Khóa đào tạo:</span>
+                    <strong class="badge-value" id="profileBadgeBatch">Trainee 2026</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Ngành / Khoa:</span>
+                    <strong class="badge-value" id="profileBadgeTrack">Khoa học Máy tính</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Info & Password & Support Forms -->
+            <div class="profile-col-main">
+
+              <!-- Card 1: Chỉnh sửa thông tin cá nhân (Họ tên & Email) -->
+              <div class="portal-card profile-form-card">
+                <div class="profile-card-header">
+                  <div class="card-icon-box blue-bg">👤</div>
+                  <div>
+                    <h3 class="card-title">Thông Tin Cá Nhân Cơ Bản</h3>
+                    <p class="card-subtitle">Chỉnh sửa họ tên và email liên hệ (lưu trực tiếp lên MongoDB)</p>
+                  </div>
+                </div>
+
+                <form id="profileInfoForm" class="profile-form">
+                  <div class="profile-form-grid">
+                    <div class="form-group">
+                      <label for="profileInputFullName" class="form-label">Họ và tên <span
+                          class="text-danger">*</span></label>
+                      <input type="text" id="profileInputFullName" class="form-input"
+                        placeholder="Nhập họ và tên đầy đủ" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputEmail" class="form-label">Email liên hệ <span
+                          class="text-danger">*</span></label>
+                      <input type="email" id="profileInputEmail" class="form-input" placeholder="vidu@uit.edu.vn"
+                        required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputId" class="form-label">Mã số sinh viên (MSSV)</label>
+                      <input type="text" id="profileInputId" class="form-input" readonly disabled
+                        style="opacity: 0.75; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputTrack" class="form-label">Khoa / Ngành học</label>
+                      <input type="text" id="profileInputTrack" class="form-input" readonly disabled
+                        style="opacity: 0.75; cursor: not-allowed;">
+                    </div>
+                  </div>
+
+                  <div class="profile-form-footer">
+                    <button type="submit" class="btn btn-primary" id="btnSaveProfileInfo">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                      </svg>
+                      <span>💾 Lưu Thay Đổi Thông Tin</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Card 2: Đổi mật khẩu tài khoản -->
+              <div class="portal-card profile-form-card" style="margin-top: 20px;">
+                <div class="profile-card-header">
+                  <div class="card-icon-box yellow-bg">🔑</div>
+                  <div>
+                    <h3 class="card-title">Đổi Mật Khẩu Đăng Nhập</h3>
+                    <p class="card-subtitle">Cập nhật mật khẩu tài khoản và đồng bộ an toàn vào MongoDB Atlas</p>
+                  </div>
+                </div>
+
+                <form id="profileSecurityForm" class="profile-form">
+                  <div class="profile-form-grid profile-security-grid">
+                    <div class="form-group">
+                      <label for="profileOldPass" class="form-label">Mật khẩu hiện tại <span
+                          class="text-danger">*</span></label>
+                      <input type="password" id="profileOldPass" class="form-input" placeholder="Mật khẩu đang dùng"
+                        required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profileNewPass" class="form-label">Mật khẩu mới <span
+                          class="text-danger">*</span></label>
+                      <input type="password" id="profileNewPass" class="form-input" placeholder="Tối thiểu 4 ký tự"
+                        required minlength="4">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileConfirmPass" class="form-label">Xác nhận mật khẩu mới <span
+                          class="text-danger">*</span></label>
+                      <input type="password" id="profileConfirmPass" class="form-input"
+                        placeholder="Nhập lại mật khẩu mới" required minlength="4">
+                    </div>
+                  </div>
+
+                  <div class="profile-form-footer">
+                    <button type="submit" class="btn btn-secondary" id="btnSaveNewPassword">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      <span>🔑 Cập Nhật Mật Khẩu Mới</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Card 3: Quên mật khẩu & Gửi yêu cầu hỗ trợ Admin -->
+              <div class="portal-card profile-forgot-card" style="margin-top: 20px;">
+                <div class="forgot-card-inner">
+                  <div class="forgot-card-icon">❓</div>
+                  <div class="forgot-card-content">
+                    <h4 class="forgot-card-title">Bạn quên mật khẩu hoặc cần admin hỗ trợ?</h4>
+                    <p class="forgot-card-desc">
+                      Nếu không nhớ mật khẩu cũ hoặc cần cấp lại mật khẩu mới, nhấn nút bên dưới để gửi yêu cầu trực
+                      tiếp tới Admin. Ban quản trị sẽ nhận được thông báo ngay lập tức và cấp lại mật khẩu mặc định
+                      (1234) cho bạn.
+                    </p>
+                  </div>
+                  <div class="forgot-card-action">
+                    <button type="button" class="btn btn-danger" id="btnProfileSendForgotReq">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      <span>Quên mật khẩu? Gửi yêu cầu tới Admin</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: THỜI KHÓA BIỂU & LỊCH HỌC TRỰC TUYẾN THEO THÁNG (MS TEAMS) -->
+        <!-- ======================================================== -->
+        <section class="tab-view active" id="viewSchedule">
+
+          <!-- Schedule Header Box -->
+          <div class="schedule-header-box">
+            <div class="schedule-title-area">
+              <div class="schedule-breadcrumb">
+                <span>Cổng Sinh viên</span>
+                <span class="breadcrumb-sep">&rsaquo;</span>
+                <span class="breadcrumb-current">Thời khóa biểu trực tuyến</span>
+              </div>
+              <h2 class="schedule-page-title">Thời Khóa Biểu & Lịch Học Trực Tuyến</h2>
+              <p class="schedule-page-desc">
+                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program UIT. Lịch được tổng hợp
+                chung theo tháng, học viên bấm nút <strong>"Vào học"</strong> để tham gia lớp học trực tuyến.
+              </p>
+            </div>
+            <div class="schedule-header-actions">
+              <!-- Nút tải dữ liệu: Cho phép TẤT CẢ người dùng (Sinh viên, Khách, Admin) tải về -->
+              <button type="button" class="btn btn-outline" id="btnDownloadScheduleExcel"
+                title="Tải toàn bộ lịch học tháng dạng file Excel/CSV">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Tải Excel</span>
+              </button>
+              <button type="button" class="btn btn-outline" id="btnGoogleCalendar"
+                title="Đồng bộ lịch học tháng vào Google Calendar / Tải iCal (.ics)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>Google Calendar</span>
+              </button>
+              <button type="button" class="btn btn-outline" id="btnDownloadSyllabus"
+                title="Tải toàn bộ đề cương môn học và hướng dẫn buổi học">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                  <path d="m9 10 3 3 3-3" />
+                  <path d="M12 13V7" />
+                </svg>
+                <span>Tải đề cương</span>
+              </button>
+              <!-- Nút Thêm / Chỉnh sửa lịch: CHỈ ADMIN MỚI THẤY VÀ CÓ QUYỀN SỬ DỤNG -->
+              <button type="button" class="btn btn-primary admin-only-element" id="btnOpenScheduleEditor"
+                style="display: none;" title="Thêm hoặc chỉnh sửa buổi học trong thời khóa biểu (Chỉ Admin)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>+ Thêm buổi học mới</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bộ lọc Tháng & Năm học -->
+          <div class="schedule-filter-card">
+            <div class="filter-card-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              <span>Chọn Tháng & Chế độ xem</span>
+            </div>
+
+            <form class="filter-controls-form" id="scheduleFilterForm">
+              <div class="filter-control-item">
+                <label for="filterScheduleMonth" class="filter-control-label">Tháng học</label>
+                <div class="filter-select-box">
+                  <select id="filterScheduleMonth" class="filter-native-select">
+                    <option value="9">Tháng 9 / 2026</option>
+                    <option value="10" selected>Tháng 10 / 2026 (Hiện tại)</option>
+                    <option value="11">Tháng 11 / 2026</option>
+                    <option value="12">Tháng 12 / 2026</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="filter-control-item">
+                <label for="filterAcademicYear" class="filter-control-label">Năm học</label>
+                <div class="filter-select-box">
+                  <select id="filterAcademicYear" class="filter-native-select">
+                    <option value="2026-2027" selected>2026 - 2027</option>
+                    <option value="2025-2026">2025 - 2026</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="filter-control-item filter-btn-item">
+                <button type="submit" class="btn btn-apply-filter" id="btnApplyScheduleFilter">
+                  Áp dụng
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Dòng Chuyển chế độ xem & Chú thích -->
+          <div class="schedule-toolbar-row">
+            <div class="schedule-mode-toggle">
+              <button type="button" class="mode-toggle-btn active" id="btnModeAgenda" data-mode="agenda"
+                title="Hiển thị tất cả buổi học của tháng trong 1 lần">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                <span>Toàn bộ buổi học tháng</span>
+              </button>
+              <button type="button" class="mode-toggle-btn" id="btnModeCalendar" data-mode="calendar"
+                title="Xem theo dạng lưới lịch 31 ngày">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>Lưới lịch tháng</span>
+              </button>
+            </div>
+
+            <div class="schedule-legend-bar">
+              <span class="legend-title">Chú thích:</span>
+              <span class="legend-chip chip-online">💻 Học trực tuyến</span>
+              <span class="legend-chip chip-teams-link">🌐 Đã có link Teams</span>
+              <span class="legend-chip chip-teams-missing">⏳ Link gán sau</span>
+              <span class="legend-chip chip-live">🔴 Đang diễn ra</span>
+            </div>
+          </div>
+
+          <!-- Khung hiển thị Lịch học theo tháng chính (Tất cả buổi học trong 1 lần) -->
+          <div class="schedule-month-container" id="scheduleMonthContainer">
+            <!-- Nạp động qua JavaScript bằng ScheduleManager -->
+          </div>
+
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: BẢNG XẾP HẠNG SINH VIÊN (LEADERBOARD) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewLeaderboard">
+
+          <!-- Leaderboard Hero Header -->
+          <div class="leaderboard-header-box">
+            <div class="header-content">
+              <h2 class="leaderboard-title">Bảng Xếp Hạng Thực Tập Sinh</h2>
+              <p class="leaderboard-desc">
+                Theo dõi tiến độ, điểm đánh giá tổng hợp và bảng xếp hạng thành tích của các sinh viên trong Trainee
+                Program.
+              </p>
+            </div>
+            <div class="header-stats-summary" id="leaderboardSummaryStats">
+              <!-- Dynamically populated stats -->
+            </div>
+          </div>
+
+          <!-- Podium Top 3 Trainees -->
+          <div class="podium-section" id="podiumSection">
+            <!-- 2nd Place -->
+            <div class="podium-card rank-2" id="podiumRank2">
+              <div class="podium-medal">🥈 Hạng 2</div>
+              <div class="podium-avatar-wrap">
+                <img src="" alt="" class="podium-avatar-img" id="podium2Avatar">
+              </div>
+              <h4 class="podium-name" id="podium2Name">--</h4>
+              <div class="podium-meta" id="podium2Track">--</div>
+              <div class="podium-score-tag">
+                <span class="label">⭐ Sao tích lũy:</span>
+                <span class="val" id="podium2Score">--</span>
+              </div>
+            </div>
+
+            <!-- 1st Place -->
+            <div class="podium-card rank-1" id="podiumRank1">
+              <div class="podium-crown">👑</div>
+              <div class="podium-medal">🥇 Quán Quân</div>
+              <div class="podium-avatar-wrap">
+                <img src="" alt="" class="podium-avatar-img" id="podium1Avatar">
+              </div>
+              <h4 class="podium-name" id="podium1Name">--</h4>
+              <div class="podium-meta" id="podium1Track">--</div>
+              <div class="podium-score-tag">
+                <span class="label">⭐ Sao tích lũy:</span>
+                <span class="val highlight" id="podium1Score">--</span>
+              </div>
+            </div>
+
+            <!-- 3rd Place -->
+            <div class="podium-card rank-3" id="podiumRank3">
+              <div class="podium-medal">🥉 Hạng 3</div>
+              <div class="podium-avatar-wrap">
+                <img src="" alt="" class="podium-avatar-img" id="podium3Avatar">
+              </div>
+              <h4 class="podium-name" id="podium3Name">--</h4>
+              <div class="podium-meta" id="podium3Track">--</div>
+              <div class="podium-score-tag">
+                <span class="label">⭐ Sao tích lũy:</span>
+                <span class="val" id="podium3Score">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toolbar: Search, Filters, Sorting -->
+          <div class="table-toolbar">
+            <div class="search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="leaderboardSearchInput" placeholder="Tìm theo tên, MSSV, email...">
+            </div>
+
+            <div class="filter-group">
+              <button class="filter-pill active" data-track="all">Tất cả khoa</button>
+              <button class="filter-pill" data-track="Khoa học Máy tính">KH Máy tính</button>
+              <button class="filter-pill" data-track="Kỹ thuật Phần mềm">Kỹ thuật PM</button>
+              <button class="filter-pill" data-track="Hệ thống Thông tin">Hệ thống TT</button>
+              <button class="filter-pill" data-track="Mạng Máy tính">An toàn TT</button>
+            </div>
+
+            <div class="sort-box">
+              <select id="leaderboardSortSelect" class="sort-select" aria-label="Sắp xếp danh sách">
+                <option value="stars_desc">⭐ Số sao nhiều nhất (Mặc định)</option>
+                <option value="stars_asc">⭐ Số sao ít nhất</option>
+                <option value="attended_desc">📅 Số buổi tham gia nhiều nhất</option>
+                <option value="name_asc">🔤 Tên sinh viên (A - Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Full Table Card -->
+          <div class="portal-card table-card">
+            <div class="table-responsive">
+              <table class="leaderboard-table" id="leaderboardTable">
+                <thead>
+                  <tr>
+                    <th class="th-rank" style="width: 75px; text-align: center;">Hạng</th>
+                    <th class="th-student">Sinh viên / Trainee</th>
+                    <th class="th-track">Chuyên ngành / Lớp</th>
+                    <th class="th-stars" style="text-align: center;">Sao tích lũy ⭐</th>
+                    <th class="th-sessions" style="text-align: center;">Số buổi học 📅</th>
+                    <th class="th-absent" style="text-align: center;">Buổi vắng ⚠️</th>
+                    <th class="th-assignment" style="text-align: center;">Điểm bài tập 📝</th>
+                    <th class="th-status" style="text-align: center;">Trạng thái</th>
+                    <th class="th-actions" style="text-align: center;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboardTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: BẢNG ĐIỂM SAO BUỔI HỌC (STAR TRANSCRIPT PER SESSION) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewGrades">
+          <div class="grades-page-wrapper">
+
+            <!-- Breadcrumb & Header Bar -->
+            <div class="grades-header-bar">
+              <div class="grades-header-left">
+                <div class="grades-breadcrumb">
+                  <span>Cổng Sinh viên</span>
+                  <span class="sep">›</span>
+                  <span class="active">Bảng điểm sao buổi học</span>
+                </div>
+                <h1 class="grades-title">Bảng Điểm Sao Theo Từng Buổi Học</h1>
+                <p class="grades-subtitle">
+                  Theo dõi số sao cộng thêm (+⭐) của mỗi học viên sau từng buổi học thực tế trong chương trình Trainee Program UIT.
+                </p>
+              </div>
+              <div class="grades-header-right">
+                <button type="button" class="btn btn-outline btn-print-grades" id="btnPrintGrades"
+                  title="In hoặc xuất bảng điểm dạng PDF">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                  </svg>
+                  <span>In bảng điểm</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Top Highlights KPI Summary Cards -->
+            <div class="grades-kpi-grid">
+              <div class="grades-kpi-card">
+                <div class="grades-kpi-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">
+                  👥
+                </div>
+                <div class="grades-kpi-info">
+                  <span class="grades-kpi-label">Tổng số sinh viên</span>
+                  <strong class="grades-kpi-value" id="kpiTotalTrainees">10 học viên</strong>
+                  <span class="grades-kpi-sub">Đồng bộ từ MongoDB Atlas</span>
+                </div>
+              </div>
+
+              <div class="grades-kpi-card">
+                <div class="grades-kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                  📅
+                </div>
+                <div class="grades-kpi-info">
+                  <span class="grades-kpi-label">Số buổi học đã diễn ra</span>
+                  <strong class="grades-kpi-value" id="kpiTotalSessions">4 buổi học</strong>
+                  <span class="grades-kpi-sub" id="kpiLatestSessionDate">Buổi gần nhất: 27/10/2026</span>
+                </div>
+              </div>
+
+              <div class="grades-kpi-card">
+                <div class="grades-kpi-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+                  ⭐
+                </div>
+                <div class="grades-kpi-info">
+                  <span class="grades-kpi-label">Tổng sao đã cấp phát</span>
+                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned">326 ⭐</strong>
+                  <span class="grades-kpi-sub">Toàn bộ các buổi đào tạo</span>
+                </div>
+              </div>
+
+              <div class="grades-kpi-card">
+                <div class="grades-kpi-icon-wrap" style="background: rgba(168, 85, 247, 0.12); color: #a855f7;">
+                  🏆
+                </div>
+                <div class="grades-kpi-info">
+                  <span class="grades-kpi-label">Sinh viên dẫn đầu</span>
+                  <strong class="grades-kpi-value" id="kpiTopStudent">Anh Khoi (50 ⭐)</strong>
+                  <span class="grades-kpi-sub">🥇 Quán quân Trainee</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- View Mode Controls & Filter Bar -->
+            <div class="grades-control-card">
+              <div class="grades-control-row">
+                <!-- View Mode Toggle Buttons -->
+                <div class="grades-view-mode-group">
+                  <button type="button" class="btn-mode-toggle active" id="btnModeSessionBoxes">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect>
+                      <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span>Xem Từng Buổi Học (Ô Box)</span>
+                  </button>
+                  <button type="button" class="btn-mode-toggle" id="btnModeMatrix">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 3h18v18H3z"></path>
+                      <path d="M3 9h18"></path>
+                      <path d="M3 15h18"></path>
+                      <path d="M9 3v18"></path>
+                      <path d="M15 3v18"></path>
+                    </svg>
+                    <span>Bảng Ma Trận Tổng Hợp</span>
+                  </button>
+                </div>
+
+                <!-- Search & Track Filters -->
+                <div class="grades-filter-tools">
+                  <div class="grades-search-box">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="inputSearchGradesTrainee" placeholder="Tìm tên sinh viên hoặc MSSV...">
+                  </div>
+
+                  <div class="grades-track-select-box">
+                    <select id="selectGradesTrack" class="form-input" style="padding: 6px 12px; font-size: 0.82rem; height: 34px; border-radius: 8px;">
+                      <option value="all">Tất cả khoa / lớp</option>
+                      <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
+                      <option value="Khoa Hệ thống Thông tin">Khoa Hệ thống Thông tin</option>
+                      <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
+                      <option value="Khoa Mạng Máy tính & Truyền thông">Khoa Mạng Máy tính & TT</option>
+                    </select>
+                  </div>
+
+                  <span class="badge badge-primary" id="gradesCountBadge">10 học viên</span>
+                </div>
+              </div>
+
+              <!-- Quick Session Filter Pills -->
+              <div class="grades-session-pills-bar" id="gradesSessionPillsBar">
+                <span class="pills-bar-label">Buổi học:</span>
+                <div class="pills-scroll-list" id="gradesSessionPillsList">
+                  <button type="button" class="session-pill-btn active" data-session="all">Tất cả buổi học</button>
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 1. VIEW PRIMARY: SESSION BOXES CONTAINER (MỖI BUỔI CHO 1 Ô BOX GỒM TẤT CẢ SINH VIÊN VÀ SỐ SAO CỘNG) -->
+            <div class="grades-session-boxes-view" id="gradesSessionBoxesView">
+              <div class="session-boxes-grid" id="gradesSessionBoxesContainer">
+                <!-- Dynamically populated by JS: Each session as 1 dedicated box/card -->
+              </div>
+            </div>
+
+            <!-- 2. VIEW SECONDARY: MATRIX TABLE (TỔNG HỢP NHIỀU CỘT) -->
+            <div class="grades-card grades-matrix-wrap" id="gradesMatrixWrap" style="display: none;">
+              <div class="grades-card-header grades-card-header-flex">
+                <div class="grades-card-icon-title">
+                  <span class="grades-pane-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                  </span>
+                  <div>
+                    <h3 class="grades-card-title">Bảng Ma Trận Sao Qua Từng Buổi Học</h3>
+                    <p class="grades-card-subtitle">
+                      Mỗi cột thể hiện số sao <strong>(+⭐)</strong> được cộng thêm sau buổi học đó. Nhấp vào số sao để xem chi tiết nhận xét của Trainer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Matrix Table Responsive -->
+              <div class="grades-table-responsive">
+                <table class="grades-matrix-table" id="gradesSessionMatrixTable">
+                  <thead id="gradesMatrixThead">
+                    <!-- Dynamic Headers generated by JS -->
+                  </thead>
+                  <tbody id="gradesMatrixTbody">
+                    <!-- Dynamic Rows populated by JS -->
+                  </tbody>
+                  <tfoot id="gradesMatrixTfoot">
+                    <!-- Class Totals / Averages row -->
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            <!-- Session Reference Section: Thông tin các buổi học đã diễn ra -->
+            <div class="grades-session-reference-section">
+              <div class="section-title-wrap">
+                <h4 class="session-reference-title">📚 Danh Sách Nội Dung Các Buổi Học Đã Đào Tạo</h4>
+                <span class="session-reference-badge">Trainer phụ trách: <strong>Võ Thị Xuân Quỳnh</strong> (quynhvtx@uit.edu.vn)</span>
+              </div>
+              <div class="session-reference-grid" id="sessionReferenceGrid">
+                <!-- Populated dynamically by JS -->
+              </div>
+            </div>
+
+          </div>
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: BÀI TẬP RÈN LUYỆN (DUOLINGO LEARNING PATH STYLE) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewAssignments">
+          <div class="duo-page-container">
+
+            <!-- Main Layout Grid -->
+            <div class="duo-main-grid">
+
+              <!-- Left Column: Unit Banner + Learning Path -->
+              <div class="duo-path-column">
+
+                <!-- Unit Banner (Green) -->
+                <div class="duo-unit-banner">
+                  <div class="duo-unit-left">
+                    <div class="duo-unit-tag">Lộ Trình 11 Bài Tập Thực Hành</div>
+                    <div class="duo-unit-desc">Hệ thống 11 bài tập rèn luyện chuyên sâu Trainee Program UIT</div>
+                  </div>
+                  <button type="button" class="duo-guidebook-btn" id="duoGuidebookBtn"
+                    title="Xem sổ tay hướng dẫn bài tập">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                      <line x1="8" y1="6" x2="16" y2="6" />
+                      <line x1="8" y1="10" x2="16" y2="10" />
+                      <line x1="8" y1="14" x2="14" y2="14" />
+                    </svg>
+                    <span>GUIDEBOOK</span>
+                  </button>
+                </div>
+
+                <!-- Learning Path Container -->
+                <div class="duo-path-wrapper">
+                  <!-- Winding SVG Path in background -->
+                  <svg class="duo-path-svg-bg" viewBox="0 0 320 1200" preserveAspectRatio="none">
+                    <path class="duo-path-curve"
+                      d="M 160 35 C 260 160, 260 350, 160 475 C 60 600, 60 790, 160 915 C 260 1010, 255 1070, 232 1115" />
+                  </svg>
+
+                  <!-- Mascot 1: Duo reading book with glasses on a stack of books (left side) -->
+                  <div class="duo-mascot duo-mascot-left">
+                    <svg viewBox="0 0 120 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Stack of books -->
+                      <rect x="15" y="105" width="90" height="14" rx="4" fill="#fbbf24" stroke="#d97706"
+                        stroke-width="2" />
+                      <rect x="25" y="93" width="75" height="13" rx="3" fill="#a855f7" stroke="#7e22ce"
+                        stroke-width="2" />
+                      <rect x="20" y="82" width="80" height="12" rx="3" fill="#3b82f6" stroke="#1d4ed8"
+                        stroke-width="2" />
+                      <!-- Duo Body -->
+                      <ellipse cx="60" cy="50" rx="36" ry="38" fill="#58cc02" />
+                      <ellipse cx="60" cy="56" rx="26" ry="26" fill="#78e000" />
+                      <!-- Cute Ears/Tufts -->
+                      <polygon points="32,20 44,12 40,28" fill="#46a302" />
+                      <polygon points="88,20 76,12 80,28" fill="#46a302" />
+                      <!-- Big Eyes with Glasses -->
+                      <circle cx="45" cy="42" r="14" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                      <circle cx="75" cy="42" r="14" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                      <line x1="59" y1="42" x2="61" y2="42" stroke="#1e293b" stroke-width="3" />
+                      <!-- Eye Pupils looking down at book -->
+                      <circle cx="47" cy="46" r="6" fill="#1e293b" />
+                      <circle cx="73" cy="46" r="6" fill="#1e293b" />
+                      <circle cx="48" cy="44" r="2" fill="#ffffff" />
+                      <circle cx="74" cy="44" r="2" fill="#ffffff" />
+                      <!-- Beak -->
+                      <polygon points="60,48 53,58 67,58" fill="#ff9600" />
+                      <!-- Wings holding book -->
+                      <ellipse cx="32" cy="62" rx="8" ry="14" fill="#46a302" transform="rotate(25 32 62)" />
+                      <ellipse cx="88" cy="62" rx="8" ry="14" fill="#46a302" transform="rotate(-25 88 62)" />
+                      <!-- Open Book in hands -->
+                      <polygon points="40,78 60,72 80,78 78,64 60,60 42,64" fill="#60a5fa" stroke="#2563eb"
+                        stroke-width="2" />
+                      <path d="M 44 68 Q 52 65 58 65 M 62 65 Q 68 65 76 68" stroke="#ffffff" stroke-width="1.5" />
+                    </svg>
+                  </div>
+
+                  <!-- Mascot 2: Cheerful Duo holding a shiny blue gem (right side) -->
+                  <div class="duo-mascot duo-mascot-right">
+                    <svg viewBox="0 0 110 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Feet -->
+                      <ellipse cx="44" cy="110" rx="9" ry="5" fill="#ff9600" />
+                      <ellipse cx="66" cy="110" rx="9" ry="5" fill="#ff9600" />
+                      <!-- Body -->
+                      <ellipse cx="55" cy="64" rx="35" ry="38" fill="#58cc02" />
+                      <ellipse cx="55" cy="72" rx="25" ry="24" fill="#78e000" />
+                      <!-- Wing left waving -->
+                      <ellipse cx="25" cy="60" rx="9" ry="16" fill="#46a302" transform="rotate(-35 25 60)" />
+                      <!-- Wing right holding gem up -->
+                      <ellipse cx="82" cy="52" rx="9" ry="16" fill="#46a302" transform="rotate(45 82 52)" />
+                      <!-- Shiny Blue Gem/Diamond -->
+                      <polygon points="86,30 98,22 104,36 94,48 80,38" fill="#38bdf8" stroke="#0284c7"
+                        stroke-width="2" />
+                      <polygon points="86,30 98,22 94,48" fill="#7dd3fc" />
+                      <circle cx="94" cy="32" r="3" fill="#ffffff" opacity="0.8" />
+                      <!-- Eyes -->
+                      <circle cx="43" cy="54" r="12" fill="#ffffff" />
+                      <circle cx="67" cy="54" r="12" fill="#ffffff" />
+                      <!-- Pupils -->
+                      <circle cx="45" cy="54" r="6" fill="#1e293b" />
+                      <circle cx="65" cy="54" r="6" fill="#1e293b" />
+                      <circle cx="47" cy="52" r="2" fill="#ffffff" />
+                      <circle cx="67" cy="52" r="2" fill="#ffffff" />
+                      <!-- Cheerful Beak -->
+                      <polygon points="55,58 48,68 62,68" fill="#ff9600" />
+                      <!-- Blush -->
+                      <circle cx="34" cy="64" r="5" fill="#f87171" opacity="0.4" />
+                      <circle cx="76" cy="64" r="5" fill="#f87171" opacity="0.4" />
+                    </svg>
+                  </div>
+
+                  <!-- Path Nodes container (Generated dynamically by duolingo.js) -->
+                  <div id="duoPathContainer"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+
+                  <!-- Floating Practice Dumbbell Button -->
+                  <button type="button" class="duo-practice-btn" id="duoPracticeBtn"
+                    title="Luyện tập nhanh để phục hồi năng lượng">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m6.5 6.5 11 11" />
+                      <path d="m21 21-1-1" />
+                      <path d="m3 3 1 1" />
+                      <path d="m18 22 4-4" />
+                      <path d="m2 6 4-4" />
+                      <path d="m3 10 7-7" />
+                      <path d="m14 21 7-7" />
+                    </svg>
+                  </button>
+
+                </div>
+
+              </div>
+
+              <!-- Right Column: Sidebar Widgets -->
+              <div class="duo-sidebar">
+
+                <!-- Widget 1: XP Progress & Weekly Activity -->
+                <div class="duo-card">
+                  <div class="duo-card-header">
+                    <div class="duo-card-title">XP Progress</div>
+                    <a href="javascript:void(0)" class="duo-card-action"
+                      onclick="if(window.showToast) window.showToast('Mục tiêu hàng ngày: 50 XP/ngày', 'info')">EDIT
+                      GOAL</a>
+                  </div>
+
+                  <div class="duo-goal-row">
+                    <div class="duo-chest-icon-wrap">
+                      <span>💎</span>
+                    </div>
+                    <div class="duo-goal-info">
+                      <div class="duo-goal-label-row">
+                        <span>Daily Goal</span>
+                        <span style="font-weight: 800; color: #ff9600;">58 / 50 XP</span>
+                      </div>
+                      <div class="duo-progress-bar-bg">
+                        <div class="duo-progress-bar-fill" style="width: 100%;"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- SVG Weekly Chart (Su, M, Tu, W, Th, F, Sa) -->
+                  <div class="duo-chart-container">
+                    <svg class="duo-chart-svg" id="duoChartSvg" viewBox="0 0 320 140">
+                      <defs>
+                        <linearGradient id="duoChartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stop-color="#ffc800" stop-opacity="0.4" />
+                          <stop offset="100%" stop-color="#ffc800" stop-opacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      <!-- Horizontal grid lines & Y labels -->
+                      <line class="duo-chart-axis-line" x1="32" y1="18" x2="310" y2="18" />
+                      <text class="duo-chart-axis-text" x="4" y="22">960</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="45" x2="310" y2="45" />
+                      <text class="duo-chart-axis-text" x="4" y="49">720</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="72" x2="310" y2="72" />
+                      <text class="duo-chart-axis-text" x="4" y="76">480</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="99" x2="310" y2="99" />
+                      <text class="duo-chart-axis-text" x="4" y="103">240</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="118" x2="310" y2="118" />
+                      <text class="duo-chart-axis-text" x="18" y="122">0</text>
+
+                      <!-- Area & Trend Line -->
+                      <path class="duo-chart-area-fill" d="" />
+                      <path class="duo-chart-line" d="" />
+                      <g class="duo-chart-points-group"></g>
+
+                      <!-- Days of the week -->
+                      <text class="duo-chart-axis-text" x="38" y="136" text-anchor="middle">Su</text>
+                      <text class="duo-chart-axis-text" x="84" y="136" text-anchor="middle">M</text>
+                      <text class="duo-chart-axis-text" x="130" y="136" text-anchor="middle">Tu</text>
+                      <text class="duo-chart-axis-text" x="176" y="136" text-anchor="middle">W</text>
+                      <text class="duo-chart-axis-text" x="222" y="136" text-anchor="middle">Th</text>
+                      <text class="duo-chart-axis-text" x="268" y="136" text-anchor="middle">F</text>
+                      <text class="duo-chart-axis-text" x="306" y="136" text-anchor="middle">Sa</text>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Widget 2: Next Achievement -->
+                <div class="duo-card">
+                  <div class="duo-card-header">
+                    <div class="duo-card-title">Next Achievement</div>
+                    <a href="javascript:void(0)" class="duo-card-action"
+                      onclick="if(window.showToast) window.showToast('Bạn đã đạt 14/20 huy hiệu trong chương trình!', 'info')">VIEW
+                      ALL</a>
+                  </div>
+
+                  <div class="duo-achievement-row">
+                    <div class="duo-achievement-badge-box">
+                      <span class="duo-achievement-icon">📜</span>
+                      <span class="duo-achievement-level">LEVEL 10</span>
+                    </div>
+
+                    <div class="duo-achievement-details">
+                      <div class="duo-achievement-text">Hoàn thành 2000 dòng code &amp; bài tập thực hành Trainee</div>
+                      <div class="duo-progress-bar-bg" style="height: 10px;">
+                        <div class="duo-progress-bar-fill" style="width: 82%;"></div>
+                      </div>
+                      <div
+                        style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-align: right; margin-top: 5px;">
+                        1949 / 2000
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Widget 3: Daily Quests / Nhiệm vụ ngày -->
+                <div class="duo-card">
+                  <div class="duo-card-header">
+                    <div class="duo-card-title">Nhiệm Vụ Hôm Nay</div>
+                    <span style="font-size: 13px; font-weight: 700; color: #ff9600;">⚡ 2/3 XONG</span>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-size: 20px;">🎯</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13.5px; font-weight: 700;">Nộp 1 bài tập Trainee</div>
+                        <div class="duo-progress-bar-bg" style="height: 8px; margin-top: 4px;">
+                          <div class="duo-progress-bar-fill" style="width: 100%; background: #58cc02;"></div>
+                        </div>
+                      </div>
+                      <span style="font-size: 12px; font-weight: 800; color: #58cc02;">+20 XP</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-size: 20px;">🔥</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13.5px; font-weight: 700;">Luyện tập liên tục 7 ngày</div>
+                        <div class="duo-progress-bar-bg" style="height: 8px; margin-top: 4px;">
+                          <div class="duo-progress-bar-fill" style="width: 100%; background: #ff9600;"></div>
+                        </div>
+                      </div>
+                      <span style="font-size: 12px; font-weight: 800; color: #ff9600;">+30 💎</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-size: 20px;">⭐</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13.5px; font-weight: 700;">Đạt điểm tối đa 100/100</div>
+                        <div class="duo-progress-bar-bg" style="height: 8px; margin-top: 4px;">
+                          <div class="duo-progress-bar-fill" style="width: 40%; background: #3b82f6;"></div>
+                        </div>
+                      </div>
+                      <span style="font-size: 12px; font-weight: 800; color: #64748b;">+50 XP</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: XIN NGHỈ HỌC TRỰC TUYẾN (LEAVE REQUEST FORM) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewLeave">
+          <div class="leave-page-container">
+
+            <!-- Banner Header -->
+            <div class="leave-header-card">
+              <div class="leave-header-content">
+                <div class="leave-badge-pill">
+                  <span class="leave-badge-icon">📋</span>
+                  <span>HỌC VỤ &amp; RÈN LUYỆN</span>
+                  <span class="badge-dot">·</span>
+                  <span>TRAINEE PROGRAM 2026</span>
+                </div>
+                <h2 class="leave-main-title">Đơn Xin Nghỉ Học Trực Tuyến</h2>
+                <p class="leave-subtext">
+                  Dành cho sinh viên &amp; thực tập sinh trong chương trình Trainee Program UIT. Vui lòng gửi đơn trước buổi học ít nhất 2 tiếng để Giảng viên/Mentor và Ban Điều phối nắm thông tin điểm danh.
+                </p>
+              </div>
+              <div class="leave-header-stat">
+                <div class="leave-stat-box">
+                  <span class="leave-stat-num" id="leaveStatAllowedCount">20%</span>
+                  <span class="leave-stat-lbl">Giới hạn vắng tối đa</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quy Định Alert Card -->
+            <div class="leave-notice-card">
+              <div class="leave-notice-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <div class="leave-notice-body">
+                <h4 class="leave-notice-title">Lưu ý quan trọng về quy chế vắng học</h4>
+                <ul class="leave-notice-list">
+                  <li>Buổi nghỉ có phép gửi qua đơn này sẽ được tính vào <strong>"Vắng có phép"</strong> và <strong>không bị trừ sao kỷ luật</strong> trên Bảng xếp hạng.</li>
+                  <li>Sau khi xin nghỉ, sinh viên có trách nhiệm chủ động <strong>xem lại Video bài giảng (Recording trên Teams)</strong> và hoàn thành bài tập nộp bù đúng hạn.</li>
+                  <li>Nếu có minh chứng (giấy báo thi, lịch thi chính thức UIT, giấy khám bệnh...), bạn có thể đính kèm thông tin ở mục lý do.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Success Alert Banner (Initially Hidden) -->
+            <div class="leave-success-banner" id="leaveSuccessAlert" style="display: none;">
+              <div class="leave-success-icon-wrap">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <div class="leave-success-content">
+                <div class="leave-success-badge">✓ ĐÃ GỬI THÀNH CÔNG</div>
+                <h3 class="leave-success-title">Đơn xin nghỉ học đã được ghi nhận vào hệ thống!</h3>
+                <p class="leave-success-desc" id="leaveSuccessDesc">
+                  Thông tin đơn của bạn đã được chuyển tới Giảng viên hướng dẫn và Ban Điều phối UIT Trainee Program.
+                </p>
+                <div class="leave-success-meta" id="leaveSuccessMeta">
+                  <!-- Injected via JS -->
+                </div>
+              </div>
+              <button type="button" class="leave-success-close-btn" id="btnDismissLeaveSuccess" title="Đóng thông báo">&times;</button>
+            </div>
+
+            <!-- Main Form Card -->
+            <div class="leave-form-card">
+              <div class="leave-form-header">
+                <div class="leave-form-title-wrap">
+                  <div class="leave-form-icon">📝</div>
+                  <div>
+                    <h3 class="leave-form-title">Thông Tin Đơn Xin Nghỉ</h3>
+                    <p class="leave-form-subtitle">Điền đầy đủ thông tin bên dưới và bấm nút "Gửi đơn xin nghỉ"</p>
+                  </div>
+                </div>
+                <span class="leave-required-note"><span class="text-danger">*</span> Các trường bắt buộc</span>
+              </div>
+
+              <form id="leaveApplicationForm" class="leave-form-body" novalidate>
+
+                <!-- Row 1: MSSV & Họ tên (2 Columns) -->
+                <div class="leave-form-grid-2">
+                  <div class="form-group">
+                    <label for="leaveInputMssv" class="form-label">
+                      <span>1. Mã số sinh viên (MSSV)</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      <input type="text" id="leaveInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
+                    </div>
+                    <span class="form-help-text">Mã số sinh viên chính thức tại UIT.</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="leaveInputFullName" class="form-label">
+                      <span>2. Họ và tên sinh viên</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                      <input type="text" id="leaveInputFullName" class="form-input" placeholder="Ví dụ: Khôi Trương Trần Anh" required>
+                    </div>
+                    <span class="form-help-text">Họ tên đầy đủ theo danh sách lớp Trainee.</span>
+                  </div>
+                </div>
+
+                <!-- Row 2: Buổi học xin nghỉ (Dropdown from schedule database) -->
+                <div class="form-group" style="margin-top: 14px;">
+                  <label for="leaveSelectSchedule" class="form-label">
+                    <span>3. Buổi học xin nghỉ (Lựa chọn từ cơ sở dữ liệu Lịch đào tạo)</span>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-with-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <select id="leaveSelectSchedule" class="form-input" required>
+                      <option value="">-- Đang nạp danh sách lịch học từ cơ sở dữ liệu --</option>
+                    </select>
+                  </div>
+                  <span class="form-help-text">Dữ liệu được đồng bộ trực tiếp từ Lịch đào tạo trực tuyến của chương trình.</span>
+
+                  <!-- Preview Selected Session Box -->
+                  <div class="leave-schedule-preview" id="leaveSchedulePreview" style="display: none;">
+                    <div class="schedule-preview-left">
+                      <div class="preview-badge" id="previewSessionCode">TP-M10.01</div>
+                      <div class="preview-title" id="previewSessionTitle">Tên buổi học</div>
+                    </div>
+                    <div class="schedule-preview-details">
+                      <div class="preview-item">
+                        <span class="preview-lbl">📅 Thời gian:</span>
+                        <span class="preview-val" id="previewSessionTime">Thứ 3, 06/10/2026 · 19:30 - 21:30</span>
+                      </div>
+                      <div class="preview-item">
+                        <span class="preview-lbl">👨‍🏫 Giảng viên:</span>
+                        <span class="preview-val" id="previewSessionInstructor">TS. Dương Việt Hằng</span>
+                      </div>
+                      <div class="preview-item">
+                        <span class="preview-lbl">💻 Hình thức:</span>
+                        <span class="preview-val">Microsoft Teams Trực Tuyến</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 3: Lý do xin nghỉ (Ô bự hơn và nằm ở dưới riêng) -->
+                <div class="form-group" style="margin-top: 20px;">
+                  <label for="leaveInputReason" class="form-label">
+                    <span>4. Lý do xin nghỉ</span>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <textarea id="leaveInputReason" class="form-input leave-textarea" rows="6"
+                    placeholder="Vui lòng nêu chi tiết và rõ ràng lý do xin phép vắng mặt (Ví dụ: Trùng lịch thi cuối kỳ môn Kiến trúc Máy tính tại trường UIT từ 19h00 đến 21h00, hoặc lý do sức khỏe bị sốt cao cần nghỉ ngơi, có việc đột xuất gia đình...). Nhập ít nhất 10 ký tự."
+                    required></textarea>
+
+                  <!-- Gợi ý lý do nhanh (Quick Chips) -->
+                  <div class="leave-quick-chips">
+                    <span class="chips-label">Gợi ý lý do nhanh:</span>
+                    <button type="button" class="leave-chip" data-reason="Trùng lịch thi / Kiểm tra học phần tại trường Đại học Công nghệ Thông tin (UIT).">
+                      📝 Trùng lịch thi UIT
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Lý do sức khỏe (bị ốm/sốt), cần nghỉ ngơi phục hồi và sẽ xem lại video sau.">
+                      🏥 Lý do sức khỏe / Ốm
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Bận công việc cơ quan / Công tác đột xuất có giấy xác nhận.">
+                      💼 Bận công việc đột xuất
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Khu vực xảy ra sự cố mất điện / mất kết nối internet không thể vào MS Teams.">
+                      ⚡ Sự cố mạng / Mất điện
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Có công việc gia đình đột xuất cần giải quyết.">
+                      🚗 Việc gia đình đột xuất
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Row 4: Cam kết Checkbox -->
+                <div class="leave-commit-row">
+                  <label class="custom-checkbox-label">
+                    <input type="checkbox" id="leaveCheckCommit" checked required>
+                    <span class="checkbox-text">
+                      Tôi cam kết thông tin cung cấp là hoàn toàn trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
+                    </span>
+                  </label>
+                </div>
+
+                <!-- Form Actions: Nút Gửi & Nhập lại -->
+                <div class="leave-actions-row">
+                  <button type="button" class="btn btn-secondary" id="btnResetLeaveForm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                      <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Nhập lại</span>
+                  </button>
+
+                  <button type="submit" class="btn btn-primary leave-submit-btn" id="btnSubmitLeave">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span>Gửi Đơn Xin Nghỉ</span>
+                  </button>
+                </div>
+
+              </form>
+            </div>
+
+            <!-- Recent History Section -->
+            <div class="leave-history-card">
+              <div class="leave-history-header">
+                <div class="leave-history-title-wrap">
+                  <span class="leave-history-icon">📜</span>
+                  <h3 class="leave-history-title">Lịch Sử Đơn Xin Nghỉ Của Bạn</h3>
+                </div>
+                <span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
+              </div>
+              <div class="table-responsive">
+                <table class="leave-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">STT</th>
+                      <th>MSSV</th>
+                      <th>Họ và tên</th>
+                      <th>Buổi học xin nghỉ</th>
+                      <th>Lý do</th>
+                      <th>Thời gian gửi</th>
+                      <th>Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody id="leaveHistoryTableBody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB: DIỄN ĐÀN ĐẶT CÂU HỎI & BẢNG GIẢI ĐÁP (Q&A FORUM) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewQuestions">
+          <div class="question-page-container">
+
+            <!-- Banner Header -->
+            <div class="question-header-card">
+              <div class="question-header-content">
+                <div class="question-badge-pill">
+                  <span class="question-badge-icon">💬</span>
+                  <span>HỎI ĐÁP &amp; HỖ TRỢ</span>
+                  <span class="badge-dot">·</span>
+                  <span>TRAINEE PROGRAM UIT 2026</span>
+                </div>
+                <h2 class="question-main-title">Đặt Câu Hỏi &amp; Bảng Giải Đáp Học Vụ - Kỹ Thuật</h2>
+                <p class="question-subtext">
+                  Kênh tiếp nhận và giải đáp trực tiếp từ Giảng viên, Mentor và Ban Điều phối UIT. Bạn chỉ cần cung cấp MSSV (hoặc lựa chọn gửi ẩn danh 🎭) và nội dung thắc mắc để được hỗ trợ giải quyết kịp thời.
+                </p>
+              </div>
+              <div class="question-header-stats">
+                <div class="question-stat-box">
+                  <span class="question-stat-num" id="statAnsweredRate">96%</span>
+                  <span class="question-stat-lbl">Tỉ lệ đã giải đáp</span>
+                </div>
+                <div class="question-stat-box">
+                  <span class="question-stat-num" id="statAvgResponse">&lt; 2 giờ</span>
+                  <span class="question-stat-lbl">Phản hồi trung bình</span>
+                </div>
+                <div class="question-stat-box">
+                  <span class="question-stat-num" id="statTotalQuestions">4</span>
+                  <span class="question-stat-lbl">Tổng câu hỏi</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quy Định & Chế Độ Ẩn Danh Card -->
+            <div class="question-notice-card">
+              <div class="question-notice-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              <div class="question-notice-body">
+                <h4 class="question-notice-title">Quy tắc đặt câu hỏi &amp; Chế độ Ẩn danh 🎭</h4>
+                <ul class="question-notice-list">
+                  <li><strong>Tùy chọn ẩn danh:</strong> Tích chọn <em>"Gửi ẩn danh"</em> nếu bạn muốn bảo mật danh tính. Trên bảng câu hỏi công khai, thông tin người gửi sẽ hiển thị là <strong>"Sinh viên ẩn danh"</strong>, MSSV của bạn không bị lộ.</li>
+                  <li><strong>Mô tả chi tiết:</strong> Hãy ghi rõ chủ đề (Kỹ thuật Node.js/MongoDB, Bài tập thực hành, Lịch học...), đính kèm thông báo lỗi cụ thể để Mentor hỗ trợ chính xác.</li>
+                  <li><strong>Tra cứu nhanh:</strong> Khuyến khích tìm kiếm trên <strong>Bảng câu hỏi</strong> bên dưới trước khi đặt câu hỏi mới xem vấn đề đã được giải đáp hay chưa.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Success Alert Banner (Initially Hidden) -->
+            <div class="question-success-banner" id="questionSuccessAlert" style="display: none;">
+              <div class="question-success-icon-wrap">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <div class="question-success-content">
+                <div class="question-success-badge">✓ ĐÃ GỬI CÂU HỎI THÀNH CÔNG</div>
+                <h3 class="question-success-title">Thắc mắc của bạn đã được ghi nhận vào Bảng câu hỏi!</h3>
+                <p class="question-success-desc" id="questionSuccessDesc">
+                  Giảng viên và Mentor phụ trách sẽ xem xét và phản hồi trong thời gian sớm nhất.
+                </p>
+                <div class="question-success-meta" id="questionSuccessMeta">
+                  <!-- Injected via JS -->
+                </div>
+              </div>
+              <button type="button" class="question-success-close-btn" id="btnDismissQuestionSuccess" title="Đóng thông báo">&times;</button>
+            </div>
+
+            <!-- Main Form Card: ĐẶT CÂU HỎI -->
+            <div class="question-form-card">
+              <div class="question-form-header">
+                <div class="question-form-title-wrap">
+                  <div class="question-form-icon">📝</div>
+                  <div>
+                    <h3 class="question-form-title">Biểu Mẫu Đặt Câu Hỏi &amp; Thắc Mắc</h3>
+                    <p class="question-form-subtitle">Điền MSSV (hoặc chọn ẩn danh) và nhập câu hỏi của bạn vào bên dưới</p>
+                  </div>
+                </div>
+                <span class="question-required-note"><span class="text-danger">*</span> Các trường bắt buộc</span>
+              </div>
+
+              <form id="questionSubmitForm" class="question-form-body" novalidate>
+
+                <!-- Row 1: MSSV & Lựa chọn Ẩn danh -->
+                <div class="question-form-grid-2">
+                  <div class="form-group">
+                    <label for="questionInputMssv" class="form-label">
+                      <span>1. Mã số sinh viên (MSSV)</span>
+                      <span class="text-danger" id="questionMssvRequiredStar">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      <input type="text" id="questionInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
+                    </div>
+                    <span class="form-help-text" id="questionMssvHelpText">Mã số sinh viên chính thức tại UIT của bạn.</span>
+                  </div>
+
+                  <!-- Tùy chọn Ẩn Danh (Interactive Toggle Card) -->
+                  <div class="form-group">
+                    <label class="form-label">
+                      <span>2. Tùy chọn danh tính trên Bảng câu hỏi</span>
+                    </label>
+                    <div class="anon-toggle-card" id="anonToggleBox">
+                      <div class="anon-toggle-left">
+                        <div class="anon-toggle-icon" id="anonToggleIcon">🌐</div>
+                        <div class="anon-toggle-info">
+                          <div class="anon-toggle-title" id="anonToggleTitle">Công khai MSSV</div>
+                          <div class="anon-toggle-desc" id="anonToggleDesc">MSSV sẽ hiển thị cùng câu hỏi để Giảng viên dễ nhận diện.</div>
+                        </div>
+                      </div>
+                      <label class="anon-switch" title="Bật/Tắt chế độ ẩn danh">
+                        <input type="checkbox" id="questionCheckAnonymous">
+                        <span class="anon-slider"></span>
+                      </label>
+                    </div>
+                    <span class="form-help-text">Gạt nút sang phải để <strong>Gửi ẩn danh 🎭</strong>.</span>
+                  </div>
+                </div>
+
+                <!-- Row 2: Chủ đề & Tiêu đề -->
+                <div class="question-form-grid-2" style="margin-top: 14px;">
+                  <div class="form-group">
+                    <label for="questionSelectCategory" class="form-label">
+                      <span>3. Lĩnh vực / Chủ đề thắc mắc</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                      </svg>
+                      <select id="questionSelectCategory" class="form-input" required>
+                        <option value="Kỹ thuật & Code">💻 Kỹ thuật &amp; Lập trình (Node.js, Express, MongoDB, Git)</option>
+                        <option value="Bài tập & Đồ án">📚 Bài tập rèn luyện &amp; Deadline nộp bài</option>
+                        <option value="Lịch học & Điểm danh">📅 Lịch học trực tuyến &amp; Điểm danh MS Teams</option>
+                        <option value="Chương trình Trainee">⭐ Sao rèn luyện &amp; Bảng xếp hạng Trainee</option>
+                        <option value="Học vụ & Khác">❓ Học vụ &amp; Thắc mắc chung khác</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="questionInputTitle" class="form-label">
+                      <span>4. Tiêu đề câu hỏi (Tóm tắt ngắn gọn)</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                      </svg>
+                      <input type="text" id="questionInputTitle" class="form-input" placeholder="Ví dụ: Lỗi MongooseServerSelectionError khi kết nối MongoDB Atlas" required>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 3: Nội dung chi tiết câu hỏi (Bảng câu hỏi) -->
+                <div class="form-group" style="margin-top: 14px;">
+                  <label for="questionInputContent" class="form-label">
+                    <span>5. Nội dung chi tiết câu hỏi</span>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <textarea id="questionInputContent" class="form-input question-textarea" rows="5"
+                    placeholder="Vui lòng mô tả chi tiết thắc mắc, bối cảnh bài học, mã lỗi, dòng code hoặc câu hỏi cần giải đáp... Nhập ít nhất 10 ký tự."
+                    required></textarea>
+
+                  <!-- Gợi ý câu hỏi nhanh (Quick Prompts) -->
+                  <div class="question-quick-chips">
+                    <span class="chips-label">Gợi ý mẫu câu hỏi nhanh:</span>
+                    <button type="button" class="question-chip" data-category="Kỹ thuật & Code" data-title="Lỗi kết nối MongoDB Atlas từ Node.js" data-content="Em chạy ứng dụng Node.js thì gặp lỗi MongooseServerSelectionError không kết nối được MongoDB Atlas. Thầy cô và Mentor cho em hỏi cách khắc phục lỗi IP Whitelist ạ?">
+                      💡 Lỗi MongoDB Atlas
+                    </button>
+                    <button type="button" class="question-chip" data-category="Bài tập & Đồ án" data-title="Thời hạn nộp bài tập Tuần và hình thức nộp" data-content="Thầy cô cho em hỏi thời hạn chót nộp bài tập tuần này là mấy giờ, và khi nộp thì gửi link GitHub repository hay nộp file nén ạ?">
+                      ⏰ Deadline nộp bài tập
+                    </button>
+                    <button type="button" class="question-chip" data-category="Lịch học & Điểm danh" data-title="Link xem lại video Recording buổi học" data-content="Buổi học vừa qua em có đơn xin nghỉ phép. Thầy cô cho em hỏi có thể xem lại video ghi hình buổi học trực tuyến ở kênh Teams nào ạ?">
+                      📹 Xem lại Recording buổi học
+                    </button>
+                    <button type="button" class="question-chip" data-category="Chương trình Trainee" data-title="Cơ chế cộng sao rèn luyện trên Bảng xếp hạng" data-content="Thầy cô cho em hỏi quy chế cộng sao rèn luyện ⭐ cho sinh viên: bài tập làm thêm và phát biểu trong buổi học được cộng bao nhiêu sao ạ?">
+                      ⭐ Tiêu chí cộng sao Trainee
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Form Actions: Nút Gửi & Nhập lại -->
+                <div class="question-actions-row">
+                  <button type="button" class="btn btn-secondary" id="btnResetQuestionForm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                      <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Nhập lại</span>
+                  </button>
+
+                  <button type="submit" class="btn btn-primary question-submit-btn" id="btnSubmitQuestion">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span>Gửi Câu Hỏi</span>
+                  </button>
+                </div>
+
+              </form>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- BẢNG CÂU HỎI & GIẢI ĐÁP CỘNG ĐỒNG (QUESTION BOARD) -->
+            <!-- ======================================================== -->
+            <div class="question-board-card">
+              <div class="question-board-header">
+                <div class="question-board-title-wrap">
+                  <span class="question-board-icon">📋</span>
+                  <div>
+                    <h3 class="question-board-title">Bảng Câu Hỏi &amp; Giải Đáp Cộng Đồng</h3>
+                    <p class="question-board-subtitle">Tra cứu các thắc mắc đã được Giảng viên và Mentor UIT phản hồi</p>
+                  </div>
+                </div>
+                <div class="question-board-header-right">
+                  <span class="question-board-count" id="questionBoardCountBadge">0 câu hỏi</span>
+                  <button type="button" class="btn btn-secondary question-refresh-btn" id="btnRefreshQuestions" title="Tải lại danh sách câu hỏi mới nhất">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                    </svg>
+                    <span>Làm mới</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter & Search Toolbar -->
+              <div class="question-toolbar">
+                <div class="question-search-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa, MSSV...">
+                </div>
+
+                <div class="question-filter-pills" id="questionFilterPills">
+                  <button type="button" class="q-filter-pill active" data-filter="all">Tất cả</button>
+                  <button type="button" class="q-filter-pill" data-filter="pending">⏳ Chờ giải đáp</button>
+                  <button type="button" class="q-filter-pill" data-filter="answered">✅ Đã giải đáp</button>
+                  <button type="button" class="q-filter-pill" data-filter="anonymous">🎭 Ẩn danh</button>
+                  <button type="button" class="q-filter-pill" data-filter="mine">👤 Của tôi</button>
+                </div>
+              </div>
+
+              <!-- Question Table -->
+              <div class="table-responsive">
+                <table class="question-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px; text-align: center;">STT</th>
+                      <th style="width: 140px;">Người gửi</th>
+                      <th style="width: 150px;">Chủ đề</th>
+                      <th>Câu hỏi &amp; Giải đáp</th>
+                      <th style="width: 130px;">Thời gian</th>
+                      <th style="width: 120px; text-align: center;">Trạng thái</th>
+                      <th style="width: 110px; text-align: center;">Tương tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="questionTableBody">
+                    <!-- Populated dynamically via JS -->
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+        <!-- ======================================================== -->
+        <!-- TAB 4: TRANG QUẢN TRỊ ADMIN (CHỈ DÀNH CHO ADMIN) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewAdmin">
+
+          <!-- Admin Header Banner -->
+          <div class="admin-header-card">
+            <div class="admin-header-content">
+              <div class="admin-badge-pill">
+                <span class="shield-icon">🛡️</span>
+                <span>QUẢN TRỊ VIÊN HỆ THỐNG</span>
+              </div>
+              <h2 class="admin-main-title">Bảng Điều Khiển Quản Trị & Cập Nhật Chỉ Số</h2>
+              <p class="admin-subtext">
+                Cập nhật số sao ⭐, số buổi học 📅, buổi vắng (có phép & không phép) ⚠️, điểm bài tập 📝 của toàn bộ học
+                viên.
+                Dữ liệu được lưu trữ và đồng bộ trực tiếp tới cơ sở dữ liệu MongoDB Atlas.
+              </p>
+            </div>
+            <div class="admin-header-actions">
+              <div class="admin-db-status-chip">
+                <span class="db-chip-dot pulse"></span>
+                <span class="db-chip-text" id="adminDbChipText">MongoDB Atlas</span>
+              </div>
+              <button class="btn btn-secondary" id="btnAdminRefresh" title="Tải lại dữ liệu mới nhất từ MongoDB">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                </svg>
+                <span>Làm mới</span>
+              </button>
+              <button class="btn btn-primary" id="btnOpenCreateUserModal">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Tạo người dùng mới</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Admin Quick Metrics 4 Cards -->
+          <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+              <div class="stat-card-icon blue-bg">👥</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Tổng số sinh viên</span>
+                <span class="stat-card-value" id="adminMetricTotalUsers">8</span>
+                <span class="stat-card-hint">Trong database MongoDB</span>
+              </div>
+            </div>
+
+            <div class="admin-stat-card">
+              <div class="stat-card-icon yellow-bg">⭐</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Tổng số sao đã cấp</span>
+                <span class="stat-card-value" id="adminMetricTotalStars">180</span>
+                <span class="stat-card-hint">Đánh giá quá trình học tập</span>
+              </div>
+            </div>
+
+            <div class="admin-stat-card">
+              <div class="stat-card-icon green-bg">📅</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Tỷ lệ chuyên cần TB</span>
+                <span class="stat-card-value" id="adminMetricAvgAttendance">94.2%</span>
+                <span class="stat-card-hint">Tỷ lệ tham gia buổi học</span>
+              </div>
+            </div>
+
+            <div class="admin-stat-card">
+              <div class="stat-card-icon purple-bg">📝</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Điểm bài tập TB</span>
+                <span class="stat-card-value" id="adminMetricAvgScore">9.35</span>
+                <span class="stat-card-hint">Thang điểm 10.0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Toolbar -->
+          <div class="admin-toolbar-card">
+            <div class="admin-search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input type="text" id="adminSearchInput" class="admin-search-input"
+                placeholder="Tìm theo MSSV, Họ và tên, Email...">
+            </div>
+
+            <div class="admin-filter-group">
+              <select id="adminTrackFilter" class="form-select admin-filter-select">
+                <option value="all">Tất cả ngành / Khoa</option>
+                <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
+                <option value="Khoa Hệ thống Thông tin">Khoa Hệ thống Thông tin</option>
+                <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
+                <option value="Khoa Mạng Máy tính & Truyền thông">Khoa Mạng Máy tính & TT</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Admin Trainees Data Table -->
+          <div class="portal-card admin-table-card">
+            <div class="admin-table-header">
+              <h3 class="admin-table-title">Danh Sách Người Dùng & Chỉ Số KPI</h3>
+              <span class="admin-table-count" id="adminTableCountBadge">8 sinh viên</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table" id="adminTraineesTable">
+                <thead>
+                  <tr>
+                    <th class="th-admin-user">Sinh viên / Trainee</th>
+                    <th class="th-admin-track">Khoa / Lớp</th>
+                    <th class="th-admin-stars" style="text-align: center;">⭐ Số sao</th>
+                    <th class="th-admin-attendance" style="text-align: center;">📅 Buổi học</th>
+                    <th class="th-admin-excused" style="text-align: center;">⚠️ Vắng CP</th>
+                    <th class="th-admin-unexcused" style="text-align: center;">🚫 Vắng KP</th>
+                    <th class="th-admin-score" style="text-align: center;">📝 Điểm bài tập</th>
+                    <th class="th-admin-rank" style="text-align: center;">🏆 Thứ hạng</th>
+                    <th class="th-admin-actions" style="text-align: center;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminTraineesTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="admin-empty-state" id="adminEmptyState" style="display: none;">
+              <div class="empty-icon">🔍</div>
+              <h4>Không tìm thấy người dùng phù hợp</h4>
+              <p>Vui lòng thử tìm với từ khóa khác hoặc xóa bộ lọc.</p>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ LỊCH HỌC TRỰC TUYẾN MS TEAMS (CHỈ ADMIN) ================= -->
+          <div class="portal-card admin-schedule-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <h3 class="admin-table-title">📅 Quản Lý Lịch Học Trực Tuyến & Microsoft Teams (Tháng 10/2026)</h3>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Chỉ Quản trị viên mới có quyền cập nhật lịch học, đổi thời gian và gán link phòng họp MS Teams cho
+                  từng buổi học.
+                </p>
+              </div>
+              <div class="admin-header-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="btnAdminGoSchedule"
+                  title="Chuyển đến trang xem Thời khóa biểu">
+                  <span>Xem trên TKB</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminResetSchedule"
+                  title="Khôi phục lại lịch mẫu Tháng 10">
+                  <span>↺ Đặt lại lịch tháng</span>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnAdminAddSchedule">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span>+ Tạo buổi học mới</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top: 14px;">
+              <table class="admin-table" id="adminScheduleTable">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th>Mã Buổi</th>
+                    <th>Tên Buổi Học / Chuyên Đề</th>
+                    <th style="text-align: center;">Ngày Học</th>
+                    <th style="text-align: center;">Giờ Học</th>
+                    <th>Giảng Viên / Mentor</th>
+                    <th style="text-align: center;">Link MS Teams</th>
+                    <th style="text-align: center;">Trạng Thái</th>
+                    <th style="text-align: center;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminScheduleTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ TỔNG HỢP & CỘNG SAO BUỔI HỌC (CHỈ ADMIN) ================= -->
+          <div class="portal-card admin-award-stars-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 class="admin-table-title">⭐ Tổng Hợp &amp; Cộng Sao Theo Buổi Học</h3>
+                  <span class="badge badge-success">Đồng bộ MongoDB &amp; Homepage</span>
+                </div>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Chọn buổi học từ Lịch đào tạo để tổng hợp và cộng sao cho sinh viên. Dữ liệu sẽ tự động đồng bộ vào
+                  Biểu đồ trang chủ, Bảng xếp hạng và Bảng điểm của sinh viên.
+                </p>
+              </div>
+            </div>
+
+            <!-- Award Stars Form -->
+            <form id="adminAwardStarsForm" class="award-stars-form"
+              style="margin-top: 16px; background: var(--bg-card-subtle); padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+              <div class="form-row-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+
+                <div class="form-group">
+                  <label for="awardSelectSchedule" class="form-label" style="font-weight: 600; font-size: 0.82rem;">1.
+                    Chọn buổi học từ Lịch đào tạo <span class="text-danger">*</span></label>
+                  <select id="awardSelectSchedule" class="form-input" required>
+                    <option value="">-- Đang tải lịch học --</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="awardSelectTrainee" class="form-label" style="font-weight: 600; font-size: 0.82rem;">2.
+                    Đối tượng nhận sao <span class="text-danger">*</span></label>
+                  <select id="awardSelectTrainee" class="form-input" required>
+                    <option value="all">⭐ Tất cả sinh viên (Cộng đồng loạt)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="awardSelectStage" class="form-label" style="font-weight: 600; font-size: 0.82rem;">3. Giai
+                    đoạn đào tạo</label>
+                  <select id="awardSelectStage" class="form-input">
+                    <option value="Giai đoạn 1" data-stagename="Training">Giai đoạn 1: Training</option>
+                    <option value="Giai đoạn 2" data-stagename="Capstone Project">Giai đoạn 2: Capstone Project</option>
+                    <option value="Giai đoạn 3" data-stagename="Đánh giá &amp; Tốt nghiệp">Giai đoạn 3: Đánh giá &amp;
+                      Tốt nghiệp</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="awardInputStars" class="form-label" style="font-weight: 600; font-size: 0.82rem;">4. Số
+                    sao được cộng (+) <span class="text-danger">*</span></label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="number" id="awardInputStars" class="form-input" value="5" min="1" max="100" required
+                      style="max-width: 90px; text-align: center; font-weight: 700; font-size: 1.05rem; color: #f59e0b;">
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="1">+1</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="2">+2</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="5">+5</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="10">+10</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="15">+15</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="form-row-grid"
+                style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-top: 12px;">
+                <div class="form-group">
+                  <label for="awardInputNote" class="form-label" style="font-weight: 600; font-size: 0.82rem;">5. Đánh
+                    giá / Lý do cộng sao</label>
+                  <input type="text" id="awardInputNote" class="form-input"
+                    placeholder="Ví dụ: Hoàn thành xuất sắc bài tập thực hành, tham gia tích cực">
+                </div>
+                <div class="form-group">
+                  <label for="awardInputTrainer" class="form-label" style="font-weight: 600; font-size: 0.82rem;">6.
+                    Trainer đánh giá</label>
+                  <input type="text" id="awardInputTrainer" class="form-input" value="Võ Thị Xuân Quỳnh">
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <button type="submit" class="btn btn-primary" id="btnSubmitAwardStars">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon
+                      points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                    </polygon>
+                  </svg>
+                  <span>⭐ Xác Nhận Cộng Sao &amp; Đồng Bộ</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- BẢNG ĐIỀU CHỈNH ĐIỂM SAO TOÀN DIỆN THEO BUỔI (RÀNG BUỘC THEO TỪNG BUỔI HỌC) -->
+            <div class="admin-session-batch-panel" style="margin-top: 24px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
+              <div class="batch-panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <h4 style="font-size: 0.98rem; font-weight: 700; color: var(--text-main); margin: 0;">
+                      🎯 Bảng Chấm Điểm &amp; Cập Nhật Sao Theo Buổi (Cho Toàn Bộ Sinh Viên)
+                    </h4>
+                    <span class="badge badge-primary">Ràng buộc theo từng buổi</span>
+                  </div>
+                  <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0 0;">
+                    Chọn buổi học để xem và điều chỉnh số sao được cộng (+⭐) cùng nhận xét riêng cho từng sinh viên trong buổi đó.
+                  </p>
+                </div>
+
+                <div class="batch-panel-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Áp dụng nhanh:</span>
+                    <button type="button" class="btn btn-outline btn-xs" id="btnQuickSetAllStars" data-stars="5">+5⭐ Tất cả</button>
+                    <button type="button" class="btn btn-outline btn-xs" id="btnQuickSetAllStars10" data-stars="10">+10⭐ Tất cả</button>
+                  </div>
+                  <button type="button" class="btn btn-primary" id="btnSaveBatchSessionStars" style="font-size: 0.82rem; padding: 6px 14px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                      <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    <span>💾 Lưu Điểm Buổi Học Này Vào MongoDB</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Roster grading table for selected session -->
+              <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+                <table class="admin-table admin-session-grading-table" id="adminSessionGradingTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px; text-align: center;">STT</th>
+                      <th style="min-width: 200px;">Sinh viên / Trainee</th>
+                      <th style="min-width: 120px;">Khoa / Lớp</th>
+                      <th style="width: 140px; text-align: center;">⭐ Sao cộng buổi này</th>
+                      <th style="min-width: 220px;">📝 Nhận xét / Đánh giá của Trainer</th>
+                      <th style="width: 110px; text-align: center;">Lũy kế sau buổi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminSessionGradingTableBody">
+                    <!-- Populated dynamically when session is selected -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Recent session stars awards history -->
+            <div style="margin-top: 20px;">
+              <h4 style="font-size: 0.88rem; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">📋
+                Lịch sử cộng sao các buổi học gần nhất (Học viên hiện tại / Toàn khóa)</h4>
+              <div class="table-responsive">
+                <table class="admin-table" id="adminRecentAwardTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 12%;">Mã buổi</th>
+                      <th style="width: 28%;">Tên buổi học</th>
+                      <th style="width: 14%; text-align: center;">Ngày học</th>
+                      <th style="width: 12%; text-align: center;">Số sao</th>
+                      <th style="width: 22%;">Đánh giá / Ghi chú</th>
+                      <th style="width: 12%; text-align: center;">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminRecentAwardTableBody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ 11 BÀI TẬP RÈN LUYỆN & GÁN LINK (CHỈ ADMIN) ================= -->
+          <div class="portal-card admin-assignments-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 class="admin-table-title">🎒 Quản Lý 11 Bài Tập Rèn Luyện &amp; Gán Link Bài Tập</h3>
+                  <span class="badge badge-success">Đồng bộ MongoDB &amp; Duolingo Path</span>
+                </div>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Admin có thể chỉnh sửa tiêu đề, mô tả, đặc biệt là <strong>Đường Link Bài Tập</strong> (Google Form, GitHub, Colab, LMS...) cho từng bài. Khi sinh viên bấm vào bất kỳ bài tập nào trên lộ trình, đường link này sẽ hiển thị để sinh viên truy cập.
+                </p>
+              </div>
+              <div class="admin-header-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminResetAssignments" title="Khôi phục 11 bài tập về mặc định ban đầu">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  <span>Khôi phục mặc định</span>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnAdminSaveAllAssignments">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  <span>💾 Lưu Toàn Bộ Link Vào MongoDB</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top: 14px;">
+              <table class="admin-table" id="adminAssignmentsTable">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th style="min-width: 200px;">Tên Bài Tập / Chuyên Đề</th>
+                    <th style="width: 130px; text-align: center;">Trạng Thái</th>
+                    <th style="min-width: 240px;">🔗 Đường Link Đã Gán (Admin Sửa)</th>
+                    <th style="min-width: 210px; text-align: center;">⏰ Thời Hạn Nộp &amp; Đếm Ngược</th>
+                    <th style="width: 110px; text-align: center;">Thưởng</th>
+                    <th style="width: 140px; text-align: center;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminAssignmentsTableBody">
+                  <!-- Populated dynamically by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ YÊU CẦU QUÊN MẬT KHẨU & HỖ TRỢ ================= -->
+          <div class="portal-card admin-support-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 class="admin-table-title">📬 Hộp Thư Yêu Cầu Hỗ Trợ & Quên Mật Khẩu</h3>
+                  <span class="badge badge-warning" id="adminSupportPendingBadge">0 chờ xử lý</span>
+                </div>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Danh sách sinh viên gửi yêu cầu quên mật khẩu hoặc phản hồi. Quản trị viên có thể bấm 1 chạm để đặt
+                  lại mật khẩu về mặc định (1234) hoặc xóa yêu cầu.
+                </p>
+              </div>
+              <div class="admin-header-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminRefreshSupport"
+                  title="Làm mới danh sách yêu cầu từ MongoDB">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                  </svg>
+                  <span>Làm mới</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top: 14px;">
+              <table class="admin-table" id="adminSupportTable">
+                <thead>
+                  <tr>
+                    <th style="width: 45px; text-align: center;">STT</th>
+                    <th>Loại Yêu Cầu</th>
+                    <th>MSSV / Tài Khoản</th>
+                    <th>Họ và Tên</th>
+                    <th>Email / SĐT</th>
+                    <th>Ghi Chú / Lời Nhắn</th>
+                    <th style="text-align: center;">Thời Gian Gửi</th>
+                    <th style="text-align: center;">Trạng Thái</th>
+                    <th style="text-align: center;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminSupportTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="admin-empty-state" id="adminSupportEmptyState" style="display: none; padding: 32px 16px;">
+              <div class="empty-icon">📭</div>
+              <h4>Không có yêu cầu hỗ trợ nào</h4>
+              <p>Hiện không có học viên nào gửi yêu cầu quên mật khẩu hay phản hồi.</p>
+            </div>
+          </div>
+
+        </section>
+      </main>
+    </div>
+
+  </div>
+
+
+  <!-- ==================== MODAL: TRAINEE DETAIL ==================== -->
+  <div class="modal-overlay" id="traineeDetailModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Hồ Sơ Chi Tiết Thực Tập Sinh</h3>
+        <button class="modal-close-btn" id="closeDetailModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="traineeDetailModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: MONGODB CONFIGURATION ==================== -->
+  <div class="modal-overlay" id="mongoConfigModal">
+    <div class="modal-card mongo-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="mongo-icon">🍃</span>
+          <h3 class="modal-title">Cấu Hình Kết Nối MongoDB</h3>
+        </div>
+        <button class="modal-close-btn" id="closeMongoModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Current Status Banner -->
+        <div class="db-status-banner" id="modalDbStatusBanner">
+          <div class="status-indicator-row">
+            <span class="status-pulse-dot" id="modalStatusDot"></span>
+            <div class="status-info-text">
+              <strong id="modalStatusTitle">Chế độ hiện tại: MOCK DATABASE</strong>
+              <p id="modalStatusDesc">Hệ thống đang phục vụ dữ liệu mẫu an toàn, không cần cài đặt gì thêm.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Setup Form -->
+        <div class="config-instructions">
+          <h4>Cách gắn link MongoDB Atlas của bạn:</h4>
+          <ol class="step-list">
+            <li>Tạo 1 cluster miễn phí trên <strong>MongoDB Atlas</strong> (hoặc chạy MongoDB local).</li>
+            <li>Copy chuỗi kết nối <code>mongodb+srv://...</code></li>
+            <li>Dán vào ô bên dưới rồi nhấn <strong>Lưu & Kết Nối</strong> (hoặc sửa trực tiếp biến
+              <code>MONGODB_URI</code> trong file <code>.env</code>).
+            </li>
+          </ol>
+        </div>
+
+        <form id="mongoConnectForm" class="mongo-form">
+          <label for="mongoUriInput" class="form-label">Chuỗi kết nối (Connection String):</label>
+          <div class="input-action-group">
+            <input type="text" id="mongoUriInput" class="form-input"
+              placeholder="mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/trainee_portal?retryWrites=true&w=majority"
+              required>
+          </div>
+          <div class="form-help-text">
+            * Hệ thống sẽ tự động cập nhật vào file <code>.env</code> và nạp dữ liệu mẫu vào database MongoDB của bạn.
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancelMongoBtn">Đóng</button>
+            <button type="submit" class="btn btn-primary" id="saveMongoBtn">
+              <span class="btn-text">Lưu & Kết Nối Ngay</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: QUẢN LÝ / CHỈNH SỬA THỜI KHÓA BIỂU (CHỈ ADMIN) ==================== -->
+  <div class="modal-overlay" id="scheduleModal">
+    <div class="modal-card schedule-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge">📅</span>
+          <h3 class="modal-title" id="scheduleModalTitle">Thêm / Chỉnh Sửa Buổi Học Trực Tuyến</h3>
+        </div>
+        <button class="modal-close-btn" id="closeScheduleModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-admin-shield-hint">
+          <span class="shield-tag">🛡️ QUYỀN ADMIN</span>
+          <span>Chỉ Quản trị viên mới được sửa lịch học. Dữ liệu được lưu trữ trực tiếp vào MongoDB Atlas.</span>
+        </div>
+
+        <form id="scheduleCourseForm" class="schedule-course-form">
+          <input type="hidden" id="courseEditId" value="">
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="courseTitleInput" class="form-label">Tên buổi học / Chuyên đề đào tạo <span
+                  class="required">*</span></label>
+              <input type="text" id="courseTitleInput" class="form-input"
+                placeholder="Ví dụ: Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống" required>
+            </div>
+            <div class="form-group">
+              <label for="courseCodeInput" class="form-label">Mã buổi học / Lớp HP</label>
+              <input type="text" id="courseCodeInput" class="form-input" placeholder="Ví dụ: TP-M10.01">
+            </div>
+          </div>
+
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="courseDateInput" class="form-label">Ngày học <span class="required">*</span></label>
+              <input type="date" id="courseDateInput" class="form-input" value="2026-10-27" required>
+            </div>
+            <div class="form-group">
+              <label for="courseStartTime" class="form-label">Giờ bắt đầu <span class="required">*</span></label>
+              <input type="time" id="courseStartTime" class="form-input" value="19:30" required>
+            </div>
+            <div class="form-group">
+              <label for="courseEndTime" class="form-label">Giờ kết thúc <span class="required">*</span></label>
+              <input type="time" id="courseEndTime" class="form-input" value="21:30" required>
+            </div>
+          </div>
+
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="courseDaySelect" class="form-label">Thứ trong tuần</label>
+              <select id="courseDaySelect" class="form-select">
+                <option value="Thứ 2">Thứ 2</option>
+                <option value="Thứ 3" selected>Thứ 3</option>
+                <option value="Thứ 4">Thứ 4</option>
+                <option value="Thứ 5">Thứ 5</option>
+                <option value="Thứ 6">Thứ 6</option>
+                <option value="Thứ 7">Thứ 7</option>
+                <option value="Chủ nhật">Chủ nhật</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="coursePeriods" class="form-label">Khung tiết học</label>
+              <input type="text" id="coursePeriods" class="form-input" value="Tiết 1 - 4 (Tối)"
+                placeholder="VD: Tiết 1 - 4">
+            </div>
+            <div class="form-group">
+              <label for="courseStatusSelect" class="form-label">Trạng thái buổi học</label>
+              <select id="courseStatusSelect" class="form-select">
+                <option value="upcoming" selected>Sắp diễn ra</option>
+                <option value="live">Đang diễn ra (Trực tiếp)</option>
+                <option value="completed">Đã kết thúc</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="courseInstructorInput" class="form-label">Giảng viên / Mentor phụ trách</label>
+              <input type="text" id="courseInstructorInput" class="form-input"
+                placeholder="Ví dụ: TS. Dương Việt Hằng, Mentor UIT...">
+            </div>
+            <div class="form-group">
+              <label for="courseTypeSelect" class="form-label">Hình thức đào tạo</label>
+              <select id="courseTypeSelect" class="form-select">
+                <option value="Online" selected>Học Trực Tuyến (Online MS Teams)</option>
+                <option value="Lý thuyết">Lý thuyết Trực tuyến</option>
+                <option value="Thực hành">Thực hành Trực tuyến</option>
+                <option value="Báo cáo">Báo cáo & Đồ án</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- PHẦN GÁN LINK MICROSOFT TEAMS (CHO NÚT "VÀO HỌC") -->
+          <div class="form-group full-width-group highlight-teams-form-group">
+            <label for="courseTeamsUrl" class="form-label teams-field-label">
+              <span class="teams-icon-badge">🌐</span>
+              <span>Đường Dẫn Phòng Họp Microsoft Teams (Link "Vào học")</span>
+            </label>
+            <input type="url" id="courseTeamsUrl" class="form-input teams-url-input"
+              placeholder="https://teams.microsoft.com/l/meetup-join/... (Để trống nếu bạn muốn gán sau)">
+            <p class="teams-input-hint">
+              💡 <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
+              Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng học viên vào phòng học
+              MS Teams!
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label for="courseNoteInput" class="form-label">Ghi chú & Yêu cầu chuẩn bị buổi học</label>
+            <textarea id="courseNoteInput" class="form-input" rows="2"
+              placeholder="Ví dụ: Cài đặt trước Node.js và clone mã nguồn bài tập về máy..."></textarea>
+          </div>
+
+          <div class="modal-form-actions">
+            <button type="button" class="btn btn-secondary admin-only-element" id="btnResetDefaultSchedule"
+              title="Khôi phục lại dữ liệu mẫu Tháng 10 vào database">
+              ↺ Khôi phục mẫu Tháng 10
+            </button>
+            <button type="button" class="btn btn-danger admin-only-element" id="btnDeleteCourse" style="display: none;">
+              🗑 Xóa buổi học
+            </button>
+            <div style="flex: 1;"></div>
+            <button type="button" class="btn btn-secondary" id="cancelScheduleBtn">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btnSaveCourse">
+              💾 Lưu buổi học & Link MS Teams
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trang đăng nhập là 1 trang riêng biệt tại /login (public/login.html) -->
+
+  <!-- ==================== MODAL: TẠO SINH VIÊN MỚI (ADMIN) ==================== -->
+  <div class="modal-overlay" id="createTraineeModal">
+    <div class="modal-card trainee-form-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge">✨</span>
+          <div>
+            <h3 class="modal-title">Tạo Người Dùng / Sinh Viên Mới</h3>
+            <span class="modal-subtitle">Ghi dữ liệu trực tiếp vào cơ sở dữ liệu MongoDB Atlas</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeCreateTraineeModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="createTraineeForm" class="trainee-edit-form">
+          <div class="form-section-title">THÔNG TIN ĐỊNH DANH</div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="createTraineeId" class="form-label">Mã sinh viên (MSSV) <span
+                  class="required">*</span></label>
+              <input type="text" id="createTraineeId" class="form-input" placeholder="Ví dụ: 25520999" required>
+            </div>
+            <div class="form-group">
+              <label for="createFullName" class="form-label">Họ và tên sinh viên <span class="required">*</span></label>
+              <input type="text" id="createFullName" class="form-input" placeholder="Ví dụ: Nguyễn Văn An" required>
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="createEmail" class="form-label">Email sinh viên <span class="required">*</span></label>
+              <input type="email" id="createEmail" class="form-input" placeholder="an.nv@trainee.uit.edu.vn" required>
+            </div>
+            <div class="form-group">
+              <label for="createTrack" class="form-label">Khoa / Chuyên ngành đào tạo <span
+                  class="required">*</span></label>
+              <select id="createTrack" class="form-select" required>
+                <option value="Khoa Khoa học Máy tính" selected>Khoa Khoa học Máy tính</option>
+                <option value="Khoa Hệ thống Thông tin">Khoa Hệ thống Thông tin</option>
+                <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
+                <option value="Khoa Mạng Máy tính & Truyền thông">Khoa Mạng Máy tính & TT</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="createBatch" class="form-label">Lớp / Khóa học</label>
+              <input type="text" id="createBatch" class="form-input" value="KHMT2026.2">
+            </div>
+            <div class="form-group">
+              <label for="createTotalSessions" class="form-label">Tổng số buổi quy định</label>
+              <input type="number" id="createTotalSessions" class="form-input" min="1" max="200" value="45">
+            </div>
+          </div>
+
+          <div class="form-section-title">CHỈ SỐ KPI & THÀNH TÍCH HỌC TẬP</div>
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="createStars" class="form-label">⭐ Số sao tích lũy <span class="required">*</span></label>
+              <input type="number" id="createStars" class="form-input" min="0" max="1000" value="25" required>
+            </div>
+            <div class="form-group">
+              <label for="createAttended" class="form-label">📅 Số buổi đã học <span class="required">*</span></label>
+              <input type="number" id="createAttended" class="form-input" min="0" max="200" value="40" required>
+            </div>
+            <div class="form-group">
+              <label for="createAssignmentScore" class="form-label">📝 Điểm bài tập (thang 10)</label>
+              <input type="number" id="createAssignmentScore" class="form-input" min="0" max="10" step="0.1"
+                value="9.0">
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="createExcused" class="form-label">⚠️ Vắng CÓ PHÉP</label>
+              <input type="number" id="createExcused" class="form-input" min="0" max="50" value="0">
+            </div>
+            <div class="form-group">
+              <label for="createUnexcused" class="form-label">🚫 Vắng KHÔNG PHÉP</label>
+              <input type="number" id="createUnexcused" class="form-input" min="0" max="50" value="0">
+            </div>
+          </div>
+
+          <div class="form-info-hint" style="background: rgba(37, 99, 235, 0.06); border: 1px dashed rgba(37, 99, 235, 0.25); padding: 12px 16px; border-radius: 8px; font-size: 0.84rem; color: var(--text-secondary); margin-top: 14px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.2rem;">✨</span>
+            <span>Thứ hạng (Rank) sẽ <strong>tự động xếp hạng</strong> theo số sao tích lũy ⭐. Sinh viên không cần đăng nhập mật khẩu để xem cổng thông tin.</span>
+          </div>
+
+          <div class="modal-form-actions">
+            <button type="button" class="btn btn-secondary" id="cancelCreateTraineeBtn">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitCreateTrainee">
+              <span>✨ Tạo Người Dùng Vào MongoDB</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: SỬA CHỈ SỐ KPI / USER (ADMIN) ==================== -->
+  <div class="modal-overlay" id="editTraineeModal">
+    <div class="modal-card trainee-form-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge">✏️</span>
+          <div>
+            <h3 class="modal-title">Cập Nhật Chỉ Số KPI & Thông Tin Người Dùng</h3>
+            <span class="modal-subtitle">Chỉnh sửa số sao, số buổi học, vắng, điểm bài tập trên MongoDB Atlas</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeEditTraineeModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editTraineeForm" class="trainee-edit-form">
+          <input type="hidden" id="editTraineeIdHidden">
+
+          <div class="form-section-title">THÔNG TIN CƠ BẢN</div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editTraineeId" class="form-label">Mã sinh viên (MSSV)</label>
+              <input type="text" id="editTraineeId" class="form-input" readonly disabled
+                style="background: var(--bg-card-subtle); opacity: 0.85;">
+            </div>
+            <div class="form-group">
+              <label for="editFullName" class="form-label">Họ và tên sinh viên <span class="required">*</span></label>
+              <input type="text" id="editFullName" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editEmail" class="form-label">Email <span class="required">*</span></label>
+              <input type="email" id="editEmail" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="editTrack" class="form-label">Khoa / Chuyên ngành</label>
+              <input type="text" id="editTrack" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editBatch" class="form-label">Lớp / Khóa học</label>
+              <input type="text" id="editBatch" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="editTotalSessions" class="form-label">Tổng số buổi quy định</label>
+              <input type="number" id="editTotalSessions" class="form-input" min="1" max="200">
+            </div>
+          </div>
+
+          <div class="form-section-title">CẬP NHẬT CHỈ SỐ KPI & BUỔI HỌC</div>
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="editStars" class="form-label" style="display: flex; justify-content: space-between;">
+                <span>⭐ Tổng sao tích lũy</span>
+                <span class="badge badge-success" style="font-size: 0.68rem; padding: 2px 6px;">Tự động tính theo buổi</span>
+              </label>
+              <input type="number" id="editStars" class="form-input" min="0" max="1000" readonly
+                style="background: rgba(245, 158, 11, 0.08); font-weight: 800; color: #d97706; border-color: rgba(245, 158, 11, 0.3); cursor: not-allowed;"
+                title="Tổng sao được tự động tính từ tổng số sao của các buổi học bên dưới">
+            </div>
+            <div class="form-group">
+              <label for="editAttendedSessions" class="form-label">📅 Số buổi đã học <span
+                  class="required">*</span></label>
+              <input type="number" id="editAttendedSessions" class="form-input" min="0" max="200" required>
+            </div>
+            <div class="form-group">
+              <label for="editAssignmentScore" class="form-label">📝 Điểm bài tập (thang 10)</label>
+              <input type="number" id="editAssignmentScore" class="form-input" min="0" max="10" step="0.1">
+            </div>
+          </div>
+
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="editAbsentExcused" class="form-label">⚠️ Buổi vắng CÓ PHÉP</label>
+              <input type="number" id="editAbsentExcused" class="form-input" min="0" max="50">
+            </div>
+            <div class="form-group">
+              <label for="editAbsentUnexcused" class="form-label">🚫 Buổi vắng KHÔNG PHÉP</label>
+              <input type="number" id="editAbsentUnexcused" class="form-input" min="0" max="50">
+            </div>
+            <div class="form-group">
+              <label for="editCompletedAssignments" class="form-label">Số bài tập đạt</label>
+              <input type="number" id="editCompletedAssignments" class="form-input" min="0" max="100">
+            </div>
+          </div>
+
+          <!-- RÀNG BUỘC CẬP NHẬT SAO THEO TỪNG BUỔI HỌC CỦA SINH VIÊN -->
+          <div class="form-section-title" style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>⭐ CỘNG SAO THEO TỪNG BUỔI HỌC (RÀNG BUỘC BUỔI)</span>
+              <span class="badge badge-primary" style="font-size: 0.68rem;">Khớp bảng điểm</span>
+            </div>
+            <button type="button" class="btn btn-outline btn-xs" id="btnAddSessionToStudentBtn" style="font-size: 0.76rem; padding: 4px 10px;">
+              + Thêm buổi mới
+            </button>
+          </div>
+
+          <div class="edit-student-sessions-wrapper">
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 10px 0;">
+              Admin cập nhật số sao cộng (+⭐) và nhận xét chi tiết của học viên cho từng buổi học. Tổng số sao ⭐ ở trên sẽ tự động cộng dồn tức thì.
+            </p>
+            <div class="edit-trainee-sessions-list" id="editTraineeSessionsContainer">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+
+          <div class="form-info-hint" style="background: rgba(37, 99, 235, 0.06); border: 1px dashed rgba(37, 99, 235, 0.25); padding: 12px 16px; border-radius: 8px; font-size: 0.84rem; color: var(--text-secondary); margin-top: 14px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.2rem;">✨</span>
+            <span>Tổng sao và Thứ hạng (Rank) sẽ <strong>tự động tính &amp; đồng bộ</strong> toàn hệ thống sau khi lưu vào MongoDB Atlas.</span>
+          </div>
+
+          <div class="modal-form-actions"
+            style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <button type="button" class="btn btn-danger" id="btnDeleteFromEditModal"
+              style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+              </svg>
+              <span>Xóa người dùng này</span>
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn btn-secondary" id="cancelEditTraineeBtn">Hủy</button>
+              <button type="submit" class="btn btn-primary" id="btnSubmitEditTrainee">
+                <span>💾 Lưu Thay Đổi Vào MongoDB</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: XÁC NHẬN XÓA USER (ADMIN) ==================== -->
+  <div class="modal-overlay" id="deleteTraineeConfirmModal">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 28px 24px;">
+      <div style="font-size: 3rem; margin-bottom: 12px; line-height: 1;">⚠️</div>
+      <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Xác Nhận Xóa Tài
+        Khoản</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 22px;"
+        id="deleteConfirmMessage">
+        Bạn có chắc chắn muốn xóa sinh viên này khỏi hệ thống? Dữ liệu sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu MongoDB
+        Atlas.
+      </p>
+      <input type="hidden" id="deleteTargetTraineeId">
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteTraineeBtn" style="min-width: 110px;">Hủy
+          Bỏ</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteTraineeBtn"
+          style="background-color: #ef4444; color: white; min-width: 140px;">
+          <span>🗑️ Xóa Vĩnh Viễn</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ĐỔI MẬT KHẨU ==================== -->
+  <div class="modal-overlay" id="changePasswordModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge">🔑</span>
+          <div>
+            <h3 class="modal-title">Đổi Mật Khẩu Tài Khoản</h3>
+            <span class="modal-subtitle">Cập nhật mật khẩu mới và lưu vào MongoDB Atlas</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeChangePasswordModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="changePasswordForm">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="changePassCurrent" class="form-label">Mật khẩu hiện tại</label>
+            <input type="password" id="changePassCurrent" class="form-input"
+              placeholder="Nhập mật khẩu đang dùng (mặc định 1234)" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="changePassNew" class="form-label">Mật khẩu mới</label>
+            <input type="password" id="changePassNew" class="form-input" placeholder="Nhập mật khẩu mới" required
+              minlength="4">
+          </div>
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="changePassConfirm" class="form-label">Xác nhận mật khẩu mới</label>
+            <input type="password" id="changePassConfirm" class="form-input" placeholder="Nhập lại mật khẩu mới"
+              required minlength="4">
+          </div>
+          <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="cancelChangePasswordBtn">Hủy</button>
+            <button type="submit" class="btn btn-primary">
+              <span>💾 Lưu Mật Khẩu Mới</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: QUÊN MẬT KHẨU / HỖ TRỢ ==================== -->
+  <div class="modal-overlay" id="profileForgotModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">❓</span>
+          <div>
+            <h3 class="modal-title">Yêu Cầu Cấp Lại Mật Khẩu</h3>
+            <span class="modal-subtitle">Gửi thông báo tới Quản trị viên để đặt lại mật khẩu</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeProfileForgotModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="profileForgotForm">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="profileForgotIdentifier" class="form-label">Mã số sinh viên (MSSV) / Tài khoản <span
+                class="text-danger">*</span></label>
+            <input type="text" id="profileForgotIdentifier" class="form-input" placeholder="Nhập MSSV" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="profileForgotEmail" class="form-label">Email liên hệ nhận hỗ trợ</label>
+            <input type="email" id="profileForgotEmail" class="form-input" placeholder="Nhập email">
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="profileForgotPhone" class="form-label">Số điện thoại liên hệ (tùy chọn)</label>
+            <input type="tel" id="profileForgotPhone" class="form-input" placeholder="Nhập số điện thoại">
+          </div>
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="profileForgotNote" class="form-label">Lý do / Lời nhắn tới Admin</label>
+            <textarea id="profileForgotNote" class="form-input" rows="3"
+              placeholder="Em bị quên mật khẩu, nhờ Admin cấp lại giúp em..."></textarea>
+          </div>
+          <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="cancelProfileForgotBtn">Hủy</button>
+            <button type="submit" class="btn btn-danger" id="submitProfileForgotBtn">
+              <span>📩 Gửi Yêu Cầu Tới Admin</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Modal: Xem & Mở Link Bài Tập Duolingo ================= -->
+  <div class="duo-modal-overlay" id="duoAssignmentModal">
+    <div class="duo-modal-card">
+      <button type="button" class="duo-modal-close-btn" id="duoModalCloseBtn" aria-label="Đóng">&times;</button>
+
+      <div class="duo-modal-badge green" id="duoModalBadge">★ BÀI HỌC TIẾP THEO</div>
+      <h3 class="duo-modal-title" id="duoModalTitle">Bài 1: Làm quen Git &amp; GitHub Workflow</h3>
+      <p class="duo-modal-desc" id="duoModalDesc">
+        Làm quen với các lệnh Git cơ bản: clone, checkout, commit, push và mở Pull Request chuẩn UIT.
+      </p>
+
+      <div class="duo-modal-rewards-row">
+        <div class="duo-reward-item duo-reward-score">
+          <span>🎯</span>
+          <span id="duoModalScore">100/100</span>
+        </div>
+        <div class="duo-reward-item duo-reward-xp">
+          <span>⚡</span>
+          <span id="duoModalXp">+80 XP</span>
+        </div>
+        <div class="duo-reward-item duo-reward-gem">
+          <span>💎</span>
+          <span id="duoModalGems">+25 Gems</span>
+        </div>
+      </div>
+
+      <!-- ĐẾM NGƯỢC THỜI HẠN NỘP BÀI (DEADLINE COUNTDOWN) -->
+      <div id="duoDeadlineCountdown" style="display:none; margin: 0 0 14px 0; border-radius: 14px; overflow: hidden;">
+        <div class="duo-countdown-box">
+          <div class="duo-countdown-header">
+            <span class="duo-countdown-icon">⏰</span>
+            <span class="duo-countdown-label">THỜI HẠN NỘP BÀI</span>
+            <span class="duo-countdown-deadline-text" id="duoCountdownDeadlineText"></span>
+          </div>
+          <div class="duo-countdown-segments" id="duoCountdownSegments">
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdDays">00</span>
+              <span class="duo-countdown-unit">ngày</span>
+            </div>
+            <div class="duo-countdown-colon">:</div>
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdHours">00</span>
+              <span class="duo-countdown-unit">giờ</span>
+            </div>
+            <div class="duo-countdown-colon">:</div>
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdMinutes">00</span>
+              <span class="duo-countdown-unit">phút</span>
+            </div>
+            <div class="duo-countdown-colon">:</div>
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdSeconds">00</span>
+              <span class="duo-countdown-unit">giây</span>
+            </div>
+          </div>
+          <div class="duo-countdown-bar-wrap">
+            <div class="duo-countdown-bar-fill" id="duoCountdownBarFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ĐÃ HẾT HẠN banner -->
+      <div id="duoDeadlineExpired" style="display:none; margin: 0 0 14px 0; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 14px; padding: 14px 16px; text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 4px;">🚨</div>
+        <div style="font-weight: 800; color: #dc2626; font-size: 14px;">ĐÃ HẾT THỜI HẠN NỘP BÀI</div>
+        <div style="font-size: 12px; color: #ef4444; margin-top: 4px;" id="duoExpiredDeadlineText"></div>
+      </div>
+
+      <!-- Ô HIỂN THỊ ĐƯỜNG LINK BÀI TẬP ĐÃ GÁN TỪ ADMIN -->
+      <div class="duo-assignment-link-showcase" id="duoAssignmentLinkShowcase" style="margin: 18px 0; background: var(--bg-card-subtle); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px;">
+            <span>🔗</span>
+            <span>ĐƯỜNG LINK BÀI TẬP (ADMIN ĐÃ GÁN)</span>
+          </span>
+          <span class="badge badge-success" id="duoLinkOfficialBadge" style="font-size: 0.68rem;">Link Chính Thức</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="duoDisplayLink" readonly class="form-input" style="font-family: monospace; font-size: 0.82rem; background: var(--bg-card); cursor: text; font-weight: 600; color: var(--primary-blue);" placeholder="Chưa có link được gán">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyDuoLink" title="Sao chép đường link" style="white-space: nowrap; padding: 7px 12px; font-weight: 700;">
+            <span>📋 Copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Nút mở trực tiếp đường link -->
+      <a href="#" class="duo-btn-launch green" id="duoBtnLaunch" target="_blank" style="margin-bottom: 12px;">
+        <span>🚀 TRUY CẬP ĐƯỜNG LINK BÀI TẬP (TAB MỚI)</span>
+      </a>
+
+      <!-- Quick Link & Deadline Editor (Dành riêng cho Admin chỉnh sửa link & thời hạn nộp) -->
+      <div class="duo-link-edit-box" id="duoAdminQuickEditBox" style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 14px; display: none;">
+        <div style="font-weight: 800; color: #dc2626; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span>🛡️ QUẢN TRỊ VIÊN: CẤU HÌNH BÀI TẬP</span>
+        </div>
+        
+        <label for="duoLinkInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
+          🔗 Đường link bài tập:
+        </label>
+        <div class="duo-link-input-wrap" style="margin-top: 4px; margin-bottom: 10px;">
+          <input type="url" id="duoLinkInput" class="duo-link-input"
+            placeholder="Dán link mới: https://github.com/... hoặc https://colab.research.google.com/...">
+          <button type="button" id="duoBtnSaveLink" class="duo-link-save-btn">💾 Lưu Link</button>
+        </div>
+
+        <label for="duoDeadlineInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
+          ⏰ Cài đặt thời hạn nộp bài (Hạn chót đếm ngược do Admin set):
+        </label>
+        <div class="duo-link-input-wrap" style="margin-top: 4px;">
+          <input type="datetime-local" id="duoDeadlineInput" class="duo-link-input" style="font-size: 12.5px;">
+          <button type="button" id="duoBtnSaveDeadline" class="duo-link-save-btn" style="background: #e11d48; white-space: nowrap;">💾 Lưu Hạn</button>
+          <button type="button" id="duoBtnClearDeadline" class="btn btn-secondary btn-sm" title="Xóa hạn chót (Không giới hạn)" style="padding: 0 10px;">✕ Xóa</button>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 6px; align-items: center; flex-wrap: wrap;">
+          <span style="font-size: 11px; color: var(--text-muted);">Gán nhanh:</span>
+          <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="12" style="font-size: 11px;" title="Cài hạn 12 giờ sau (Hiện: x h x phút còn lại)">+12 giờ (&lt;1 ngày)</button>
+          <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="24" style="font-size: 11px;" title="Cài hạn 24 giờ sau">+1 ngày</button>
+          <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="72" style="font-size: 11px;" title="Cài hạn 3 ngày sau (Hiện: x ngày x h còn lại)">+3 ngày (&gt;1 ngày)</button>
+          <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="168" style="font-size: 11px;" title="Cài hạn 7 ngày sau">+7 ngày</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= Modal: Chỉnh Sửa Chi Tiết Bài Tập (Admin) ================= -->
+  <div class="modal-overlay" id="adminEditAssignmentModal">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge">🎒</span>
+          <div>
+            <h3 class="modal-title">Chỉnh Sửa Chi Tiết Bài Tập</h3>
+            <span class="modal-subtitle" id="editAssignmentSubTitle">Cập nhật tiêu đề, mô tả và đường link bài tập</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeAdminEditAssignmentModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px;">
+        <form id="adminEditAssignmentForm">
+          <input type="hidden" id="editAssignmentIdHidden">
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentTitle">Tên bài tập / Chuyên đề <span class="required">*</span></label>
+            <input type="text" id="editAssignmentTitle" class="form-input" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentDesc">Mô tả tóm tắt nội dung bài tập</label>
+            <textarea id="editAssignmentDesc" class="form-input" rows="3" style="resize: vertical;"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentLink">🔗 Đường link bài tập (Google Colab, Form, GitHub, Drive, LMS...) <span class="required">*</span></label>
+            <input type="url" id="editAssignmentLink" class="form-input" placeholder="https://..." required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentDeadline">⏰ Thời hạn nộp bài (Hạn chót đếm ngược do Admin thiết lập)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="datetime-local" id="editAssignmentDeadline" class="form-input" style="flex: 1;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnClearEditDeadline" title="Xóa hạn chót (Không giới hạn)">✕ Xóa hạn</button>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">
+              Hệ thống sẽ hiển thị đồng hồ đếm ngược thời gian còn lại ở dưới bài tập cho sinh viên.
+            </span>
+          </div>
+
+          <div class="form-grid-3col" style="margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" for="editAssignmentStatus">Trạng thái</label>
+              <select id="editAssignmentStatus" class="form-input">
+                <option value="completed">✓ Đã hoàn thành</option>
+                <option value="active">★ Đang mở</option>
+                <option value="locked">🔒 Khóa</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editAssignmentXp">Điểm XP</label>
+              <input type="number" id="editAssignmentXp" class="form-input" min="0" max="1000" value="80">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editAssignmentGems">Số Gems</label>
+              <input type="number" id="editAssignmentGems" class="form-input" min="0" max="500" value="25">
+            </div>
+          </div>
+
+          <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button type="button" class="btn btn-secondary" id="cancelAdminEditAssignmentBtn">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitAdminEditAssignment">
+              <span>💾 Lưu Thay Đổi Vào MongoDB</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Modal: Xem Chi Tiết Câu Hỏi & Phản Hồi Giảng Viên ================= -->
+  <div class="modal-overlay" id="questionDetailModal">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge">💬</span>
+          <div>
+            <h3 class="modal-title" id="qModalTitle">Chi Tiết Câu Hỏi &amp; Giải Đáp</h3>
+            <span class="modal-subtitle" id="qModalSubtitle">Mã câu hỏi: #Q-2026-001</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeQuestionDetailModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
+        <!-- Question Meta Row -->
+        <div class="q-modal-meta-row">
+          <div class="q-modal-sender" id="qModalSender">
+            <!-- Injected via JS -->
+          </div>
+          <span class="q-modal-category" id="qModalCategory">Kỹ thuật &amp; Code</span>
+          <span class="q-modal-time" id="qModalTime">Vừa xong</span>
+        </div>
+
+        <!-- Question Full Content -->
+        <div class="q-modal-content-box">
+          <h4 class="q-modal-heading" id="qModalHeading">Tiêu đề câu hỏi</h4>
+          <p class="q-modal-text" id="qModalText">Nội dung câu hỏi chi tiết...</p>
+        </div>
+
+        <!-- Official Answer Box (If answered) -->
+        <div class="q-modal-answer-box" id="qModalAnswerBox">
+          <div class="q-modal-answer-header">
+            <div class="q-modal-teacher-info">
+              <span class="teacher-avatar">👨‍🏫</span>
+              <div>
+                <strong id="qModalAnswerTeacher">TS. Dương Việt Hằng</strong>
+                <span class="teacher-role" id="qModalAnswerRole">Giảng viên Hướng dẫn UIT</span>
+              </div>
+            </div>
+            <span class="verified-badge">✓ Phản Hồi Chính Thức</span>
+          </div>
+          <div class="q-modal-answer-body" id="qModalAnswerBody">
+            <!-- Answer text -->
+          </div>
+          <div class="q-modal-answer-footer" id="qModalAnswerTime">
+            Đã giải đáp vào lúc 14:30 · 28/10/2026
+          </div>
+        </div>
+
+        <!-- Admin / Mentor Answer Input Box (Shown for Admin/Mentor role) -->
+        <div class="q-modal-reply-box" id="qModalReplyBox" style="display: none;">
+          <h5 class="q-reply-title">✍️ Phản hồi từ Giảng viên / Ban Cố vấn</h5>
+          <textarea id="qReplyInput" class="form-input" rows="4" placeholder="Nhập nội dung giải đáp cho sinh viên..."></textarea>
+          <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+            <button type="button" class="btn btn-primary" id="btnSubmitQReply">
+              <span>Gửi Câu Trả Lời</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary q-modal-like-btn" id="btnModalLike">
+          <span>👍 Hữu ích</span>
+          <span class="like-badge" id="modalLikeCount">0</span>
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnCloseQModal">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Modal: Chi Tiết Đánh Giá & Cộng Sao Buổi Học ================= -->
+  <div class="modal-overlay" id="sessionStarDetailModal">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <span class="modal-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">⭐</span>
+          <div>
+            <h3 class="modal-title" id="starDetailModalTitle">Chi Tiết Cộng Sao Buổi Học</h3>
+            <span class="modal-subtitle" id="starDetailModalSubtitle">Thông tin buổi học & đánh giá từ Trainer</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeStarDetailModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px;">
+        <!-- Student Info Header -->
+        <div class="star-modal-student-box" id="starDetailStudentBox" style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 16px;">
+          <div class="star-modal-avatar" id="starDetailStudentAvatar" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #3b82f6; flex-shrink: 0;"></div>
+          <div>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.96rem;" id="starDetailStudentName">Họ và tên</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="starDetailStudentMeta">MSSV: 25520918 · Khoa KHMT</div>
+          </div>
+        </div>
+
+        <!-- Session & Star Stats Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Số sao được cộng</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #10b981; margin-top: 4px;" id="starDetailAwardedStars">+0 ⭐</div>
+          </div>
+          <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Lũy kế sau buổi này</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="starDetailCumulativeStars">0 ⭐</div>
+          </div>
+        </div>
+
+        <!-- Details List -->
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.86rem;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <span style="color: var(--text-muted);">Buổi học:</span>
+            <strong style="color: var(--text-main); text-align: right;" id="starDetailSessionName">Buổi 1</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <span style="color: var(--text-muted);">Ngày đào tạo:</span>
+            <span style="color: var(--text-main); font-weight: 600;" id="starDetailSessionDate">06/10/2026</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <span style="color: var(--text-muted);">Trainer phụ trách:</span>
+            <span style="color: var(--text-main); font-weight: 600;" id="starDetailTrainer">Võ Thị Xuân Quỳnh</span>
+          </div>
+          <div style="margin-top: 4px;">
+            <span style="color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600;">📝 Nhận xét & Lý do cộng sao:</span>
+            <div style="background: rgba(37, 99, 235, 0.05); border: 1px dashed rgba(37, 99, 235, 0.3); border-radius: 8px; padding: 12px 14px; color: var(--text-main); line-height: 1.45;" id="starDetailNote">
+              Hoàn thành bài tập & tham gia tích cực buổi học.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 12px 24px; border-top: 1px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary" id="btnCloseStarDetailModal">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Modular Components -->
+  <script src="js/api.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/scheduleData.js"></script>
+  <script src="js/duolingo.js"></script>
+  <script src="js/modules/core.js"></script>
+  <script src="js/modules/auth.js"></script>
+  <script src="js/modules/navigation.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/leaderboard.js"></script>
+  <script src="js/modules/profile.js"></script>
+  <script src="js/modules/schedule.js"></script>
+  <script src="js/modules/grades.js"></script>
+  <script src="js/modules/leave.js"></script>
+  <script src="js/modules/qa.js"></script>
+  <script src="js/modules/admin.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+
+</html>

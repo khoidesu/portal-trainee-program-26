@@ -1,0 +1,301 @@
+<!-- ==============================================================================
+ * COMPONENT: TAB VIEW: Q&A FORUM (Diễn Đàn Hỏi Đáp & Giải Đáp Cộng Đồng)
+ * CHỨC NĂNG CHÍNH: Nơi sinh viên đặt câu hỏi (hỗ trợ ẩn danh) và nhận câu trả lời chính thức từ Mentor / Giảng viên.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/qa.js, public/css/style.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - Banner giới thiệu kênh hỏi đáp học thuật
+ *   - Form đặt câu hỏi: Tùy chọn ẩn danh, chọn danh mục chủ đề, tiêu đề, nội dung chi tiết
+ *   - Gợi ý nhanh các mẫu câu hỏi thường gặp
+ *   - Bảng danh sách câu hỏi cộng đồng kèm bộ lọc chủ đề và ô tìm kiếm
+ *   - Xem câu trả lời chính thức từ Giảng viên / Mentor
+ * ============================================================================== -->
+
+        <!-- ======================================================== -->
+        <!-- TAB: DIỄN ĐÀN ĐẶT CÂU HỎI & BẢNG GIẢI ĐÁP (Q&A FORUM) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewQuestions">
+          <div class="question-page-container">
+
+            <!-- Banner Header -->
+            <div class="question-header-card">
+              <div class="question-header-content">
+                <div class="question-badge-pill">
+                  <span class="question-badge-icon">💬</span>
+                  <span>HỎI ĐÁP &amp; HỖ TRỢ</span>
+                  <span class="badge-dot">·</span>
+                  <span>TRAINEE PROGRAM UIT 2026</span>
+                </div>
+                <h2 class="question-main-title">Đặt Câu Hỏi &amp; Bảng Giải Đáp Học Vụ - Kỹ Thuật</h2>
+                <p class="question-subtext">
+                  Kênh tiếp nhận và giải đáp trực tiếp từ Giảng viên, Mentor và Ban Điều phối UIT. Bạn chỉ cần cung cấp MSSV (hoặc lựa chọn gửi ẩn danh 🎭) và nội dung thắc mắc để được hỗ trợ giải quyết kịp thời.
+                </p>
+              </div>
+              <div class="question-header-stats">
+                <div class="question-stat-box">
+                  <span class="question-stat-num" id="statAnsweredRate">96%</span>
+                  <span class="question-stat-lbl">Tỉ lệ đã giải đáp</span>
+                </div>
+                <div class="question-stat-box">
+                  <span class="question-stat-num" id="statAvgResponse">&lt; 2 giờ</span>
+                  <span class="question-stat-lbl">Phản hồi trung bình</span>
+                </div>
+                <div class="question-stat-box">
+                  <span class="question-stat-num" id="statTotalQuestions">4</span>
+                  <span class="question-stat-lbl">Tổng câu hỏi</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quy Định & Chế Độ Ẩn Danh Card -->
+            <div class="question-notice-card">
+              <div class="question-notice-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              <div class="question-notice-body">
+                <h4 class="question-notice-title">Quy tắc đặt câu hỏi &amp; Chế độ Ẩn danh 🎭</h4>
+                <ul class="question-notice-list">
+                  <li><strong>Tùy chọn ẩn danh:</strong> Tích chọn <em>"Gửi ẩn danh"</em> nếu bạn muốn bảo mật danh tính. Trên bảng câu hỏi công khai, thông tin người gửi sẽ hiển thị là <strong>"Sinh viên ẩn danh"</strong>, MSSV của bạn không bị lộ.</li>
+                  <li><strong>Mô tả chi tiết:</strong> Hãy ghi rõ chủ đề (Kỹ thuật Node.js/MongoDB, Bài tập thực hành, Lịch học...), đính kèm thông báo lỗi cụ thể để Mentor hỗ trợ chính xác.</li>
+                  <li><strong>Tra cứu nhanh:</strong> Khuyến khích tìm kiếm trên <strong>Bảng câu hỏi</strong> bên dưới trước khi đặt câu hỏi mới xem vấn đề đã được giải đáp hay chưa.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Success Alert Banner (Initially Hidden) -->
+            <div class="question-success-banner" id="questionSuccessAlert" style="display: none;">
+              <div class="question-success-icon-wrap">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <div class="question-success-content">
+                <div class="question-success-badge">✓ ĐÃ GỬI CÂU HỎI THÀNH CÔNG</div>
+                <h3 class="question-success-title">Thắc mắc của bạn đã được ghi nhận vào Bảng câu hỏi!</h3>
+                <p class="question-success-desc" id="questionSuccessDesc">
+                  Giảng viên và Mentor phụ trách sẽ xem xét và phản hồi trong thời gian sớm nhất.
+                </p>
+                <div class="question-success-meta" id="questionSuccessMeta">
+                  <!-- Injected via JS -->
+                </div>
+              </div>
+              <button type="button" class="question-success-close-btn" id="btnDismissQuestionSuccess" title="Đóng thông báo">&times;</button>
+            </div>
+
+            <!-- Main Form Card: ĐẶT CÂU HỎI -->
+            <div class="question-form-card">
+              <div class="question-form-header">
+                <div class="question-form-title-wrap">
+                  <div class="question-form-icon">📝</div>
+                  <div>
+                    <h3 class="question-form-title">Biểu Mẫu Đặt Câu Hỏi &amp; Thắc Mắc</h3>
+                    <p class="question-form-subtitle">Điền MSSV (hoặc chọn ẩn danh) và nhập câu hỏi của bạn vào bên dưới</p>
+                  </div>
+                </div>
+                <span class="question-required-note"><span class="text-danger">*</span> Các trường bắt buộc</span>
+              </div>
+
+              <form id="questionSubmitForm" class="question-form-body" novalidate>
+
+                <!-- Row 1: MSSV & Lựa chọn Ẩn danh -->
+                <div class="question-form-grid-2">
+                  <div class="form-group">
+                    <label for="questionInputMssv" class="form-label">
+                      <span>1. Mã số sinh viên (MSSV)</span>
+                      <span class="text-danger" id="questionMssvRequiredStar">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      <input type="text" id="questionInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
+                    </div>
+                    <span class="form-help-text" id="questionMssvHelpText">Mã số sinh viên chính thức tại UIT của bạn.</span>
+                  </div>
+
+                  <!-- Tùy chọn Ẩn Danh (Interactive Toggle Card) -->
+                  <div class="form-group">
+                    <label class="form-label">
+                      <span>2. Tùy chọn danh tính trên Bảng câu hỏi</span>
+                    </label>
+                    <div class="anon-toggle-card" id="anonToggleBox">
+                      <div class="anon-toggle-left">
+                        <div class="anon-toggle-icon" id="anonToggleIcon">🌐</div>
+                        <div class="anon-toggle-info">
+                          <div class="anon-toggle-title" id="anonToggleTitle">Công khai MSSV</div>
+                          <div class="anon-toggle-desc" id="anonToggleDesc">MSSV sẽ hiển thị cùng câu hỏi để Giảng viên dễ nhận diện.</div>
+                        </div>
+                      </div>
+                      <label class="anon-switch" title="Bật/Tắt chế độ ẩn danh">
+                        <input type="checkbox" id="questionCheckAnonymous">
+                        <span class="anon-slider"></span>
+                      </label>
+                    </div>
+                    <span class="form-help-text">Gạt nút sang phải để <strong>Gửi ẩn danh 🎭</strong>.</span>
+                  </div>
+                </div>
+
+                <!-- Row 2: Chủ đề & Tiêu đề -->
+                <div class="question-form-grid-2" style="margin-top: 14px;">
+                  <div class="form-group">
+                    <label for="questionSelectCategory" class="form-label">
+                      <span>3. Lĩnh vực / Chủ đề thắc mắc</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                      </svg>
+                      <select id="questionSelectCategory" class="form-input" required>
+                        <option value="Kỹ thuật & Code">💻 Kỹ thuật &amp; Lập trình (Node.js, Express, MongoDB, Git)</option>
+                        <option value="Bài tập & Đồ án">📚 Bài tập rèn luyện &amp; Deadline nộp bài</option>
+                        <option value="Lịch học & Điểm danh">📅 Lịch học trực tuyến &amp; Điểm danh MS Teams</option>
+                        <option value="Chương trình Trainee">⭐ Sao rèn luyện &amp; Bảng xếp hạng Trainee</option>
+                        <option value="Học vụ & Khác">❓ Học vụ &amp; Thắc mắc chung khác</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="questionInputTitle" class="form-label">
+                      <span>4. Tiêu đề câu hỏi (Tóm tắt ngắn gọn)</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                      </svg>
+                      <input type="text" id="questionInputTitle" class="form-input" placeholder="Ví dụ: Lỗi MongooseServerSelectionError khi kết nối MongoDB Atlas" required>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 3: Nội dung chi tiết câu hỏi (Bảng câu hỏi) -->
+                <div class="form-group" style="margin-top: 14px;">
+                  <label for="questionInputContent" class="form-label">
+                    <span>5. Nội dung chi tiết câu hỏi</span>
+                    <span class="text-danger">*</span>
+                  </label>
+                  <textarea id="questionInputContent" class="form-input question-textarea" rows="5"
+                    placeholder="Vui lòng mô tả chi tiết thắc mắc, bối cảnh bài học, mã lỗi, dòng code hoặc câu hỏi cần giải đáp... Nhập ít nhất 10 ký tự."
+                    required></textarea>
+
+                  <!-- Gợi ý câu hỏi nhanh (Quick Prompts) -->
+                  <div class="question-quick-chips">
+                    <span class="chips-label">Gợi ý mẫu câu hỏi nhanh:</span>
+                    <button type="button" class="question-chip" data-category="Kỹ thuật & Code" data-title="Lỗi kết nối MongoDB Atlas từ Node.js" data-content="Em chạy ứng dụng Node.js thì gặp lỗi MongooseServerSelectionError không kết nối được MongoDB Atlas. Thầy cô và Mentor cho em hỏi cách khắc phục lỗi IP Whitelist ạ?">
+                      💡 Lỗi MongoDB Atlas
+                    </button>
+                    <button type="button" class="question-chip" data-category="Bài tập & Đồ án" data-title="Thời hạn nộp bài tập Tuần và hình thức nộp" data-content="Thầy cô cho em hỏi thời hạn chót nộp bài tập tuần này là mấy giờ, và khi nộp thì gửi link GitHub repository hay nộp file nén ạ?">
+                      ⏰ Deadline nộp bài tập
+                    </button>
+                    <button type="button" class="question-chip" data-category="Lịch học & Điểm danh" data-title="Link xem lại video Recording buổi học" data-content="Buổi học vừa qua em có đơn xin nghỉ phép. Thầy cô cho em hỏi có thể xem lại video ghi hình buổi học trực tuyến ở kênh Teams nào ạ?">
+                      📹 Xem lại Recording buổi học
+                    </button>
+                    <button type="button" class="question-chip" data-category="Chương trình Trainee" data-title="Cơ chế cộng sao rèn luyện trên Bảng xếp hạng" data-content="Thầy cô cho em hỏi quy chế cộng sao rèn luyện ⭐ cho sinh viên: bài tập làm thêm và phát biểu trong buổi học được cộng bao nhiêu sao ạ?">
+                      ⭐ Tiêu chí cộng sao Trainee
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Form Actions: Nút Gửi & Nhập lại -->
+                <div class="question-actions-row">
+                  <button type="button" class="btn btn-secondary" id="btnResetQuestionForm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                      <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Nhập lại</span>
+                  </button>
+
+                  <button type="submit" class="btn btn-primary question-submit-btn" id="btnSubmitQuestion">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span>Gửi Câu Hỏi</span>
+                  </button>
+                </div>
+
+              </form>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- BẢNG CÂU HỎI & GIẢI ĐÁP CỘNG ĐỒNG (QUESTION BOARD) -->
+            <!-- ======================================================== -->
+            <div class="question-board-card">
+              <div class="question-board-header">
+                <div class="question-board-title-wrap">
+                  <span class="question-board-icon">📋</span>
+                  <div>
+                    <h3 class="question-board-title">Bảng Câu Hỏi &amp; Giải Đáp Cộng Đồng</h3>
+                    <p class="question-board-subtitle">Tra cứu các thắc mắc đã được Giảng viên và Mentor UIT phản hồi</p>
+                  </div>
+                </div>
+                <div class="question-board-header-right">
+                  <span class="question-board-count" id="questionBoardCountBadge">0 câu hỏi</span>
+                  <button type="button" class="btn btn-secondary question-refresh-btn" id="btnRefreshQuestions" title="Tải lại danh sách câu hỏi mới nhất">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                    </svg>
+                    <span>Làm mới</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter & Search Toolbar -->
+              <div class="question-toolbar">
+                <div class="question-search-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa, MSSV...">
+                </div>
+
+                <div class="question-filter-pills" id="questionFilterPills">
+                  <button type="button" class="q-filter-pill active" data-filter="all">Tất cả</button>
+                  <button type="button" class="q-filter-pill" data-filter="pending">⏳ Chờ giải đáp</button>
+                  <button type="button" class="q-filter-pill" data-filter="answered">✅ Đã giải đáp</button>
+                  <button type="button" class="q-filter-pill" data-filter="anonymous">🎭 Ẩn danh</button>
+                  <button type="button" class="q-filter-pill" data-filter="mine">👤 Của tôi</button>
+                </div>
+              </div>
+
+              <!-- Question Table -->
+              <div class="table-responsive">
+                <table class="question-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px; text-align: center;">STT</th>
+                      <th style="width: 140px;">Người gửi</th>
+                      <th style="width: 150px;">Chủ đề</th>
+                      <th>Câu hỏi &amp; Giải đáp</th>
+                      <th style="width: 130px;">Thời gian</th>
+                      <th style="width: 120px; text-align: center;">Trạng thái</th>
+                      <th style="width: 110px; text-align: center;">Tương tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="questionTableBody">
+                    <!-- Populated dynamically via JS -->
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+

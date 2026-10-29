@@ -1,0 +1,160 @@
+<!-- ==============================================================================
+ * COMPONENT: SIDEBAR NAVIGATION (Menu Điều Hướng Bên Trái)
+ * CHỨC NĂNG CHÍNH: Thanh menu bên trái hiển thị logo, các mục điều hướng chức năng cho học viên và ban quản trị.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/navigation.js, public/css/style.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - Hiển thị thương hiệu và logo UIT Portal
+ *   - Menu học vụ: Thời khóa biểu, Điểm danh & Điểm rèn luyện (Sao), Bài tập rèn luyện (Duolingo), Bảng xếp hạng
+ *   - Menu tiện ích: Xin nghỉ học, Hỏi đáp Q&A
+ *   - Menu Admin: Quản trị hệ thống (chỉ hiển thị khi tài khoản có quyền admin)
+ *   - Nút thu gọn/mở rộng sidebar trên desktop và di động
+ * ============================================================================== -->
+
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-badge">
+            <span class="badge-num">20</span>
+            <span class="badge-sub">UIT</span>
+          </div>
+          <div class="brand-text">
+            <h1 class="brand-title">Cổng thông tin</h1>
+            <span class="brand-subtitle">Trainee Program</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+        <!-- CÁC MỤC DÀNH CHO SINH VIÊN / USER THƯỜNG (ADMIN SẼ ẨN TOÀN BỘ) -->
+        <div class="student-only-nav-sections" id="studentOnlyNavSections">
+          <!-- ================= NHÓM HỌC VỤ ================= -->
+          <div class="nav-group-label">HỌC VỤ</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#schedule" class="nav-link active" id="navSchedule" data-tab="schedule">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </span>
+                <span class="nav-text">Thời khóa biểu</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#leaderboard" class="nav-link" id="navLeaderboard" data-tab="leaderboard">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                    <path d="M4 22h16" />
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                  </svg>
+                </span>
+                <span class="nav-text">Bảng xếp hạng</span>
+                <span class="nav-badge" id="traineeCountBadge">8</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#grades" class="nav-link" id="navGrades" data-tab="grades">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                  </svg>
+                </span>
+                <span class="nav-text">Bảng điểm</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="#leave" class="nav-link" id="navLeave" data-tab="leave">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" />
+                    <path d="m9 14 2 2 4-4" />
+                  </svg>
+                </span>
+                <span class="nav-text">Xin nghỉ</span>
+                <span class="nav-badge" style="background: rgba(37,99,235,0.12); color: var(--primary-blue); font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 6px;">FORM</span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- ================= NHÓM 3: THI CỬ ================= -->
+          <div class="nav-group-label">THI CỬ &amp; RÈN LUYỆN</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#assignments" class="nav-link" id="navAssignments" data-tab="assignments">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                </span>
+                <span class="nav-text">Bài tập</span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- ================= NHÓM 4: TRỢ GIÚP ================= -->
+          <div class="nav-group-label">TRỢ GIÚP &amp; HỎI ĐÁP</div>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="#questions" class="nav-link" id="navQuestions" data-tab="questions">
+                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg></span>
+                <span class="nav-text">Đặt câu hỏi</span>
+                <span class="nav-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 6px;">HỎI ĐÁP</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- ================= NHÓM ADMIN: QUẢN TRỊ HỆ THỐNG (CHỈ ADMIN MỚI THẤY VÀ TRUY CẬP ĐƯỢC) ================= -->
+        <div class="nav-group-label admin-only-element" id="adminNavGroupLabel" style="display: none;">QUẢN TRỊ HỆ THỐNG
+        </div>
+        <ul class="nav-list admin-only-element" id="adminNavList" style="display: none;">
+          <li class="nav-item">
+            <a href="#admin" class="nav-link admin-nav-link" id="navAdmin" data-tab="admin">
+              <span class="nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </span>
+              <span class="nav-text">Quản trị Admin</span>
+              <span class="nav-badge admin-badge">ADMIN</span>
+            </a>
+          </li>
+        </ul>
+
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="collapse-toggle-btn" id="collapseSidebarBtn" title="Thu gọn thanh điều hướng">
+          <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <path d="M9 3v18" />
+            <path d="m14 9-3 3 3 3" />
+          </svg>
+          <span class="collapse-text">Thu gọn</span>
+        </button>
+      </div>
+    </aside>
+

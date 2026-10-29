@@ -1,0 +1,142 @@
+<!-- ==============================================================================
+ * COMPONENT: TOP NAVBAR (Thanh Điều Hướng Phía Trên)
+ * CHỨC NĂNG CHÍNH: Header trên cùng hiển thị tiêu đề trang, breadcrumb, bộ chọn giao diện (Sáng/Tối/Hệ thống) và trạng thái người dùng.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, public/js/modules/auth.js, public/css/style.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - Nút toggle mở sidebar trên thiết bị di động
+ *   - Breadcrumb và tiêu đề trang thay đổi động theo tab
+ *   - Dropdown chuyển đổi chế độ giao diện: Sáng, Tối, Hệ thống
+ *   - Badge trạng thái tài khoản: Guest, Sinh viên hoặc Quản trị viên (Admin)
+ *   - Nút Đăng xuất và nút mở modal đổi mật khẩu / cấu hình MongoDB
+ * ============================================================================== -->
+
+      <!-- Top Navbar -->
+      <header class="top-navbar">
+        <div class="top-nav-left">
+          <button class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Mở menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="page-title-box">
+            <h2 class="page-main-title" id="pageMainTitle">Thời khóa biểu</h2>
+            <span class="page-sub-breadcrumb" id="pageSubBreadcrumb">Danh sách lớp đã đăng ký học phần và lịch học theo
+              tuần</span>
+          </div>
+        </div>
+
+        <div class="top-nav-right">
+          <!-- Hidden helper select to preserve JS compatibility -->
+          <select id="traineeSelect" style="display: none;"></select>
+
+          <!-- Theme Mode Dropdown (Phục hồi Chế độ Giao diện: Sáng / Tối / Hệ thống) -->
+          <div class="theme-mode-wrapper" id="themeModeWrapper">
+            <button class="header-action-btn theme-toggle-btn" id="themeToggleBtn" title="Chế độ giao diện (Sáng / Tối)"
+              aria-label="Chế độ giao diện" aria-expanded="false">
+              <!-- Mode icon: system (default), sun, moon -->
+              <svg class="theme-btn-icon icon-system" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <svg class="theme-btn-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg class="theme-btn-icon icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="display: none;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu: Sáng / Tối / Hệ thống -->
+            <div class="theme-dropdown-menu" id="themeDropdownMenu">
+              <div class="theme-dropdown-header">CHẾ ĐỘ GIAO DIỆN</div>
+              <div class="theme-options-list">
+                <button type="button" class="theme-option-item" data-mode="light">
+                  <div class="theme-option-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="5"></circle>
+                      <line x1="12" y1="1" x2="12" y2="3"></line>
+                      <line x1="12" y1="21" x2="12" y2="23"></line>
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                      <line x1="1" y1="12" x2="3" y2="12"></line>
+                      <line x1="21" y1="12" x2="23" y2="12"></line>
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                  </div>
+                  <div class="theme-option-info">
+                    <div class="theme-option-title">Sáng</div>
+                    <div class="theme-option-desc">Nền trắng, chữ đậm</div>
+                  </div>
+                </button>
+                <button type="button" class="theme-option-item" data-mode="dark">
+                  <div class="theme-option-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                  </div>
+                  <div class="theme-option-info">
+                    <div class="theme-option-title">Tối</div>
+                    <div class="theme-option-desc">Dịu mắt buổi tối</div>
+                  </div>
+                </button>
+                <button type="button" class="theme-option-item active" data-mode="system">
+                  <div class="theme-option-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                  </div>
+                  <div class="theme-option-info">
+                    <div class="theme-option-title">Hệ thống</div>
+                    <div class="theme-option-desc">Theo cài đặt máy</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ô nhỏ Đăng nhập Admin duy nhất -->
+          <a href="/login" class="header-action-btn login-header-btn" id="openLoginModalBtn"
+            title="Đăng nhập Quản trị viên (Admin)"
+            style="text-decoration: none; padding: 7px 16px; font-weight: 600; font-size: 13.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: var(--primary-blue); color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+            <span class="btn-text">Đăng nhập Admin</span>
+          </a>
+
+          <!-- Trạng thái khi Admin đã đăng nhập -->
+          <div class="admin-only-element" id="headerAdminStatus" style="display: none; align-items: center; gap: 8px;">
+            <a href="#admin"
+              style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
+              <span>🛡️ Admin UIT</span>
+            </a>
+            <button type="button" class="header-action-btn logout-header-btn" id="headerLogoutBtn"
+              title="Đăng xuất khỏi tài khoản Quản trị"
+              style="padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;">
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </header>
+

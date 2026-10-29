@@ -1,0 +1,475 @@
+<!-- ==============================================================================
+ * COMPONENT: TAB VIEW: ADMIN CONTROL PANEL (Trang Quản Trị Hệ Thống)
+ * CHỨC NĂNG CHÍNH: Trung tâm điều hành của Admin: quản lý sinh viên, lịch học, chấm sao buổi học, quản lý 11 bài tập & deadline, xử lý yêu cầu hỗ trợ.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/admin.js, public/css/style.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - 4 KPI Cards tổng quan quản trị: Tổng SV, Điểm trung bình, Buổi học, Yêu cầu chờ duyệt
+ *   - Quản lý thực tập sinh: Thêm mới, chỉnh sửa chỉ số KPI, đặt lại mật khẩu, xóa tài khoản
+ *   - Quản lý thời khóa biểu: Thêm buổi học, chỉnh sửa link MS Teams, xóa/reset lịch
+ *   - Quản lý cộng sao theo buổi học: Cấp sao hàng loạt theo danh sách điểm danh từng buổi
+ *   - Quản lý 11 bài tập Duolingo: Đổi tiêu đề, gán link làm bài, cấu hình hạn chót đếm ngược (Deadline)
+ *   - Quản lý yêu cầu hỗ trợ: Duyệt và cấp lại mật khẩu cho học viên quên tài khoản
+ * ============================================================================== -->
+
+        <!-- ======================================================== -->
+        <!-- TAB 4: TRANG QUẢN TRỊ ADMIN (CHỈ DÀNH CHO ADMIN) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewAdmin">
+
+          <!-- Admin Header Banner -->
+          <div class="admin-header-card">
+            <div class="admin-header-content">
+              <div class="admin-badge-pill">
+                <span class="shield-icon">🛡️</span>
+                <span>QUẢN TRỊ VIÊN HỆ THỐNG</span>
+              </div>
+              <h2 class="admin-main-title">Bảng Điều Khiển Quản Trị & Cập Nhật Chỉ Số</h2>
+              <p class="admin-subtext">
+                Cập nhật số sao ⭐, số buổi học 📅, buổi vắng (có phép & không phép) ⚠️, điểm bài tập 📝 của toàn bộ học
+                viên.
+                Dữ liệu được lưu trữ và đồng bộ trực tiếp tới cơ sở dữ liệu MongoDB Atlas.
+              </p>
+            </div>
+            <div class="admin-header-actions">
+              <div class="admin-db-status-chip">
+                <span class="db-chip-dot pulse"></span>
+                <span class="db-chip-text" id="adminDbChipText">MongoDB Atlas</span>
+              </div>
+              <button class="btn btn-secondary" id="btnAdminRefresh" title="Tải lại dữ liệu mới nhất từ MongoDB">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                </svg>
+                <span>Làm mới</span>
+              </button>
+              <button class="btn btn-primary" id="btnOpenCreateUserModal">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Tạo người dùng mới</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Admin Quick Metrics 4 Cards -->
+          <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+              <div class="stat-card-icon blue-bg">👥</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Tổng số sinh viên</span>
+                <span class="stat-card-value" id="adminMetricTotalUsers">8</span>
+                <span class="stat-card-hint">Trong database MongoDB</span>
+              </div>
+            </div>
+
+            <div class="admin-stat-card">
+              <div class="stat-card-icon yellow-bg">⭐</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Tổng số sao đã cấp</span>
+                <span class="stat-card-value" id="adminMetricTotalStars">180</span>
+                <span class="stat-card-hint">Đánh giá quá trình học tập</span>
+              </div>
+            </div>
+
+            <div class="admin-stat-card">
+              <div class="stat-card-icon green-bg">📅</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Tỷ lệ chuyên cần TB</span>
+                <span class="stat-card-value" id="adminMetricAvgAttendance">94.2%</span>
+                <span class="stat-card-hint">Tỷ lệ tham gia buổi học</span>
+              </div>
+            </div>
+
+            <div class="admin-stat-card">
+              <div class="stat-card-icon purple-bg">📝</div>
+              <div class="stat-card-data">
+                <span class="stat-card-label">Điểm bài tập TB</span>
+                <span class="stat-card-value" id="adminMetricAvgScore">9.35</span>
+                <span class="stat-card-hint">Thang điểm 10.0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Toolbar -->
+          <div class="admin-toolbar-card">
+            <div class="admin-search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input type="text" id="adminSearchInput" class="admin-search-input"
+                placeholder="Tìm theo MSSV, Họ và tên, Email...">
+            </div>
+
+            <div class="admin-filter-group">
+              <select id="adminTrackFilter" class="form-select admin-filter-select">
+                <option value="all">Tất cả ngành / Khoa</option>
+                <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
+                <option value="Khoa Hệ thống Thông tin">Khoa Hệ thống Thông tin</option>
+                <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
+                <option value="Khoa Mạng Máy tính & Truyền thông">Khoa Mạng Máy tính & TT</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Admin Trainees Data Table -->
+          <div class="portal-card admin-table-card">
+            <div class="admin-table-header">
+              <h3 class="admin-table-title">Danh Sách Người Dùng & Chỉ Số KPI</h3>
+              <span class="admin-table-count" id="adminTableCountBadge">8 sinh viên</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table" id="adminTraineesTable">
+                <thead>
+                  <tr>
+                    <th class="th-admin-user">Sinh viên / Trainee</th>
+                    <th class="th-admin-track">Khoa / Lớp</th>
+                    <th class="th-admin-stars" style="text-align: center;">⭐ Số sao</th>
+                    <th class="th-admin-attendance" style="text-align: center;">📅 Buổi học</th>
+                    <th class="th-admin-excused" style="text-align: center;">⚠️ Vắng CP</th>
+                    <th class="th-admin-unexcused" style="text-align: center;">🚫 Vắng KP</th>
+                    <th class="th-admin-score" style="text-align: center;">📝 Điểm bài tập</th>
+                    <th class="th-admin-rank" style="text-align: center;">🏆 Thứ hạng</th>
+                    <th class="th-admin-actions" style="text-align: center;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminTraineesTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="admin-empty-state" id="adminEmptyState" style="display: none;">
+              <div class="empty-icon">🔍</div>
+              <h4>Không tìm thấy người dùng phù hợp</h4>
+              <p>Vui lòng thử tìm với từ khóa khác hoặc xóa bộ lọc.</p>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ LỊCH HỌC TRỰC TUYẾN MS TEAMS (CHỈ ADMIN) ================= -->
+          <div class="portal-card admin-schedule-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <h3 class="admin-table-title">📅 Quản Lý Lịch Học Trực Tuyến & Microsoft Teams (Tháng 10/2026)</h3>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Chỉ Quản trị viên mới có quyền cập nhật lịch học, đổi thời gian và gán link phòng họp MS Teams cho
+                  từng buổi học.
+                </p>
+              </div>
+              <div class="admin-header-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="btnAdminGoSchedule"
+                  title="Chuyển đến trang xem Thời khóa biểu">
+                  <span>Xem trên TKB</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminResetSchedule"
+                  title="Khôi phục lại lịch mẫu Tháng 10">
+                  <span>↺ Đặt lại lịch tháng</span>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnAdminAddSchedule">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span>+ Tạo buổi học mới</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top: 14px;">
+              <table class="admin-table" id="adminScheduleTable">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th>Mã Buổi</th>
+                    <th>Tên Buổi Học / Chuyên Đề</th>
+                    <th style="text-align: center;">Ngày Học</th>
+                    <th style="text-align: center;">Giờ Học</th>
+                    <th>Giảng Viên / Mentor</th>
+                    <th style="text-align: center;">Link MS Teams</th>
+                    <th style="text-align: center;">Trạng Thái</th>
+                    <th style="text-align: center;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminScheduleTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ TỔNG HỢP & CỘNG SAO BUỔI HỌC (CHỈ ADMIN) ================= -->
+          <div class="portal-card admin-award-stars-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 class="admin-table-title">⭐ Tổng Hợp &amp; Cộng Sao Theo Buổi Học</h3>
+                  <span class="badge badge-success">Đồng bộ MongoDB &amp; Homepage</span>
+                </div>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Chọn buổi học từ Lịch đào tạo để tổng hợp và cộng sao cho sinh viên. Dữ liệu sẽ tự động đồng bộ vào
+                  Biểu đồ trang chủ, Bảng xếp hạng và Bảng điểm của sinh viên.
+                </p>
+              </div>
+            </div>
+
+            <!-- Award Stars Form -->
+            <form id="adminAwardStarsForm" class="award-stars-form"
+              style="margin-top: 16px; background: var(--bg-card-subtle); padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+              <div class="form-row-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+
+                <div class="form-group">
+                  <label for="awardSelectSchedule" class="form-label" style="font-weight: 600; font-size: 0.82rem;">1.
+                    Chọn buổi học từ Lịch đào tạo <span class="text-danger">*</span></label>
+                  <select id="awardSelectSchedule" class="form-input" required>
+                    <option value="">-- Đang tải lịch học --</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="awardSelectTrainee" class="form-label" style="font-weight: 600; font-size: 0.82rem;">2.
+                    Đối tượng nhận sao <span class="text-danger">*</span></label>
+                  <select id="awardSelectTrainee" class="form-input" required>
+                    <option value="all">⭐ Tất cả sinh viên (Cộng đồng loạt)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="awardSelectStage" class="form-label" style="font-weight: 600; font-size: 0.82rem;">3. Giai
+                    đoạn đào tạo</label>
+                  <select id="awardSelectStage" class="form-input">
+                    <option value="Giai đoạn 1" data-stagename="Training">Giai đoạn 1: Training</option>
+                    <option value="Giai đoạn 2" data-stagename="Capstone Project">Giai đoạn 2: Capstone Project</option>
+                    <option value="Giai đoạn 3" data-stagename="Đánh giá &amp; Tốt nghiệp">Giai đoạn 3: Đánh giá &amp;
+                      Tốt nghiệp</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="awardInputStars" class="form-label" style="font-weight: 600; font-size: 0.82rem;">4. Số
+                    sao được cộng (+) <span class="text-danger">*</span></label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="number" id="awardInputStars" class="form-input" value="5" min="1" max="100" required
+                      style="max-width: 90px; text-align: center; font-weight: 700; font-size: 1.05rem; color: #f59e0b;">
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="1">+1</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="2">+2</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="5">+5</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="10">+10</button>
+                      <button type="button" class="btn btn-outline btn-xs btn-quick-star" data-val="15">+15</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="form-row-grid"
+                style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-top: 12px;">
+                <div class="form-group">
+                  <label for="awardInputNote" class="form-label" style="font-weight: 600; font-size: 0.82rem;">5. Đánh
+                    giá / Lý do cộng sao</label>
+                  <input type="text" id="awardInputNote" class="form-input"
+                    placeholder="Ví dụ: Hoàn thành xuất sắc bài tập thực hành, tham gia tích cực">
+                </div>
+                <div class="form-group">
+                  <label for="awardInputTrainer" class="form-label" style="font-weight: 600; font-size: 0.82rem;">6.
+                    Trainer đánh giá</label>
+                  <input type="text" id="awardInputTrainer" class="form-input" value="Võ Thị Xuân Quỳnh">
+                </div>
+              </div>
+
+              <div
+                style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <button type="submit" class="btn btn-primary" id="btnSubmitAwardStars">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon
+                      points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                    </polygon>
+                  </svg>
+                  <span>⭐ Xác Nhận Cộng Sao &amp; Đồng Bộ</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- BẢNG ĐIỀU CHỈNH ĐIỂM SAO TOÀN DIỆN THEO BUỔI (RÀNG BUỘC THEO TỪNG BUỔI HỌC) -->
+            <div class="admin-session-batch-panel" style="margin-top: 24px; border-top: 1px dashed var(--border-color); padding-top: 20px;">
+              <div class="batch-panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <h4 style="font-size: 0.98rem; font-weight: 700; color: var(--text-main); margin: 0;">
+                      🎯 Bảng Chấm Điểm &amp; Cập Nhật Sao Theo Buổi (Cho Toàn Bộ Sinh Viên)
+                    </h4>
+                    <span class="badge badge-primary">Ràng buộc theo từng buổi</span>
+                  </div>
+                  <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0 0;">
+                    Chọn buổi học để xem và điều chỉnh số sao được cộng (+⭐) cùng nhận xét riêng cho từng sinh viên trong buổi đó.
+                  </p>
+                </div>
+
+                <div class="batch-panel-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Áp dụng nhanh:</span>
+                    <button type="button" class="btn btn-outline btn-xs" id="btnQuickSetAllStars" data-stars="5">+5⭐ Tất cả</button>
+                    <button type="button" class="btn btn-outline btn-xs" id="btnQuickSetAllStars10" data-stars="10">+10⭐ Tất cả</button>
+                  </div>
+                  <button type="button" class="btn btn-primary" id="btnSaveBatchSessionStars" style="font-size: 0.82rem; padding: 6px 14px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                      <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    <span>💾 Lưu Điểm Buổi Học Này Vào MongoDB</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Roster grading table for selected session -->
+              <div class="table-responsive" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+                <table class="admin-table admin-session-grading-table" id="adminSessionGradingTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px; text-align: center;">STT</th>
+                      <th style="min-width: 200px;">Sinh viên / Trainee</th>
+                      <th style="min-width: 120px;">Khoa / Lớp</th>
+                      <th style="width: 140px; text-align: center;">⭐ Sao cộng buổi này</th>
+                      <th style="min-width: 220px;">📝 Nhận xét / Đánh giá của Trainer</th>
+                      <th style="width: 110px; text-align: center;">Lũy kế sau buổi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminSessionGradingTableBody">
+                    <!-- Populated dynamically when session is selected -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Recent session stars awards history -->
+            <div style="margin-top: 20px;">
+              <h4 style="font-size: 0.88rem; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">📋
+                Lịch sử cộng sao các buổi học gần nhất (Học viên hiện tại / Toàn khóa)</h4>
+              <div class="table-responsive">
+                <table class="admin-table" id="adminRecentAwardTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 12%;">Mã buổi</th>
+                      <th style="width: 28%;">Tên buổi học</th>
+                      <th style="width: 14%; text-align: center;">Ngày học</th>
+                      <th style="width: 12%; text-align: center;">Số sao</th>
+                      <th style="width: 22%;">Đánh giá / Ghi chú</th>
+                      <th style="width: 12%; text-align: center;">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminRecentAwardTableBody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ 11 BÀI TẬP RÈN LUYỆN & GÁN LINK (CHỈ ADMIN) ================= -->
+          <div class="portal-card admin-assignments-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 class="admin-table-title">🎒 Quản Lý 11 Bài Tập Rèn Luyện &amp; Gán Link Bài Tập</h3>
+                  <span class="badge badge-success">Đồng bộ MongoDB &amp; Duolingo Path</span>
+                </div>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Admin có thể chỉnh sửa tiêu đề, mô tả, đặc biệt là <strong>Đường Link Bài Tập</strong> (Google Form, GitHub, Colab, LMS...) cho từng bài. Khi sinh viên bấm vào bất kỳ bài tập nào trên lộ trình, đường link này sẽ hiển thị để sinh viên truy cập.
+                </p>
+              </div>
+              <div class="admin-header-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminResetAssignments" title="Khôi phục 11 bài tập về mặc định ban đầu">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  <span>Khôi phục mặc định</span>
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnAdminSaveAllAssignments">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  <span>💾 Lưu Toàn Bộ Link Vào MongoDB</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top: 14px;">
+              <table class="admin-table" id="adminAssignmentsTable">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">STT</th>
+                    <th style="min-width: 200px;">Tên Bài Tập / Chuyên Đề</th>
+                    <th style="width: 130px; text-align: center;">Trạng Thái</th>
+                    <th style="min-width: 240px;">🔗 Đường Link Đã Gán (Admin Sửa)</th>
+                    <th style="min-width: 210px; text-align: center;">⏰ Thời Hạn Nộp &amp; Đếm Ngược</th>
+                    <th style="width: 110px; text-align: center;">Thưởng</th>
+                    <th style="width: 140px; text-align: center;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminAssignmentsTableBody">
+                  <!-- Populated dynamically by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ================= QUẢN LÝ YÊU CẦU QUÊN MẬT KHẨU & HỖ TRỢ ================= -->
+          <div class="portal-card admin-support-card" style="margin-top: 24px;">
+            <div class="admin-table-header">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 class="admin-table-title">📬 Hộp Thư Yêu Cầu Hỗ Trợ & Quên Mật Khẩu</h3>
+                  <span class="badge badge-warning" id="adminSupportPendingBadge">0 chờ xử lý</span>
+                </div>
+                <p class="admin-subtext" style="margin: 4px 0 0 0; font-size: 0.82rem;">
+                  Danh sách sinh viên gửi yêu cầu quên mật khẩu hoặc phản hồi. Quản trị viên có thể bấm 1 chạm để đặt
+                  lại mật khẩu về mặc định (1234) hoặc xóa yêu cầu.
+                </p>
+              </div>
+              <div class="admin-header-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminRefreshSupport"
+                  title="Làm mới danh sách yêu cầu từ MongoDB">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                  </svg>
+                  <span>Làm mới</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive" style="margin-top: 14px;">
+              <table class="admin-table" id="adminSupportTable">
+                <thead>
+                  <tr>
+                    <th style="width: 45px; text-align: center;">STT</th>
+                    <th>Loại Yêu Cầu</th>
+                    <th>MSSV / Tài Khoản</th>
+                    <th>Họ và Tên</th>
+                    <th>Email / SĐT</th>
+                    <th>Ghi Chú / Lời Nhắn</th>
+                    <th style="text-align: center;">Thời Gian Gửi</th>
+                    <th style="text-align: center;">Trạng Thái</th>
+                    <th style="text-align: center;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminSupportTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="admin-empty-state" id="adminSupportEmptyState" style="display: none; padding: 32px 16px;">
+              <div class="empty-icon">📭</div>
+              <h4>Không có yêu cầu hỗ trợ nào</h4>
+              <p>Hiện không có học viên nào gửi yêu cầu quên mật khẩu hay phản hồi.</p>
+            </div>
+          </div>
+
+        </section>
+

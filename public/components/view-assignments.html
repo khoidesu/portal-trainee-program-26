@@ -1,0 +1,293 @@
+<!-- ==============================================================================
+ * COMPONENT: TAB VIEW: DUOLINGO ASSIGNMENTS (Lộ Trình Bài Tập Rèn Luyện)
+ * CHỨC NĂNG CHÍNH: Lộ trình 11 bài tập phong cách Duolingo với đồng hồ đếm ngược thời gian còn lại (Deadline).
+ * LIÊN KẾT & PHỤ THUỘC: public/js/duolingo.js, public/css/duolingo.css
+ * NHIỆM VỤ CHI TIẾT:
+ *   - Thanh thông số Gamification: Chuỗi ngày Streak, Tổng XP, Đá quý Gems, Tim Lives
+ *   - Đường dẫn học tập uốn lượn phong cách Duolingo với 11 bài tập thực hành
+ *   - Huy hiệu đồng hồ đếm ngược thời gian còn lại (Deadline Countdown) dưới mỗi nút bài tập
+ *   - Cột phụ bên phải: Mục tiêu hàng ngày (Daily Quests) và bảng xếp hạng rèn luyện mini
+ *   - Tích hợp mở modal làm bài và nút gán link/thiết lập deadline nhanh cho Admin
+ * ============================================================================== -->
+
+        <!-- ======================================================== -->
+        <!-- TAB: BÀI TẬP RÈN LUYỆN (DUOLINGO LEARNING PATH STYLE) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewAssignments">
+          <div class="duo-page-container">
+
+            <!-- Main Layout Grid -->
+            <div class="duo-main-grid">
+
+              <!-- Left Column: Unit Banner + Learning Path -->
+              <div class="duo-path-column">
+
+                <!-- Unit Banner (Green) -->
+                <div class="duo-unit-banner">
+                  <div class="duo-unit-left">
+                    <div class="duo-unit-tag">Lộ Trình 11 Bài Tập Thực Hành</div>
+                    <div class="duo-unit-desc">Hệ thống 11 bài tập rèn luyện chuyên sâu Trainee Program UIT</div>
+                  </div>
+                  <button type="button" class="duo-guidebook-btn" id="duoGuidebookBtn"
+                    title="Xem sổ tay hướng dẫn bài tập">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                      <line x1="8" y1="6" x2="16" y2="6" />
+                      <line x1="8" y1="10" x2="16" y2="10" />
+                      <line x1="8" y1="14" x2="14" y2="14" />
+                    </svg>
+                    <span>GUIDEBOOK</span>
+                  </button>
+                </div>
+
+                <!-- Learning Path Container -->
+                <div class="duo-path-wrapper">
+                  <!-- Winding SVG Path in background -->
+                  <svg class="duo-path-svg-bg" viewBox="0 0 320 1200" preserveAspectRatio="none">
+                    <path class="duo-path-curve"
+                      d="M 160 35 C 260 160, 260 350, 160 475 C 60 600, 60 790, 160 915 C 260 1010, 255 1070, 232 1115" />
+                  </svg>
+
+                  <!-- Mascot 1: Duo reading book with glasses on a stack of books (left side) -->
+                  <div class="duo-mascot duo-mascot-left">
+                    <svg viewBox="0 0 120 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Stack of books -->
+                      <rect x="15" y="105" width="90" height="14" rx="4" fill="#fbbf24" stroke="#d97706"
+                        stroke-width="2" />
+                      <rect x="25" y="93" width="75" height="13" rx="3" fill="#a855f7" stroke="#7e22ce"
+                        stroke-width="2" />
+                      <rect x="20" y="82" width="80" height="12" rx="3" fill="#3b82f6" stroke="#1d4ed8"
+                        stroke-width="2" />
+                      <!-- Duo Body -->
+                      <ellipse cx="60" cy="50" rx="36" ry="38" fill="#58cc02" />
+                      <ellipse cx="60" cy="56" rx="26" ry="26" fill="#78e000" />
+                      <!-- Cute Ears/Tufts -->
+                      <polygon points="32,20 44,12 40,28" fill="#46a302" />
+                      <polygon points="88,20 76,12 80,28" fill="#46a302" />
+                      <!-- Big Eyes with Glasses -->
+                      <circle cx="45" cy="42" r="14" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                      <circle cx="75" cy="42" r="14" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                      <line x1="59" y1="42" x2="61" y2="42" stroke="#1e293b" stroke-width="3" />
+                      <!-- Eye Pupils looking down at book -->
+                      <circle cx="47" cy="46" r="6" fill="#1e293b" />
+                      <circle cx="73" cy="46" r="6" fill="#1e293b" />
+                      <circle cx="48" cy="44" r="2" fill="#ffffff" />
+                      <circle cx="74" cy="44" r="2" fill="#ffffff" />
+                      <!-- Beak -->
+                      <polygon points="60,48 53,58 67,58" fill="#ff9600" />
+                      <!-- Wings holding book -->
+                      <ellipse cx="32" cy="62" rx="8" ry="14" fill="#46a302" transform="rotate(25 32 62)" />
+                      <ellipse cx="88" cy="62" rx="8" ry="14" fill="#46a302" transform="rotate(-25 88 62)" />
+                      <!-- Open Book in hands -->
+                      <polygon points="40,78 60,72 80,78 78,64 60,60 42,64" fill="#60a5fa" stroke="#2563eb"
+                        stroke-width="2" />
+                      <path d="M 44 68 Q 52 65 58 65 M 62 65 Q 68 65 76 68" stroke="#ffffff" stroke-width="1.5" />
+                    </svg>
+                  </div>
+
+                  <!-- Mascot 2: Cheerful Duo holding a shiny blue gem (right side) -->
+                  <div class="duo-mascot duo-mascot-right">
+                    <svg viewBox="0 0 110 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Feet -->
+                      <ellipse cx="44" cy="110" rx="9" ry="5" fill="#ff9600" />
+                      <ellipse cx="66" cy="110" rx="9" ry="5" fill="#ff9600" />
+                      <!-- Body -->
+                      <ellipse cx="55" cy="64" rx="35" ry="38" fill="#58cc02" />
+                      <ellipse cx="55" cy="72" rx="25" ry="24" fill="#78e000" />
+                      <!-- Wing left waving -->
+                      <ellipse cx="25" cy="60" rx="9" ry="16" fill="#46a302" transform="rotate(-35 25 60)" />
+                      <!-- Wing right holding gem up -->
+                      <ellipse cx="82" cy="52" rx="9" ry="16" fill="#46a302" transform="rotate(45 82 52)" />
+                      <!-- Shiny Blue Gem/Diamond -->
+                      <polygon points="86,30 98,22 104,36 94,48 80,38" fill="#38bdf8" stroke="#0284c7"
+                        stroke-width="2" />
+                      <polygon points="86,30 98,22 94,48" fill="#7dd3fc" />
+                      <circle cx="94" cy="32" r="3" fill="#ffffff" opacity="0.8" />
+                      <!-- Eyes -->
+                      <circle cx="43" cy="54" r="12" fill="#ffffff" />
+                      <circle cx="67" cy="54" r="12" fill="#ffffff" />
+                      <!-- Pupils -->
+                      <circle cx="45" cy="54" r="6" fill="#1e293b" />
+                      <circle cx="65" cy="54" r="6" fill="#1e293b" />
+                      <circle cx="47" cy="52" r="2" fill="#ffffff" />
+                      <circle cx="67" cy="52" r="2" fill="#ffffff" />
+                      <!-- Cheerful Beak -->
+                      <polygon points="55,58 48,68 62,68" fill="#ff9600" />
+                      <!-- Blush -->
+                      <circle cx="34" cy="64" r="5" fill="#f87171" opacity="0.4" />
+                      <circle cx="76" cy="64" r="5" fill="#f87171" opacity="0.4" />
+                    </svg>
+                  </div>
+
+                  <!-- Path Nodes container (Generated dynamically by duolingo.js) -->
+                  <div id="duoPathContainer"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+
+                  <!-- Floating Practice Dumbbell Button -->
+                  <button type="button" class="duo-practice-btn" id="duoPracticeBtn"
+                    title="Luyện tập nhanh để phục hồi năng lượng">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m6.5 6.5 11 11" />
+                      <path d="m21 21-1-1" />
+                      <path d="m3 3 1 1" />
+                      <path d="m18 22 4-4" />
+                      <path d="m2 6 4-4" />
+                      <path d="m3 10 7-7" />
+                      <path d="m14 21 7-7" />
+                    </svg>
+                  </button>
+
+                </div>
+
+              </div>
+
+              <!-- Right Column: Sidebar Widgets -->
+              <div class="duo-sidebar">
+
+                <!-- Widget 1: XP Progress & Weekly Activity -->
+                <div class="duo-card">
+                  <div class="duo-card-header">
+                    <div class="duo-card-title">XP Progress</div>
+                    <a href="javascript:void(0)" class="duo-card-action"
+                      onclick="if(window.showToast) window.showToast('Mục tiêu hàng ngày: 50 XP/ngày', 'info')">EDIT
+                      GOAL</a>
+                  </div>
+
+                  <div class="duo-goal-row">
+                    <div class="duo-chest-icon-wrap">
+                      <span>💎</span>
+                    </div>
+                    <div class="duo-goal-info">
+                      <div class="duo-goal-label-row">
+                        <span>Daily Goal</span>
+                        <span style="font-weight: 800; color: #ff9600;">58 / 50 XP</span>
+                      </div>
+                      <div class="duo-progress-bar-bg">
+                        <div class="duo-progress-bar-fill" style="width: 100%;"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- SVG Weekly Chart (Su, M, Tu, W, Th, F, Sa) -->
+                  <div class="duo-chart-container">
+                    <svg class="duo-chart-svg" id="duoChartSvg" viewBox="0 0 320 140">
+                      <defs>
+                        <linearGradient id="duoChartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stop-color="#ffc800" stop-opacity="0.4" />
+                          <stop offset="100%" stop-color="#ffc800" stop-opacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      <!-- Horizontal grid lines & Y labels -->
+                      <line class="duo-chart-axis-line" x1="32" y1="18" x2="310" y2="18" />
+                      <text class="duo-chart-axis-text" x="4" y="22">960</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="45" x2="310" y2="45" />
+                      <text class="duo-chart-axis-text" x="4" y="49">720</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="72" x2="310" y2="72" />
+                      <text class="duo-chart-axis-text" x="4" y="76">480</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="99" x2="310" y2="99" />
+                      <text class="duo-chart-axis-text" x="4" y="103">240</text>
+
+                      <line class="duo-chart-axis-line" x1="32" y1="118" x2="310" y2="118" />
+                      <text class="duo-chart-axis-text" x="18" y="122">0</text>
+
+                      <!-- Area & Trend Line -->
+                      <path class="duo-chart-area-fill" d="" />
+                      <path class="duo-chart-line" d="" />
+                      <g class="duo-chart-points-group"></g>
+
+                      <!-- Days of the week -->
+                      <text class="duo-chart-axis-text" x="38" y="136" text-anchor="middle">Su</text>
+                      <text class="duo-chart-axis-text" x="84" y="136" text-anchor="middle">M</text>
+                      <text class="duo-chart-axis-text" x="130" y="136" text-anchor="middle">Tu</text>
+                      <text class="duo-chart-axis-text" x="176" y="136" text-anchor="middle">W</text>
+                      <text class="duo-chart-axis-text" x="222" y="136" text-anchor="middle">Th</text>
+                      <text class="duo-chart-axis-text" x="268" y="136" text-anchor="middle">F</text>
+                      <text class="duo-chart-axis-text" x="306" y="136" text-anchor="middle">Sa</text>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Widget 2: Next Achievement -->
+                <div class="duo-card">
+                  <div class="duo-card-header">
+                    <div class="duo-card-title">Next Achievement</div>
+                    <a href="javascript:void(0)" class="duo-card-action"
+                      onclick="if(window.showToast) window.showToast('Bạn đã đạt 14/20 huy hiệu trong chương trình!', 'info')">VIEW
+                      ALL</a>
+                  </div>
+
+                  <div class="duo-achievement-row">
+                    <div class="duo-achievement-badge-box">
+                      <span class="duo-achievement-icon">📜</span>
+                      <span class="duo-achievement-level">LEVEL 10</span>
+                    </div>
+
+                    <div class="duo-achievement-details">
+                      <div class="duo-achievement-text">Hoàn thành 2000 dòng code &amp; bài tập thực hành Trainee</div>
+                      <div class="duo-progress-bar-bg" style="height: 10px;">
+                        <div class="duo-progress-bar-fill" style="width: 82%;"></div>
+                      </div>
+                      <div
+                        style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-align: right; margin-top: 5px;">
+                        1949 / 2000
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Widget 3: Daily Quests / Nhiệm vụ ngày -->
+                <div class="duo-card">
+                  <div class="duo-card-header">
+                    <div class="duo-card-title">Nhiệm Vụ Hôm Nay</div>
+                    <span style="font-size: 13px; font-weight: 700; color: #ff9600;">⚡ 2/3 XONG</span>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-size: 20px;">🎯</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13.5px; font-weight: 700;">Nộp 1 bài tập Trainee</div>
+                        <div class="duo-progress-bar-bg" style="height: 8px; margin-top: 4px;">
+                          <div class="duo-progress-bar-fill" style="width: 100%; background: #58cc02;"></div>
+                        </div>
+                      </div>
+                      <span style="font-size: 12px; font-weight: 800; color: #58cc02;">+20 XP</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-size: 20px;">🔥</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13.5px; font-weight: 700;">Luyện tập liên tục 7 ngày</div>
+                        <div class="duo-progress-bar-bg" style="height: 8px; margin-top: 4px;">
+                          <div class="duo-progress-bar-fill" style="width: 100%; background: #ff9600;"></div>
+                        </div>
+                      </div>
+                      <span style="font-size: 12px; font-weight: 800; color: #ff9600;">+30 💎</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-size: 20px;">⭐</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13.5px; font-weight: 700;">Đạt điểm tối đa 100/100</div>
+                        <div class="duo-progress-bar-bg" style="height: 8px; margin-top: 4px;">
+                          <div class="duo-progress-bar-fill" style="width: 40%; background: #3b82f6;"></div>
+                        </div>
+                      </div>
+                      <span style="font-size: 12px; font-weight: 800; color: #64748b;">+50 XP</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+

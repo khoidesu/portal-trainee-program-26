@@ -1,0 +1,27 @@
+{
+  "name": "trainee-portal-2026",
+  "version": "1.0.0",
+  "description": "Cổng thông tin theo dõi sinh viên trong chương trình Trainee Program (UIT Style UI with MongoDB & Mock DB)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seed.js",
+    "build:components": "node scripts/assemble-components.js"
+  },
+  "keywords": [
+    "trainee",
+    "portal",
+    "uit",
+    "mongodb",
+    "student-management"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.2"
+  }
+}
