@@ -81,7 +81,7 @@ portal-tp-26/
 
 1. **Mở Terminal và clone dự án về máy:**
    ```bash
-   git clone <URL_REPOSITORY_CUA_BAN>
+   git clone https://github.com/khoidesu/portal-trainee-program-26.git
    cd portal-tp-26
    ```
 
