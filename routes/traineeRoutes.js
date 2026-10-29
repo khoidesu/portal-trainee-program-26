@@ -19,10 +19,28 @@ const { requireAdmin } = require('../utils/security');
 const {
   getAllTrainees,
   getTraineeById,
+  getSessionStars,
   createTrainee,
   updateTrainee,
   deleteTrainee
 } = require('../config/db');
+
+// Lấy danh sách chi tiết sao từng buổi học của sinh viên
+router.get('/:id/session-stars', async (req, res) => {
+  try {
+    const data = await getSessionStars(req.params.id);
+    res.json({
+      success: true,
+      data
+    });
+  } catch (err) {
+    console.error('Lỗi API /api/trainees/:id/session-stars:', err.message);
+    res.status(404).json({
+      success: false,
+      message: err.message || 'Không tìm thấy dữ liệu sao của sinh viên này'
+    });
+  }
+});
 
 // Lấy danh sách tất cả thực tập sinh
 router.get('/', async (req, res) => {

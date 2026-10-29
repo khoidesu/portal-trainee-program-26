@@ -170,12 +170,17 @@ function handleLogout() {
 }
 
 
+function checkAdminAuth() {
+  return Boolean(state.currentUser && state.currentUser.role === 'admin');
+}
+
 function updateAuthUI() {
   renderAuthState();
 }
 
 // Expose to global window
 window.initAuth = initAuth;
+window.checkAdminAuth = checkAdminAuth;
 window.logout = handleLogout;
 window.handleLogout = handleLogout;
 window.updateAuthUI = updateAuthUI;

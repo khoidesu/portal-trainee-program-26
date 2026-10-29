@@ -550,7 +550,18 @@ async function loadTrainees() {
 
 // 3. Tải chi tiết thực tập sinh hiện tại
 async function loadCurrentTrainee(id) {
-  const trainee = await window.API.getTraineeById(id);
+  let targetId = id;
+  if (!targetId) {
+    if (state.currentTraineeId) {
+      targetId = state.currentTraineeId;
+    } else if (state.trainees && state.trainees.length > 0) {
+      targetId = state.trainees[0].traineeId;
+    }
+  }
+
+  if (!targetId) return;
+
+  const trainee = await window.API.getTraineeById(targetId);
   if (!trainee) return;
 
   state.currentTrainee = trainee;
@@ -636,6 +647,12 @@ async function handleSaveMongoUri(e) {
     await loadTrainees();
   } else {
     alert('Không thể kết nối MongoDB: ' + res.message);
+  }
+}
+
+function initMongoConfigModal() {
+  if (elements.mongoConfigForm) {
+    elements.mongoConfigForm.addEventListener('submit', handleSaveMongoUri);
   }
 }
 
