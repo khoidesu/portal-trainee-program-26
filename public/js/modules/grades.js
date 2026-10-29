@@ -721,6 +721,14 @@ function renderSessionReferenceSection() {
 }
 
 
+function initGradesModule() {
+  setupGradesFilters();
+}
+
+function openStarDetailModal(traineeId, sessionCode) {
+  openSessionStarDetailModal(traineeId, sessionCode);
+}
+
 // Expose to global window
 window.gradesState = gradesState;
 window.initGradesModule = initGradesModule;

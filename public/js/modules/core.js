@@ -651,6 +651,10 @@ function getInitials(name) {
 }
 
 
+function setThemeMode(mode) {
+  applyThemeMode(mode, true);
+}
+
 // Expose to global window
 window.state = state;
 window.elements = elements;

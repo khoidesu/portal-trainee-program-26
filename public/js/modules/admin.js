@@ -1401,8 +1401,13 @@ function openAdminEditAssignmentModal(item) {
 window.renderAdminAssignmentsTable = renderAdminAssignmentsTable;
 
 
+function renderAdminTraineesTable() {
+  renderAdminTable();
+}
+
 // Expose to global window
 window.renderAdminView = renderAdminView;
+window.renderAdminTable = renderAdminTable;
 window.renderAdminTraineesTable = renderAdminTraineesTable;
 window.openDeleteModal = openDeleteModal;
 window.renderAdminSupportRequests = renderAdminSupportRequests;

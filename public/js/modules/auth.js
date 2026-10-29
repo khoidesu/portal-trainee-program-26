@@ -170,8 +170,15 @@ function handleLogout() {
 }
 
 
+function updateAuthUI() {
+  renderAuthState();
+}
+
 // Expose to global window
 window.initAuth = initAuth;
-window.logout = logout;
+window.logout = handleLogout;
+window.handleLogout = handleLogout;
 window.updateAuthUI = updateAuthUI;
 window.checkAdminAuth = checkAdminAuth;
+window.openLoginModal = openLoginModal;
+window.closeLoginModal = closeLoginModal;

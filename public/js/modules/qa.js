@@ -700,6 +700,15 @@ function setupQuestionEvents() {
 
 
 
+function initQaModule() {
+  setupQuestionEvents();
+}
+
+function openQaDetailModal(id) {
+  openQuestionModal(id);
+}
+
 // Expose to global window
 window.initQaModule = initQaModule;
+window.renderQuestionsView = renderQuestionsView;
 window.openQaDetailModal = openQaDetailModal;

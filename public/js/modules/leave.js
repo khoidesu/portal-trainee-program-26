@@ -334,7 +334,12 @@ function setupLeaveFormEvents() {
 }
 
 
+function initLeaveModule() {
+  setupLeaveFormEvents();
+}
+
 // Expose to global window
 window.initLeaveModule = initLeaveModule;
+window.renderLeaveView = renderLeaveView;
 window.getSavedLeaveHistory = getSavedLeaveHistory;
 window.saveLeaveHistory = saveLeaveHistory;
