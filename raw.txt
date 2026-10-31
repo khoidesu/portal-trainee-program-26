@@ -38,10 +38,10 @@ File .env chứa chuỗi kết nối thật:
 Code block
 
 
-MONGODB_URI=mongodb+srv://anhkhoi11077_db_user:khoi1101@portal-tp.rvs1iso.mongodb.net/...
+MONGODB_URI=mongodb+srv://<credentials-redacted>@<cluster>/...
 Không có .gitignore (tôi đã kiểm tra, thư mục hiện chưa phải git repo, nhưng ngay khi git init + push thì password này lộ công khai).
-Mật khẩu DB là khoi1101 — rất yếu, liên quan trực tiếp tới username.
-Ai có chuỗi này = toàn quyền đọc/ghi/xóa database.
+Thông tin xác thực DB đã được che khỏi báo cáo; cần thay mật khẩu nếu chuỗi cũ từng được dùng thật.
+Ai có chuỗi cũ = toàn quyền đọc/ghi/xóa database.
 Khuyến nghị: xoay ngay password MongoDB, dùng biến môi trường (không commit .env), thêm .gitignore, dùng secret manager.
 
 🔴 S3. Credential admin hardcode trong source code
