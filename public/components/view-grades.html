@@ -19,45 +19,47 @@
             <div class="grades-header-bar">
               <div class="grades-header-left">
                 <div class="grades-breadcrumb">
-                  <span>Cổng Sinh viên</span>
+                  <span>Cổng Trainee Program</span>
                   <span class="sep">›</span>
                   <span class="active">Bảng điểm sao buổi học</span>
                 </div>
                 <h1 class="grades-title">Bảng Điểm Sao Theo Từng Buổi Học</h1>
                 <p class="grades-subtitle">
-                  Theo dõi số sao cộng thêm (+⭐) của mỗi học viên sau từng buổi học thực tế trong chương trình Trainee Program UIT.
+                  Theo dõi điểm sao của mỗi Trainee sau từng buổi học thực tế trong chương trình Trainee Program UIT.
                 </p>
               </div>
               <div class="grades-header-right">
                 <button type="button" class="btn btn-outline btn-print-grades" id="btnPrintGrades"
                   title="In hoặc xuất bảng điểm dạng PDF">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                    <rect x="6" y="14" width="12" height="8"></rect>
-                  </svg>
+
                   <span>In bảng điểm</span>
                 </button>
               </div>
             </div>
 
-            <!-- Top Highlights KPI Summary Cards -->
+  <section class="portal-card context-management" data-permission="attendance:manage" style="display:none">
+  <h3>Ghi nhận điểm danh và điểm sao</h3>
+  <div class="attendance-controls">
+    <label>Tháng học<input type="month" class="form-input" id="attendanceMonth"></label>
+    <label>Buổi học<select class="form-input" id="attendanceSessionSelect"></select></label>
+    <label>Trainee<select class="form-input" id="attendanceTraineeSelect"></select></label>
+    <button type="button" class="btn btn-primary" id="btnOpenAttendanceEditor">Ghi nhận / Sửa</button>
+  </div>
+  <p id="attendanceControlsFeedback" role="status"></p>
+</section>
+          <!-- Top Highlights KPI Summary Cards -->
             <div class="grades-kpi-grid">
               <div class="grades-kpi-card">
-                <div class="grades-kpi-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">
-                  👥
-                </div>
+
                 <div class="grades-kpi-info">
-                  <span class="grades-kpi-label">Tổng số sinh viên</span>
-                  <strong class="grades-kpi-value" id="kpiTotalTrainees">10 học viên</strong>
+                  <span class="grades-kpi-label">Tổng số Trainee</span>
+                  <strong class="grades-kpi-value" id="kpiTotalTrainees">10 Trainee</strong>
                   <span class="grades-kpi-sub">Đồng bộ từ MongoDB Atlas</span>
                 </div>
               </div>
 
               <div class="grades-kpi-card">
-                <div class="grades-kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
-                  📅
-                </div>
+
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Số buổi học đã diễn ra</span>
                   <strong class="grades-kpi-value" id="kpiTotalSessions">4 buổi học</strong>
@@ -66,24 +68,20 @@
               </div>
 
               <div class="grades-kpi-card">
-                <div class="grades-kpi-icon-wrap" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
-                  ⭐
-                </div>
+
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Tổng sao đã cấp phát</span>
-                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned">326 ⭐</strong>
+                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned">326 </strong>
                   <span class="grades-kpi-sub">Toàn bộ các buổi đào tạo</span>
                 </div>
               </div>
 
               <div class="grades-kpi-card">
-                <div class="grades-kpi-icon-wrap" style="background: rgba(168, 85, 247, 0.12); color: #a855f7;">
-                  🏆
-                </div>
+
                 <div class="grades-kpi-info">
-                  <span class="grades-kpi-label">Sinh viên dẫn đầu</span>
-                  <strong class="grades-kpi-value" id="kpiTopStudent">Anh Khoi (50 ⭐)</strong>
-                  <span class="grades-kpi-sub">🥇 Quán quân Trainee</span>
+                  <span class="grades-kpi-label">Trainee dẫn đầu</span>
+                  <strong class="grades-kpi-value" id="kpiTopStudent">Anh Khoi (50 )</strong>
+                  <span class="grades-kpi-sub"> Quán quân Trainee</span>
                 </div>
               </div>
             </div>
@@ -94,22 +92,11 @@
                 <!-- View Mode Toggle Buttons -->
                 <div class="grades-view-mode-group">
                   <button type="button" class="btn-mode-toggle active" id="btnModeSessionBoxes">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="3" width="7" height="7"></rect>
-                      <rect x="14" y="3" width="7" height="7"></rect>
-                      <rect x="14" y="14" width="7" height="7"></rect>
-                      <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    <span>Xem Từng Buổi Học (Ô Box)</span>
+
+                    <span>Xem Từng Buổi Học</span>
                   </button>
                   <button type="button" class="btn-mode-toggle" id="btnModeMatrix">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 3h18v18H3z"></path>
-                      <path d="M3 9h18"></path>
-                      <path d="M3 15h18"></path>
-                      <path d="M9 3v18"></path>
-                      <path d="M15 3v18"></path>
-                    </svg>
+
                     <span>Bảng Ma Trận Tổng Hợp</span>
                   </button>
                 </div>
@@ -117,24 +104,15 @@
                 <!-- Search & Track Filters -->
                 <div class="grades-filter-tools">
                   <div class="grades-search-box">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="inputSearchGradesTrainee" placeholder="Tìm tên sinh viên hoặc MSSV...">
+
+                    <input type="text" id="inputSearchGradesTrainee" placeholder="Tìm tên Trainee hoặc MSSV...">
                   </div>
 
                   <div class="grades-track-select-box">
-                    <select id="selectGradesTrack" class="form-input" style="padding: 6px 12px; font-size: 0.82rem; height: 34px; border-radius: 8px;">
-                      <option value="all">Tất cả khoa / lớp</option>
-                      <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
-                      <option value="Khoa Hệ thống Thông tin">Khoa Hệ thống Thông tin</option>
-                      <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
-                      <option value="Khoa Mạng Máy tính & Truyền thông">Khoa Mạng Máy tính & TT</option>
-                    </select>
+                    <select id="selectGradesTrack" class="form-input"><option value="all">Tất cả</option></select>
                   </div>
 
-                  <span class="badge badge-primary" id="gradesCountBadge">10 học viên</span>
+                  <span class="badge badge-primary" id="gradesCountBadge">10 Trainee</span>
                 </div>
               </div>
 
@@ -148,7 +126,7 @@
               </div>
             </div>
 
-            <!-- 1. VIEW PRIMARY: SESSION BOXES CONTAINER (MỖI BUỔI CHO 1 Ô BOX GỒM TẤT CẢ SINH VIÊN VÀ SỐ SAO CỘNG) -->
+            <!-- 1. VIEW PRIMARY: SESSION BOXES CONTAINER (MỖI BUỔI CHO 1 Ô BOX GỒM TẤT CẢ Trainee VÀ SỐ SAO CỘNG) -->
             <div class="grades-session-boxes-view" id="gradesSessionBoxesView">
               <div class="session-boxes-grid" id="gradesSessionBoxesContainer">
                 <!-- Dynamically populated by JS: Each session as 1 dedicated box/card -->
@@ -159,15 +137,11 @@
             <div class="grades-card grades-matrix-wrap" id="gradesMatrixWrap" style="display: none;">
               <div class="grades-card-header grades-card-header-flex">
                 <div class="grades-card-icon-title">
-                  <span class="grades-pane-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                  </span>
+
                   <div>
                     <h3 class="grades-card-title">Bảng Ma Trận Sao Qua Từng Buổi Học</h3>
                     <p class="grades-card-subtitle">
-                      Mỗi cột thể hiện số sao <strong>(+⭐)</strong> được cộng thêm sau buổi học đó. Nhấp vào số sao để xem chi tiết nhận xét của Trainer.
+                      Mỗi cột thể hiện số sao <strong>(+)</strong> được cộng thêm sau buổi học đó. Nhấp vào số sao để xem chi tiết nhận xét của Trainer.
                     </p>
                   </div>
                 </div>
@@ -192,8 +166,8 @@
             <!-- Session Reference Section: Thông tin các buổi học đã diễn ra -->
             <div class="grades-session-reference-section">
               <div class="section-title-wrap">
-                <h4 class="session-reference-title">📚 Danh Sách Nội Dung Các Buổi Học Đã Đào Tạo</h4>
-                <span class="session-reference-badge">Trainer phụ trách: <strong>Võ Thị Xuân Quỳnh</strong> (quynhvtx@uit.edu.vn)</span>
+                <h4 class="session-reference-title"> Danh Sách Nội Dung Các Buổi Học Đã Đào Tạo</h4>
+                <span class="session-reference-badge">Phụ trách: <strong>Ban Hậu cần</strong></span>
               </div>
               <div class="session-reference-grid" id="sessionReferenceGrid">
                 <!-- Populated dynamically by JS -->

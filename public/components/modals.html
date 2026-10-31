@@ -1,19 +1,19 @@
 <!-- ==============================================================================
  * COMPONENT: COMPONENTS: SYSTEM MODALS (Hộp Thoại Tương Tác Toàn Hệ Thống)
- * CHỨC NĂNG CHÍNH: Tập hợp toàn bộ các modal popup tương tác phục vụ sinh viên và admin.
+ * CHỨC NĂNG CHÍNH: Tập hợp toàn bộ các modal popup tương tác phục vụ Trainee và admin.
  * LIÊN KẾT & PHỤ THUỘC: public/js/modules/*.js, public/js/duolingo.js, public/css/style.css
  * NHIỆM VỤ CHI TIẾT:
- *   - Modal #traineeDetailModal: Xem chi tiết hồ sơ cá nhân và lịch sử học tập của sinh viên
+ *   - Modal #traineeDetailModal: Xem chi tiết hồ sơ cá nhân và lịch sử học tập của Trainee
  *   - Modal #mongoConfigModal: Xem trạng thái và cấu hình kết nối MongoDB Atlas (Admin)
  *   - Modal #scheduleModal: Thêm / sửa thông tin buổi học và gán link MS Teams (Admin)
- *   - Modal #createUserModal: Thêm tài khoản thực tập sinh mới vào hệ thống (Admin)
- *   - Modal #editUserModal: Chỉnh sửa thông số KPI và sao từng buổi của sinh viên (Admin)
- *   - Modal #deleteConfirmModal: Xác nhận xóa tài khoản sinh viên khỏi cơ sở dữ liệu
+ *   - Modal #createUserModal: Thêm tài khoản Trainee mới vào hệ thống (Admin)
+ *   - Modal #editUserModal: Chỉnh sửa thông số KPI và sao từng buổi của Trainee (Admin)
+ *   - Modal #deleteConfirmModal: Xác nhận xóa tài khoản Trainee khỏi cơ sở dữ liệu
  *   - Modal #changePasswordModal: Đổi mật khẩu tài khoản trực tiếp
  *   - Modal #forgotPasswordModal: Gửi yêu cầu hỗ trợ quên mật khẩu
  *   - Modal #duoAssignmentModal: Xem chi tiết bài tập Duolingo, đồng hồ đếm ngược và gán deadline
- *   - Modal #adminEditAssignmentModal: Form sửa đầy đủ thông tin bài tập (tiêu đề, link, deadline, xp, gems)
- *   - Modal #qaDetailModal: Xem chi tiết câu hỏi và form gửi phản hồi chính thức cho Mentor
+ *   - Modal #adminEditAssignmentModal: Form sửa thông tin bài tập (tiêu đề, link, deadline, trạng thái)
+ *   - Modal #qaDetailModal: Xem chi tiết câu hỏi và form gửi phản hồi chính thức cho Trainer
  *   - Modal #awardStarsDetailModal: Xem minh chứng chi tiết điểm sao từng buổi học
  * ============================================================================== -->
 
@@ -21,8 +21,8 @@
   <div class="modal-overlay" id="traineeDetailModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Hồ Sơ Chi Tiết Thực Tập Sinh</h3>
-        <button class="modal-close-btn" id="closeDetailModalBtn">&times;</button>
+        <h3 class="modal-title">Hồ Sơ Chi Tiết Trainee</h3>
+        <button class="modal-close-btn" id="closeDetailModalBtn">Đóng</button>
       </div>
       <div class="modal-body" id="traineeDetailModalBody">
         <!-- Rendered dynamically -->
@@ -35,10 +35,10 @@
     <div class="modal-card mongo-modal-card">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="mongo-icon">🍃</span>
+
           <h3 class="modal-title">Cấu Hình Kết Nối MongoDB</h3>
         </div>
-        <button class="modal-close-btn" id="closeMongoModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeMongoModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body">
@@ -92,15 +92,15 @@
     <div class="modal-card schedule-modal-card">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge">📅</span>
+
           <h3 class="modal-title" id="scheduleModalTitle">Thêm / Chỉnh Sửa Buổi Học Trực Tuyến</h3>
         </div>
-        <button class="modal-close-btn" id="closeScheduleModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeScheduleModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body">
         <div class="modal-admin-shield-hint">
-          <span class="shield-tag">🛡️ QUYỀN ADMIN</span>
+          <span class="shield-tag"> QUYỀN ADMIN</span>
           <span>Chỉ Quản trị viên mới được sửa lịch học. Dữ liệu được lưu trữ trực tiếp vào MongoDB Atlas.</span>
         </div>
 
@@ -154,45 +154,49 @@
                 placeholder="VD: Tiết 1 - 4">
             </div>
             <div class="form-group">
-              <label for="courseStatusSelect" class="form-label">Trạng thái buổi học</label>
-              <select id="courseStatusSelect" class="form-select">
-                <option value="upcoming" selected>Sắp diễn ra</option>
-                <option value="live">Đang diễn ra (Trực tiếp)</option>
-                <option value="completed">Đã kết thúc</option>
-              </select>
+              <label class="form-label">Trạng thái buổi học</label>
+              <p class="form-help-text">Tự động theo ngày và giờ học (UTC+7).</p>
             </div>
           </div>
 
           <div class="form-grid-2col">
             <div class="form-group">
-              <label for="courseInstructorInput" class="form-label">Giảng viên / Mentor phụ trách</label>
+              <label for="courseInstructorInput" class="form-label">Trainer phụ trách</label>
               <input type="text" id="courseInstructorInput" class="form-input"
-                placeholder="Ví dụ: TS. Dương Việt Hằng, Mentor UIT...">
+                placeholder="Ví dụ: TS. Dương Việt Hằng, Trainer...">
             </div>
             <div class="form-group">
               <label for="courseTypeSelect" class="form-label">Hình thức đào tạo</label>
               <select id="courseTypeSelect" class="form-select">
+                <option value="Offline">Trực tiếp (Offline)</option>
                 <option value="Online" selected>Học Trực Tuyến (Online MS Teams)</option>
                 <option value="Lý thuyết">Lý thuyết Trực tuyến</option>
                 <option value="Thực hành">Thực hành Trực tuyến</option>
                 <option value="Báo cáo">Báo cáo & Đồ án</option>
               </select>
+              <label class="form-help-text"><input type="checkbox" id="courseTentativeInput"> Lịch dự kiến ngày hoặc giờ</label>
             </div>
           </div>
 
           <!-- PHẦN GÁN LINK MICROSOFT TEAMS (CHO NÚT "VÀO HỌC") -->
           <div class="form-group full-width-group highlight-teams-form-group">
             <label for="courseTeamsUrl" class="form-label teams-field-label">
-              <span class="teams-icon-badge">🌐</span>
+
               <span>Đường Dẫn Phòng Họp Microsoft Teams (Link "Vào học")</span>
             </label>
             <input type="url" id="courseTeamsUrl" class="form-input teams-url-input"
               placeholder="https://teams.microsoft.com/l/meetup-join/... (Để trống nếu bạn muốn gán sau)">
             <p class="teams-input-hint">
-              💡 <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
-              Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng học viên vào phòng học
+               <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
+              Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng Trainee vào phòng học
               MS Teams!
             </p>
+          </div>
+
+          <div class="form-group">
+            <label for="courseDocumentUrl" class="form-label">Link tài liệu buổi học (tùy chọn)</label>
+            <input type="url" id="courseDocumentUrl" class="form-input" maxlength="2048" placeholder="https://...">
+            <p class="form-help-text">Có link thì Trainee và khách thấy nút Tài liệu buổi học. Để trống để ẩn nút.</p>
           </div>
 
           <div class="form-group">
@@ -207,12 +211,12 @@
               ↺ Khôi phục mẫu Tháng 10
             </button>
             <button type="button" class="btn btn-danger admin-only-element" id="btnDeleteCourse" style="display: none;">
-              🗑 Xóa buổi học
+               Xóa buổi học
             </button>
             <div style="flex: 1;"></div>
             <button type="button" class="btn btn-secondary" id="cancelScheduleBtn">Hủy</button>
             <button type="submit" class="btn btn-primary" id="btnSaveCourse">
-              💾 Lưu buổi học & Link MS Teams
+               Lưu buổi học & Link MS Teams
             </button>
           </div>
         </form>
@@ -222,18 +226,18 @@
 
   <!-- Trang đăng nhập là 1 trang riêng biệt tại /login (public/login.html) -->
 
-  <!-- ==================== MODAL: TẠO SINH VIÊN MỚI (ADMIN) ==================== -->
+  <!-- ==================== MODAL: TẠO Trainee MỚI (ADMIN) ==================== -->
   <div class="modal-overlay" id="createTraineeModal">
     <div class="modal-card trainee-form-modal-card">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge">✨</span>
+
           <div>
-            <h3 class="modal-title">Tạo Người Dùng / Sinh Viên Mới</h3>
+            <h3 class="modal-title">Tạo Người Dùng / Trainee Mới</h3>
             <span class="modal-subtitle">Ghi dữ liệu trực tiếp vào cơ sở dữ liệu MongoDB Atlas</span>
           </div>
         </div>
-        <button class="modal-close-btn" id="closeCreateTraineeModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeCreateTraineeModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body">
@@ -241,56 +245,52 @@
           <div class="form-section-title">THÔNG TIN ĐỊNH DANH</div>
           <div class="form-grid-2col">
             <div class="form-group">
-              <label for="createTraineeId" class="form-label">Mã sinh viên (MSSV) <span
+              <label for="createTraineeId" class="form-label">Mã Trainee (MSSV) <span
                   class="required">*</span></label>
               <input type="text" id="createTraineeId" class="form-input" placeholder="Ví dụ: 25520999" required>
             </div>
             <div class="form-group">
-              <label for="createFullName" class="form-label">Họ và tên sinh viên <span class="required">*</span></label>
+              <label for="createFullName" class="form-label">Họ và tên Trainee <span class="required">*</span></label>
               <input type="text" id="createFullName" class="form-input" placeholder="Ví dụ: Nguyễn Văn An" required>
             </div>
           </div>
 
           <div class="form-grid-2col">
             <div class="form-group">
-              <label for="createEmail" class="form-label">Email sinh viên <span class="required">*</span></label>
+              <label for="createEmail" class="form-label">Email Trainee <span class="required">*</span></label>
               <input type="email" id="createEmail" class="form-input" placeholder="an.nv@trainee.uit.edu.vn" required>
             </div>
             <div class="form-group">
-              <label for="createTrack" class="form-label">Khoa / Chuyên ngành đào tạo <span
+              <label for="createTrack" class="form-label">Nhóm <span
                   class="required">*</span></label>
-              <select id="createTrack" class="form-select" required>
-                <option value="Khoa Khoa học Máy tính" selected>Khoa Khoa học Máy tính</option>
-                <option value="Khoa Hệ thống Thông tin">Khoa Hệ thống Thông tin</option>
-                <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
-                <option value="Khoa Mạng Máy tính & Truyền thông">Khoa Mạng Máy tính & TT</option>
-              </select>
+              <input type="text" id="createTrack" class="form-input" list="traineeTrackOptions" placeholder="Nhập nhóm hoặc Track của chương trình" required>
+              <datalist id="traineeTrackOptions"></datalist>
             </div>
           </div>
 
           <div class="form-grid-2col">
             <div class="form-group">
-              <label for="createBatch" class="form-label">Lớp / Khóa học</label>
+              <label for="createBatch" class="form-label">Khóa Trainee</label>
               <input type="text" id="createBatch" class="form-input" value="KHMT2026.2">
             </div>
             <div class="form-group">
               <label for="createTotalSessions" class="form-label">Tổng số buổi quy định</label>
-              <input type="number" id="createTotalSessions" class="form-input" min="1" max="200" value="45">
+              <input type="number" id="createTotalSessions" class="form-input" min="0" max="200" value="0">
             </div>
           </div>
 
           <div class="form-section-title">CHỈ SỐ KPI & THÀNH TÍCH HỌC TẬP</div>
           <div class="form-grid-3col">
             <div class="form-group">
-              <label for="createStars" class="form-label">⭐ Số sao tích lũy <span class="required">*</span></label>
+              <label for="createStars" class="form-label"> Số sao tích lũy <span class="required">*</span></label>
               <input type="number" id="createStars" class="form-input" min="0" max="1000" value="25" required>
             </div>
             <div class="form-group">
-              <label for="createAttended" class="form-label">📅 Số buổi đã học <span class="required">*</span></label>
+              <label for="createAttended" class="form-label"> Số buổi đã học <span class="required">*</span></label>
               <input type="number" id="createAttended" class="form-input" min="0" max="200" value="40" required>
             </div>
             <div class="form-group">
-              <label for="createAssignmentScore" class="form-label">📝 Điểm bài tập (thang 10)</label>
+              <label for="createAssignmentScore" class="form-label"> Điểm bài tập (thang 10)</label>
               <input type="number" id="createAssignmentScore" class="form-input" min="0" max="10" step="0.1"
                 value="9.0">
             </div>
@@ -298,24 +298,24 @@
 
           <div class="form-grid-2col">
             <div class="form-group">
-              <label for="createExcused" class="form-label">⚠️ Vắng CÓ PHÉP</label>
+              <label for="createExcused" class="form-label"> Vắng CÓ PHÉP</label>
               <input type="number" id="createExcused" class="form-input" min="0" max="50" value="0">
             </div>
             <div class="form-group">
-              <label for="createUnexcused" class="form-label">🚫 Vắng KHÔNG PHÉP</label>
+              <label for="createUnexcused" class="form-label"> Vắng KHÔNG PHÉP</label>
               <input type="number" id="createUnexcused" class="form-input" min="0" max="50" value="0">
             </div>
           </div>
 
           <div class="form-info-hint" style="background: rgba(37, 99, 235, 0.06); border: 1px dashed rgba(37, 99, 235, 0.25); padding: 12px 16px; border-radius: 8px; font-size: 0.84rem; color: var(--text-secondary); margin-top: 14px; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.2rem;">✨</span>
-            <span>Thứ hạng (Rank) sẽ <strong>tự động xếp hạng</strong> theo số sao tích lũy ⭐. Sinh viên không cần đăng nhập mật khẩu để xem cổng thông tin.</span>
+            <span style="font-size: 1.2rem;"></span>
+            <span>Thứ hạng (Rank) sẽ <strong>tự động xếp hạng</strong> theo số sao tích lũy . Trainee không cần đăng nhập mật khẩu để xem cổng thông tin.</span>
           </div>
 
           <div class="modal-form-actions">
             <button type="button" class="btn btn-secondary" id="cancelCreateTraineeBtn">Hủy</button>
             <button type="submit" class="btn btn-primary" id="btnSubmitCreateTrainee">
-              <span>✨ Tạo Người Dùng Vào MongoDB</span>
+              <span> Tạo Người Dùng Vào MongoDB</span>
             </button>
           </div>
         </form>
@@ -328,13 +328,13 @@
     <div class="modal-card trainee-form-modal-card">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge">✏️</span>
+
           <div>
             <h3 class="modal-title">Cập Nhật Chỉ Số KPI & Thông Tin Người Dùng</h3>
             <span class="modal-subtitle">Chỉnh sửa số sao, số buổi học, vắng, điểm bài tập trên MongoDB Atlas</span>
           </div>
         </div>
-        <button class="modal-close-btn" id="closeEditTraineeModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeEditTraineeModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body">
@@ -344,12 +344,12 @@
           <div class="form-section-title">THÔNG TIN CƠ BẢN</div>
           <div class="form-grid-2col">
             <div class="form-group">
-              <label for="editTraineeId" class="form-label">Mã sinh viên (MSSV)</label>
+              <label for="editTraineeId" class="form-label">Mã Trainee (MSSV)</label>
               <input type="text" id="editTraineeId" class="form-input" readonly disabled
                 style="background: var(--bg-card-subtle); opacity: 0.85;">
             </div>
             <div class="form-group">
-              <label for="editFullName" class="form-label">Họ và tên sinh viên <span class="required">*</span></label>
+              <label for="editFullName" class="form-label">Họ và tên Trainee <span class="required">*</span></label>
               <input type="text" id="editFullName" class="form-input" required>
             </div>
           </div>
@@ -360,7 +360,7 @@
               <input type="email" id="editEmail" class="form-input" required>
             </div>
             <div class="form-group">
-              <label for="editTrack" class="form-label">Khoa / Chuyên ngành</label>
+              <label for="editTrack" class="form-label">Nhóm</label>
               <input type="text" id="editTrack" class="form-input">
             </div>
           </div>
@@ -372,7 +372,7 @@
             </div>
             <div class="form-group">
               <label for="editTotalSessions" class="form-label">Tổng số buổi quy định</label>
-              <input type="number" id="editTotalSessions" class="form-input" min="1" max="200">
+              <input type="number" id="editTotalSessions" class="form-input" min="0" max="200">
             </div>
           </div>
 
@@ -380,7 +380,7 @@
           <div class="form-grid-3col">
             <div class="form-group">
               <label for="editStars" class="form-label" style="display: flex; justify-content: space-between;">
-                <span>⭐ Tổng sao tích lũy</span>
+                <span> Tổng sao tích lũy</span>
                 <span class="badge badge-success" style="font-size: 0.68rem; padding: 2px 6px;">Tự động tính theo buổi</span>
               </label>
               <input type="number" id="editStars" class="form-input" min="0" max="1000" readonly
@@ -388,35 +388,31 @@
                 title="Tổng sao được tự động tính từ tổng số sao của các buổi học bên dưới">
             </div>
             <div class="form-group">
-              <label for="editAttendedSessions" class="form-label">📅 Số buổi đã học <span
+              <label for="editAttendedSessions" class="form-label"> Số buổi đã học <span
                   class="required">*</span></label>
               <input type="number" id="editAttendedSessions" class="form-input" min="0" max="200" required>
             </div>
             <div class="form-group">
-              <label for="editAssignmentScore" class="form-label">📝 Điểm bài tập (thang 10)</label>
+              <label for="editAssignmentScore" class="form-label"> Điểm bài tập (thang 10)</label>
               <input type="number" id="editAssignmentScore" class="form-input" min="0" max="10" step="0.1">
             </div>
           </div>
 
           <div class="form-grid-3col">
             <div class="form-group">
-              <label for="editAbsentExcused" class="form-label">⚠️ Buổi vắng CÓ PHÉP</label>
+              <label for="editAbsentExcused" class="form-label"> Buổi vắng CÓ PHÉP</label>
               <input type="number" id="editAbsentExcused" class="form-input" min="0" max="50">
             </div>
             <div class="form-group">
-              <label for="editAbsentUnexcused" class="form-label">🚫 Buổi vắng KHÔNG PHÉP</label>
+              <label for="editAbsentUnexcused" class="form-label"> Buổi vắng KHÔNG PHÉP</label>
               <input type="number" id="editAbsentUnexcused" class="form-input" min="0" max="50">
-            </div>
-            <div class="form-group">
-              <label for="editCompletedAssignments" class="form-label">Số bài tập đạt</label>
-              <input type="number" id="editCompletedAssignments" class="form-input" min="0" max="100">
             </div>
           </div>
 
-          <!-- RÀNG BUỘC CẬP NHẬT SAO THEO TỪNG BUỔI HỌC CỦA SINH VIÊN -->
+          <!-- RÀNG BUỘC CẬP NHẬT SAO THEO TỪNG BUỔI HỌC CỦA Trainee -->
           <div class="form-section-title" style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span>⭐ CỘNG SAO THEO TỪNG BUỔI HỌC (RÀNG BUỘC BUỔI)</span>
+              <span> CỘNG SAO THEO TỪNG BUỔI HỌC (RÀNG BUỘC BUỔI)</span>
               <span class="badge badge-primary" style="font-size: 0.68rem;">Khớp bảng điểm</span>
             </div>
             <button type="button" class="btn btn-outline btn-xs" id="btnAddSessionToStudentBtn" style="font-size: 0.76rem; padding: 4px 10px;">
@@ -426,7 +422,7 @@
 
           <div class="edit-student-sessions-wrapper">
             <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 10px 0;">
-              Admin cập nhật số sao cộng (+⭐) và nhận xét chi tiết của học viên cho từng buổi học. Tổng số sao ⭐ ở trên sẽ tự động cộng dồn tức thì.
+              Admin cập nhật số sao cộng (+) và nhận xét chi tiết của Trainee cho từng buổi học. Tổng số sao  ở trên sẽ tự động cộng dồn tức thì.
             </p>
             <div class="edit-trainee-sessions-list" id="editTraineeSessionsContainer">
               <!-- Populated by JavaScript -->
@@ -434,7 +430,7 @@
           </div>
 
           <div class="form-info-hint" style="background: rgba(37, 99, 235, 0.06); border: 1px dashed rgba(37, 99, 235, 0.25); padding: 12px 16px; border-radius: 8px; font-size: 0.84rem; color: var(--text-secondary); margin-top: 14px; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.2rem;">✨</span>
+            <span style="font-size: 1.2rem;"></span>
             <span>Tổng sao và Thứ hạng (Rank) sẽ <strong>tự động tính &amp; đồng bộ</strong> toàn hệ thống sau khi lưu vào MongoDB Atlas.</span>
           </div>
 
@@ -442,16 +438,13 @@
             style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <button type="button" class="btn btn-danger" id="btnDeleteFromEditModal"
               style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 6px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                  d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-              </svg>
+
               <span>Xóa người dùng này</span>
             </button>
             <div style="display: flex; gap: 10px;">
               <button type="button" class="btn btn-secondary" id="cancelEditTraineeBtn">Hủy</button>
               <button type="submit" class="btn btn-primary" id="btnSubmitEditTrainee">
-                <span>💾 Lưu Thay Đổi Vào MongoDB</span>
+                <span> Lưu Thay Đổi Vào MongoDB</span>
               </button>
             </div>
           </div>
@@ -463,12 +456,12 @@
   <!-- ==================== MODAL: XÁC NHẬN XÓA USER (ADMIN) ==================== -->
   <div class="modal-overlay" id="deleteTraineeConfirmModal">
     <div class="modal-card" style="max-width: 440px; text-align: center; padding: 28px 24px;">
-      <div style="font-size: 3rem; margin-bottom: 12px; line-height: 1;">⚠️</div>
+      <div style="font-size: 3rem; margin-bottom: 12px; line-height: 1;"></div>
       <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Xác Nhận Xóa Tài
         Khoản</h3>
       <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 22px;"
         id="deleteConfirmMessage">
-        Bạn có chắc chắn muốn xóa sinh viên này khỏi hệ thống? Dữ liệu sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu MongoDB
+        Bạn có chắc chắn muốn xóa Trainee này khỏi hệ thống? Dữ liệu sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu MongoDB
         Atlas.
       </p>
       <input type="hidden" id="deleteTargetTraineeId">
@@ -477,7 +470,7 @@
           Bỏ</button>
         <button type="button" class="btn btn-danger" id="confirmDeleteTraineeBtn"
           style="background-color: #ef4444; color: white; min-width: 140px;">
-          <span>🗑️ Xóa Vĩnh Viễn</span>
+          <span> Xóa Vĩnh Viễn</span>
         </button>
       </div>
     </div>
@@ -488,13 +481,13 @@
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge">🔑</span>
+
           <div>
             <h3 class="modal-title">Đổi Mật Khẩu Tài Khoản</h3>
             <span class="modal-subtitle">Cập nhật mật khẩu mới và lưu vào MongoDB Atlas</span>
           </div>
         </div>
-        <button class="modal-close-btn" id="closeChangePasswordModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeChangePasswordModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body">
@@ -517,7 +510,7 @@
           <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
             <button type="button" class="btn btn-secondary" id="cancelChangePasswordBtn">Hủy</button>
             <button type="submit" class="btn btn-primary">
-              <span>💾 Lưu Mật Khẩu Mới</span>
+              <span> Lưu Mật Khẩu Mới</span>
             </button>
           </div>
         </form>
@@ -530,19 +523,19 @@
     <div class="modal-card" style="max-width: 480px;">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">❓</span>
+
           <div>
             <h3 class="modal-title">Yêu Cầu Cấp Lại Mật Khẩu</h3>
             <span class="modal-subtitle">Gửi thông báo tới Quản trị viên để đặt lại mật khẩu</span>
           </div>
         </div>
-        <button class="modal-close-btn" id="closeProfileForgotModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeProfileForgotModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body">
         <form id="profileForgotForm">
           <div class="form-group" style="margin-bottom: 14px;">
-            <label for="profileForgotIdentifier" class="form-label">Mã số sinh viên (MSSV) / Tài khoản <span
+            <label for="profileForgotIdentifier" class="form-label">Mã số Trainee (MSSV) / Tài khoản <span
                 class="text-danger">*</span></label>
             <input type="text" id="profileForgotIdentifier" class="form-input" placeholder="Nhập MSSV" required>
           </div>
@@ -562,7 +555,7 @@
           <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
             <button type="button" class="btn btn-secondary" id="cancelProfileForgotBtn">Hủy</button>
             <button type="submit" class="btn btn-danger" id="submitProfileForgotBtn">
-              <span>📩 Gửi Yêu Cầu Tới Admin</span>
+              <span> Gửi Yêu Cầu Tới Admin</span>
             </button>
           </div>
         </form>
@@ -573,34 +566,26 @@
   <!-- ================= Modal: Xem & Mở Link Bài Tập Duolingo ================= -->
   <div class="duo-modal-overlay" id="duoAssignmentModal">
     <div class="duo-modal-card">
-      <button type="button" class="duo-modal-close-btn" id="duoModalCloseBtn" aria-label="Đóng">&times;</button>
+      <button type="button" class="duo-modal-close-btn" id="duoModalCloseBtn" aria-label="Đóng">Đóng</button>
 
-      <div class="duo-modal-badge green" id="duoModalBadge">★ BÀI HỌC TIẾP THEO</div>
+      <div class="duo-modal-badge green" id="duoModalBadge"> BÀI HỌC TIẾP THEO</div>
       <h3 class="duo-modal-title" id="duoModalTitle">Bài 1: Làm quen Git &amp; GitHub Workflow</h3>
       <p class="duo-modal-desc" id="duoModalDesc">
         Làm quen với các lệnh Git cơ bản: clone, checkout, commit, push và mở Pull Request chuẩn UIT.
       </p>
 
-      <div class="duo-modal-rewards-row">
-        <div class="duo-reward-item duo-reward-score">
-          <span>🎯</span>
-          <span id="duoModalScore">100/100</span>
-        </div>
-        <div class="duo-reward-item duo-reward-xp">
-          <span>⚡</span>
-          <span id="duoModalXp">+80 XP</span>
-        </div>
-        <div class="duo-reward-item duo-reward-gem">
-          <span>💎</span>
-          <span id="duoModalGems">+25 Gems</span>
-        </div>
-      </div>
+      <section class="duo-assignment-details" aria-labelledby="duoDetailsHeading">
+        <h4 id="duoDetailsHeading">Chi tiết bài tập</h4>
+        <p id="duoModalDetails"></p>
+        <p class="duo-sidebar-caption">Nộp bài qua Microsoft Forms. Trainer sẽ đối chiếu phản hồi để xác nhận hoàn thành; kết quả và điểm bài tập được quản lý riêng.</p>
+      </section>
 
+      <button type="button" id="duoBtnEditDetails" class="btn btn-outline" data-permission="assignments:manage" style="display:none">Chỉnh sửa thông tin bài tập</button>
       <!-- ĐẾM NGƯỢC THỜI HẠN NỘP BÀI (DEADLINE COUNTDOWN) -->
       <div id="duoDeadlineCountdown" style="display:none; margin: 0 0 14px 0; border-radius: 14px; overflow: hidden;">
         <div class="duo-countdown-box">
           <div class="duo-countdown-header">
-            <span class="duo-countdown-icon">⏰</span>
+
             <span class="duo-countdown-label">THỜI HẠN NỘP BÀI</span>
             <span class="duo-countdown-deadline-text" id="duoCountdownDeadlineText"></span>
           </div>
@@ -633,7 +618,7 @@
 
       <!-- ĐÃ HẾT HẠN banner -->
       <div id="duoDeadlineExpired" style="display:none; margin: 0 0 14px 0; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 14px; padding: 14px 16px; text-align: center;">
-        <div style="font-size: 22px; margin-bottom: 4px;">🚨</div>
+        <div style="font-size: 22px; margin-bottom: 4px;"></div>
         <div style="font-weight: 800; color: #dc2626; font-size: 14px;">ĐÃ HẾT THỜI HẠN NỘP BÀI</div>
         <div style="font-size: 12px; color: #ef4444; margin-top: 4px;" id="duoExpiredDeadlineText"></div>
       </div>
@@ -642,7 +627,7 @@
       <div class="duo-assignment-link-showcase" id="duoAssignmentLinkShowcase" style="margin: 18px 0; background: var(--bg-card-subtle); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px;">
-            <span>🔗</span>
+
             <span>ĐƯỜNG LINK BÀI TẬP (ADMIN ĐÃ GÁN)</span>
           </span>
           <span class="badge badge-success" id="duoLinkOfficialBadge" style="font-size: 0.68rem;">Link Chính Thức</span>
@@ -650,38 +635,38 @@
         <div style="display: flex; gap: 8px; align-items: center;">
           <input type="text" id="duoDisplayLink" readonly class="form-input" style="font-family: monospace; font-size: 0.82rem; background: var(--bg-card); cursor: text; font-weight: 600; color: var(--primary-blue);" placeholder="Chưa có link được gán">
           <button type="button" class="btn btn-secondary btn-sm" id="btnCopyDuoLink" title="Sao chép đường link" style="white-space: nowrap; padding: 7px 12px; font-weight: 700;">
-            <span>📋 Copy</span>
+            <span> Copy</span>
           </button>
         </div>
       </div>
 
       <!-- Nút mở trực tiếp đường link -->
       <a href="#" class="duo-btn-launch green" id="duoBtnLaunch" target="_blank" style="margin-bottom: 12px;">
-        <span>🚀 TRUY CẬP ĐƯỜNG LINK BÀI TẬP (TAB MỚI)</span>
+        <span> TRUY CẬP ĐƯỜNG LINK BÀI TẬP (TAB MỚI)</span>
       </a>
 
       <!-- Quick Link & Deadline Editor (Dành riêng cho Admin chỉnh sửa link & thời hạn nộp) -->
       <div class="duo-link-edit-box" id="duoAdminQuickEditBox" style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 14px; display: none;">
         <div style="font-weight: 800; color: #dc2626; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-          <span>🛡️ QUẢN TRỊ VIÊN: CẤU HÌNH BÀI TẬP</span>
+          <span> QUẢN TRỊ VIÊN: CẤU HÌNH BÀI TẬP</span>
         </div>
-        
+
         <label for="duoLinkInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
-          🔗 Đường link bài tập:
+           Đường link bài tập:
         </label>
         <div class="duo-link-input-wrap" style="margin-top: 4px; margin-bottom: 10px;">
           <input type="url" id="duoLinkInput" class="duo-link-input"
             placeholder="Dán link mới: https://github.com/... hoặc https://colab.research.google.com/...">
-          <button type="button" id="duoBtnSaveLink" class="duo-link-save-btn">💾 Lưu Link</button>
+          <button type="button" id="duoBtnSaveLink" class="duo-link-save-btn"> Lưu Link</button>
         </div>
 
         <label for="duoDeadlineInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
-          ⏰ Cài đặt thời hạn nộp bài (Hạn chót đếm ngược do Admin set):
+           Cài đặt thời hạn nộp bài (Hạn chót đếm ngược do Admin set):
         </label>
         <div class="duo-link-input-wrap" style="margin-top: 4px;">
           <input type="datetime-local" id="duoDeadlineInput" class="duo-link-input" style="font-size: 12.5px;">
-          <button type="button" id="duoBtnSaveDeadline" class="duo-link-save-btn" style="background: #e11d48; white-space: nowrap;">💾 Lưu Hạn</button>
-          <button type="button" id="duoBtnClearDeadline" class="btn btn-secondary btn-sm" title="Xóa hạn chót (Không giới hạn)" style="padding: 0 10px;">✕ Xóa</button>
+          <button type="button" id="duoBtnSaveDeadline" class="duo-link-save-btn" style="background: #e11d48; white-space: nowrap;"> Lưu Hạn</button>
+          <button type="button" id="duoBtnClearDeadline" class="btn btn-secondary btn-sm" title="Xóa hạn chót (Không giới hạn)" style="padding: 0 10px;"> Xóa</button>
         </div>
         <div style="display: flex; gap: 6px; margin-top: 6px; align-items: center; flex-wrap: wrap;">
           <span style="font-size: 11px; color: var(--text-muted);">Gán nhanh:</span>
@@ -700,13 +685,13 @@
     <div class="modal-card" style="max-width: 560px;">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge">🎒</span>
+
           <div>
-            <h3 class="modal-title">Chỉnh Sửa Chi Tiết Bài Tập</h3>
+            <h3 class="modal-title" id="editAssignmentModalTitle">Chỉnh sửa chi tiết bài tập</h3>
             <span class="modal-subtitle" id="editAssignmentSubTitle">Cập nhật tiêu đề, mô tả và đường link bài tập</span>
           </div>
         </div>
-        <button type="button" class="modal-close-btn" id="closeAdminEditAssignmentModalBtn">&times;</button>
+        <button type="button" class="modal-close-btn" id="closeAdminEditAssignmentModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body" style="padding: 20px 24px;">
@@ -714,54 +699,49 @@
           <input type="hidden" id="editAssignmentIdHidden">
 
           <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label" for="editAssignmentTitle">Tên bài tập / Chuyên đề <span class="required">*</span></label>
-            <input type="text" id="editAssignmentTitle" class="form-input" required>
+            <label class="form-label" for="editAssignmentTitle">Tên bài tập <span class="required">*</span></label>
+            <input type="text" id="editAssignmentTitle" class="form-input" maxlength="240" required>
           </div>
 
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" for="editAssignmentDesc">Mô tả tóm tắt nội dung bài tập</label>
-            <textarea id="editAssignmentDesc" class="form-input" rows="3" style="resize: vertical;"></textarea>
+            <textarea id="editAssignmentDesc" class="form-input" rows="3" maxlength="3000" style="resize: vertical;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editAssignmentDetails">Chi tiết bài tập</label>
+            <textarea id="editAssignmentDetails" class="form-input" rows="7" maxlength="12000" placeholder="Yêu cầu, nội dung cần nộp và tiêu chí hoàn thành"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentLink">Link nộp bài Microsoft Forms</label>
+            <input type="url" id="editAssignmentLink" class="form-input" maxlength="2048" placeholder="https://...">
           </div>
 
           <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label" for="editAssignmentLink">🔗 Đường link bài tập (Google Colab, Form, GitHub, Drive, LMS...) <span class="required">*</span></label>
-            <input type="url" id="editAssignmentLink" class="form-input" placeholder="https://..." required>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label" for="editAssignmentDeadline">⏰ Thời hạn nộp bài (Hạn chót đếm ngược do Admin thiết lập)</label>
+            <label class="form-label" for="editAssignmentDeadline"> Thời hạn nộp bài (giờ Việt Nam, UTC+7)</label>
             <div style="display: flex; gap: 8px;">
               <input type="datetime-local" id="editAssignmentDeadline" class="form-input" style="flex: 1;">
-              <button type="button" class="btn btn-secondary btn-sm" id="btnClearEditDeadline" title="Xóa hạn chót (Không giới hạn)">✕ Xóa hạn</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnClearEditDeadline" title="Xóa hạn chót (Không giới hạn)"> Xóa hạn</button>
             </div>
             <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">
-              Hệ thống sẽ hiển thị đồng hồ đếm ngược thời gian còn lại ở dưới bài tập cho sinh viên.
+              Hệ thống sẽ hiển thị đồng hồ đếm ngược thời gian còn lại ở dưới bài tập cho Trainee.
             </span>
           </div>
 
-          <div class="form-grid-3col" style="margin-bottom: 14px;">
-            <div class="form-group">
-              <label class="form-label" for="editAssignmentStatus">Trạng thái</label>
-              <select id="editAssignmentStatus" class="form-input">
-                <option value="completed">✓ Đã hoàn thành</option>
-                <option value="active">★ Đang mở</option>
-                <option value="locked">🔒 Khóa</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="editAssignmentXp">Điểm XP</label>
-              <input type="number" id="editAssignmentXp" class="form-input" min="0" max="1000" value="80">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="editAssignmentGems">Số Gems</label>
-              <input type="number" id="editAssignmentGems" class="form-input" min="0" max="500" value="25">
-            </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentStatus">Trạng thái</label>
+            <select id="editAssignmentStatus" class="form-input">
+              <option value="closed">Đã đóng</option>
+              <option value="active">Đang mở</option>
+              <option value="locked">Khóa</option>
+            </select>
           </div>
 
+          <p id="assignmentEditorFeedback" role="status" aria-live="polite"></p>
           <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
             <button type="button" class="btn btn-secondary" id="cancelAdminEditAssignmentBtn">Hủy</button>
             <button type="submit" class="btn btn-primary" id="btnSubmitAdminEditAssignment">
-              <span>💾 Lưu Thay Đổi Vào MongoDB</span>
+              <span> Lưu Thay Đổi Vào MongoDB</span>
             </button>
           </div>
         </form>
@@ -769,18 +749,18 @@
     </div>
   </div>
 
-  <!-- ================= Modal: Xem Chi Tiết Câu Hỏi & Phản Hồi Giảng Viên ================= -->
+  <!-- ================= Modal: Xem Chi Tiết Câu Hỏi & Phản Hồi Trainer ================= -->
   <div class="modal-overlay" id="questionDetailModal">
     <div class="modal-card" style="max-width: 650px;">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge">💬</span>
+
           <div>
             <h3 class="modal-title" id="qModalTitle">Chi Tiết Câu Hỏi &amp; Giải Đáp</h3>
             <span class="modal-subtitle" id="qModalSubtitle">Mã câu hỏi: #Q-2026-001</span>
           </div>
         </div>
-        <button class="modal-close-btn" id="closeQuestionDetailModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeQuestionDetailModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body" style="padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
@@ -803,13 +783,13 @@
         <div class="q-modal-answer-box" id="qModalAnswerBox">
           <div class="q-modal-answer-header">
             <div class="q-modal-teacher-info">
-              <span class="teacher-avatar">👨‍🏫</span>
+
               <div>
                 <strong id="qModalAnswerTeacher">TS. Dương Việt Hằng</strong>
-                <span class="teacher-role" id="qModalAnswerRole">Giảng viên Hướng dẫn UIT</span>
+                <span class="teacher-role" id="qModalAnswerRole">Trainer</span>
               </div>
             </div>
-            <span class="verified-badge">✓ Phản Hồi Chính Thức</span>
+            <span class="verified-badge"> Phản Hồi Chính Thức</span>
           </div>
           <div class="q-modal-answer-body" id="qModalAnswerBody">
             <!-- Answer text -->
@@ -819,10 +799,11 @@
           </div>
         </div>
 
-        <!-- Admin / Mentor Answer Input Box (Shown for Admin/Mentor role) -->
-        <div class="q-modal-reply-box" id="qModalReplyBox" style="display: none;">
-          <h5 class="q-reply-title">✍️ Phản hồi từ Giảng viên / Ban Cố vấn</h5>
-          <textarea id="qReplyInput" class="form-input" rows="4" placeholder="Nhập nội dung giải đáp cho sinh viên..."></textarea>
+        <!-- Admin / Trainer Answer Input Box (Shown for Admin/Trainer role) -->
+        <div class="q-modal-reply-box" id="qModalReplyBox" data-permission="questions:manage" style="display: none;">
+          <h5 class="q-reply-title"> Phản hồi từ Trainer / Ban Tổ chức Trainee Program</h5>
+          <textarea id="qReplyInput" class="form-input" rows="4" maxlength="5000" placeholder="Nhập nội dung giải đáp cho Trainee..."></textarea>
+          <p id="qReplyFeedback" role="status" aria-live="polite"></p>
           <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
             <button type="button" class="btn btn-primary" id="btnSubmitQReply">
               <span>Gửi Câu Trả Lời</span>
@@ -833,7 +814,7 @@
 
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid var(--border-color);">
         <button type="button" class="btn btn-secondary q-modal-like-btn" id="btnModalLike">
-          <span>👍 Hữu ích</span>
+          <span> Hữu ích</span>
           <span class="like-badge" id="modalLikeCount">0</span>
         </button>
         <button type="button" class="btn btn-secondary" id="btnCloseQModal">Đóng</button>
@@ -846,13 +827,13 @@
     <div class="modal-card" style="max-width: 520px;">
       <div class="modal-header">
         <div class="modal-header-icon-title">
-          <span class="modal-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">⭐</span>
+
           <div>
             <h3 class="modal-title" id="starDetailModalTitle">Chi Tiết Cộng Sao Buổi Học</h3>
             <span class="modal-subtitle" id="starDetailModalSubtitle">Thông tin buổi học & đánh giá từ Trainer</span>
           </div>
         </div>
-        <button class="modal-close-btn" id="closeStarDetailModalBtn">&times;</button>
+        <button class="modal-close-btn" id="closeStarDetailModalBtn">Đóng</button>
       </div>
 
       <div class="modal-body" style="padding: 20px 24px;">
@@ -869,11 +850,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
           <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
             <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Số sao được cộng</div>
-            <div style="font-size: 1.35rem; font-weight: 800; color: #10b981; margin-top: 4px;" id="starDetailAwardedStars">+0 ⭐</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #10b981; margin-top: 4px;" id="starDetailAwardedStars">+0 </div>
           </div>
           <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
             <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Lũy kế sau buổi này</div>
-            <div style="font-size: 1.35rem; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="starDetailCumulativeStars">0 ⭐</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="starDetailCumulativeStars">0 </div>
           </div>
         </div>
 
@@ -888,11 +869,11 @@
             <span style="color: var(--text-main); font-weight: 600;" id="starDetailSessionDate">06/10/2026</span>
           </div>
           <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-            <span style="color: var(--text-muted);">Trainer phụ trách:</span>
-            <span style="color: var(--text-main); font-weight: 600;" id="starDetailTrainer">Võ Thị Xuân Quỳnh</span>
+            <span style="color: var(--text-muted);">Phụ trách:</span>
+            <span style="color: var(--text-main); font-weight: 600;" id="starDetailTrainer">Ban Hậu cần</span>
           </div>
           <div style="margin-top: 4px;">
-            <span style="color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600;">📝 Nhận xét & Lý do cộng sao:</span>
+            <span style="color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600;"> Nhận xét & Lý do cộng sao:</span>
             <div style="background: rgba(37, 99, 235, 0.05); border: 1px dashed rgba(37, 99, 235, 0.3); border-radius: 8px; padding: 12px 14px; color: var(--text-main); line-height: 1.45;" id="starDetailNote">
               Hoàn thành bài tập & tham gia tích cực buổi học.
             </div>
@@ -900,6 +881,19 @@
         </div>
       </div>
 
+      <form id="attendanceEditorForm" class="attendance-editor" hidden>
+        <h4>Sửa điểm danh và điểm sao</h4>
+        <div class="account-fields">
+          <label>Điểm danh<select id="attendanceEditStatus" class="form-input" required>
+            <option value="">Chọn trạng thái</option><option value="present">Có mặt</option>
+            <option value="absent_excused">Vắng có phép</option><option value="absent_unexcused">Vắng không phép</option><option value="not_recorded">Chưa xác định</option>
+          </select></label>
+          <label>Điểm sao<input type="number" id="attendanceEditStars" class="form-input" min="-20" max="100" step="1" required></label>
+        </div>
+        <label>Ghi chú công khai<textarea id="attendanceEditNote" class="form-input" maxlength="1000" rows="3"></textarea></label>
+        <div class="context-actions"><button type="submit" class="btn btn-primary" id="btnSaveAttendance">Lưu thay đổi</button></div>
+        <p id="attendanceEditorFeedback" role="status" aria-live="polite"></p>
+      </form>
       <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 12px 24px; border-top: 1px solid var(--border-color);">
         <button type="button" class="btn btn-secondary" id="btnCloseStarDetailModal">Đóng</button>
       </div>

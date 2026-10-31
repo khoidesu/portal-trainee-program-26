@@ -19,14 +19,14 @@
             <div class="leave-header-card">
               <div class="leave-header-content">
                 <div class="leave-badge-pill">
-                  <span class="leave-badge-icon">📋</span>
-                  <span>HỌC VỤ &amp; RÈN LUYỆN</span>
+
+                  <span>THAM GIA CHƯƠNG TRÌNH</span>
                   <span class="badge-dot">·</span>
                   <span>TRAINEE PROGRAM 2026</span>
                 </div>
                 <h2 class="leave-main-title">Đơn Xin Nghỉ Học Trực Tuyến</h2>
                 <p class="leave-subtext">
-                  Dành cho sinh viên &amp; thực tập sinh trong chương trình Trainee Program UIT. Vui lòng gửi đơn trước buổi học ít nhất 2 tiếng để Giảng viên/Mentor và Ban Điều phối nắm thông tin điểm danh.
+                  Dành cho Trainee trong chương trình Trainee Program UIT. Đơn được đăng công khai kèm thời gian gửi; bạn vui lòng gửi trước buổi học ít nhất 2 tiếng để Trainer và Ban Tổ chức Trainee Program nắm thông tin điểm danh.
                 </p>
               </div>
               <div class="leave-header-stat">
@@ -39,18 +39,12 @@
 
             <!-- Quy Định Alert Card -->
             <div class="leave-notice-card">
-              <div class="leave-notice-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-              </div>
+
               <div class="leave-notice-body">
                 <h4 class="leave-notice-title">Lưu ý quan trọng về quy chế vắng học</h4>
                 <ul class="leave-notice-list">
-                  <li>Buổi nghỉ có phép gửi qua đơn này sẽ được tính vào <strong>"Vắng có phép"</strong> và <strong>không bị trừ sao kỷ luật</strong> trên Bảng xếp hạng.</li>
-                  <li>Sau khi xin nghỉ, sinh viên có trách nhiệm chủ động <strong>xem lại Video bài giảng (Recording trên Teams)</strong> và hoàn thành bài tập nộp bù đúng hạn.</li>
+                  <li>Đơn được gửi tới Ban Tổ chức Trainee Program để <strong>xem xét</strong>. Việc gửi đơn chưa đồng nghĩa với được duyệt và chưa tự động cập nhật chuyên cần.</li>
+                  <li>Sau khi xin nghỉ, Trainee có trách nhiệm chủ động <strong>xem lại Video bài giảng (Recording trên Teams)</strong> và hoàn thành bài tập nộp bù đúng hạn.</li>
                   <li>Nếu có minh chứng (giấy báo thi, lịch thi chính thức UIT, giấy khám bệnh...), bạn có thể đính kèm thông tin ở mục lý do.</li>
                 </ul>
               </div>
@@ -58,30 +52,25 @@
 
             <!-- Success Alert Banner (Initially Hidden) -->
             <div class="leave-success-banner" id="leaveSuccessAlert" style="display: none;">
-              <div class="leave-success-icon-wrap">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-              </div>
+
               <div class="leave-success-content">
-                <div class="leave-success-badge">✓ ĐÃ GỬI THÀNH CÔNG</div>
+                <div class="leave-success-badge"> ĐÃ GỬI THÀNH CÔNG</div>
                 <h3 class="leave-success-title">Đơn xin nghỉ học đã được ghi nhận vào hệ thống!</h3>
                 <p class="leave-success-desc" id="leaveSuccessDesc">
-                  Thông tin đơn của bạn đã được chuyển tới Giảng viên hướng dẫn và Ban Điều phối UIT Trainee Program.
+                  Thông tin đơn của bạn đã được chuyển tới Trainer và Ban Tổ chức Trainee Program.
                 </p>
                 <div class="leave-success-meta" id="leaveSuccessMeta">
                   <!-- Injected via JS -->
                 </div>
               </div>
-              <button type="button" class="leave-success-close-btn" id="btnDismissLeaveSuccess" title="Đóng thông báo">&times;</button>
+              <button type="button" class="leave-success-close-btn" id="btnDismissLeaveSuccess" title="Đóng thông báo">Đóng</button>
             </div>
 
             <!-- Main Form Card -->
             <div class="leave-form-card">
               <div class="leave-form-header">
                 <div class="leave-form-title-wrap">
-                  <div class="leave-form-icon">📝</div>
+
                   <div>
                     <h3 class="leave-form-title">Thông Tin Đơn Xin Nghỉ</h3>
                     <p class="leave-form-subtitle">Điền đầy đủ thông tin bên dưới và bấm nút "Gửi đơn xin nghỉ"</p>
@@ -96,34 +85,24 @@
                 <div class="leave-form-grid-2">
                   <div class="form-group">
                     <label for="leaveInputMssv" class="form-label">
-                      <span>1. Mã số sinh viên (MSSV)</span>
+                      <span>1. Mã số Trainee (MSSV)</span>
                       <span class="text-danger">*</span>
                     </label>
                     <div class="input-with-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                      </svg>
-                      <input type="text" id="leaveInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
+
+                      <input type="text" id="leaveInputMssv" class="form-input" maxlength="12" inputmode="numeric" placeholder="Nhập MSSV của bạn" required>
                     </div>
-                    <span class="form-help-text">Mã số sinh viên chính thức tại UIT.</span>
                   </div>
 
                   <div class="form-group">
                     <label for="leaveInputFullName" class="form-label">
-                      <span>2. Họ và tên sinh viên</span>
+                      <span>2. Họ và tên Trainee</span>
                       <span class="text-danger">*</span>
                     </label>
                     <div class="input-with-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                      <input type="text" id="leaveInputFullName" class="form-input" placeholder="Ví dụ: Khôi Trương Trần Anh" required>
+
+                      <input type="text" id="leaveInputFullName" class="form-input" maxlength="150" placeholder="Nhập họ tên đầy đủ của bạn" required>
                     </div>
-                    <span class="form-help-text">Họ tên đầy đủ theo danh sách lớp Trainee.</span>
                   </div>
                 </div>
 
@@ -134,10 +113,7 @@
                     <span class="text-danger">*</span>
                   </label>
                   <div class="input-with-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
+
                     <select id="leaveSelectSchedule" class="form-input" required>
                       <option value="">-- Đang nạp danh sách lịch học từ cơ sở dữ liệu --</option>
                     </select>
@@ -152,15 +128,15 @@
                     </div>
                     <div class="schedule-preview-details">
                       <div class="preview-item">
-                        <span class="preview-lbl">📅 Thời gian:</span>
+                        <span class="preview-lbl"> Thời gian:</span>
                         <span class="preview-val" id="previewSessionTime">Thứ 3, 06/10/2026 · 19:30 - 21:30</span>
                       </div>
                       <div class="preview-item">
-                        <span class="preview-lbl">👨‍🏫 Giảng viên:</span>
+                        <span class="preview-lbl"> Trainer:</span>
                         <span class="preview-val" id="previewSessionInstructor">TS. Dương Việt Hằng</span>
                       </div>
                       <div class="preview-item">
-                        <span class="preview-lbl">💻 Hình thức:</span>
+                        <span class="preview-lbl"> Hình thức:</span>
                         <span class="preview-val">Microsoft Teams Trực Tuyến</span>
                       </div>
                     </div>
@@ -173,7 +149,7 @@
                     <span>4. Lý do xin nghỉ</span>
                     <span class="text-danger">*</span>
                   </label>
-                  <textarea id="leaveInputReason" class="form-input leave-textarea" rows="6"
+                  <textarea id="leaveInputReason" class="form-input leave-textarea" rows="6" maxlength="3000"
                     placeholder="Vui lòng nêu chi tiết và rõ ràng lý do xin phép vắng mặt (Ví dụ: Trùng lịch thi cuối kỳ môn Kiến trúc Máy tính tại trường UIT từ 19h00 đến 21h00, hoặc lý do sức khỏe bị sốt cao cần nghỉ ngơi, có việc đột xuất gia đình...). Nhập ít nhất 10 ký tự."
                     required></textarea>
 
@@ -181,19 +157,19 @@
                   <div class="leave-quick-chips">
                     <span class="chips-label">Gợi ý lý do nhanh:</span>
                     <button type="button" class="leave-chip" data-reason="Trùng lịch thi / Kiểm tra học phần tại trường Đại học Công nghệ Thông tin (UIT).">
-                      📝 Trùng lịch thi UIT
+                       Trùng lịch thi UIT
                     </button>
                     <button type="button" class="leave-chip" data-reason="Lý do sức khỏe (bị ốm/sốt), cần nghỉ ngơi phục hồi và sẽ xem lại video sau.">
-                      🏥 Lý do sức khỏe / Ốm
+                       Lý do sức khỏe / Ốm
                     </button>
                     <button type="button" class="leave-chip" data-reason="Bận công việc cơ quan / Công tác đột xuất có giấy xác nhận.">
-                      💼 Bận công việc đột xuất
+                       Bận công việc đột xuất
                     </button>
                     <button type="button" class="leave-chip" data-reason="Khu vực xảy ra sự cố mất điện / mất kết nối internet không thể vào MS Teams.">
-                      ⚡ Sự cố mạng / Mất điện
+                       Sự cố mạng / Mất điện
                     </button>
                     <button type="button" class="leave-chip" data-reason="Có công việc gia đình đột xuất cần giải quyết.">
-                      🚗 Việc gia đình đột xuất
+                       Việc gia đình đột xuất
                     </button>
                   </div>
                 </div>
@@ -201,28 +177,25 @@
                 <!-- Row 4: Cam kết Checkbox -->
                 <div class="leave-commit-row">
                   <label class="custom-checkbox-label">
-                    <input type="checkbox" id="leaveCheckCommit" checked required>
+                    <input type="checkbox" id="leaveCheckCommit" required>
                     <span class="checkbox-text">
-                      Tôi cam kết thông tin cung cấp là hoàn toàn trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
+                      Tôi đồng ý công khai họ tên, MSSV, buổi xin nghỉ, lý do và thời gian gửi trên cổng thông tin. Tôi cam kết thông tin là trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
                     </span>
                   </label>
                 </div>
 
+                <div id="leaveChallenge"></div>
+                <p id="leaveFeedback" class="form-help-text" role="status" aria-live="polite"></p>
+
                 <!-- Form Actions: Nút Gửi & Nhập lại -->
                 <div class="leave-actions-row">
                   <button type="button" class="btn btn-secondary" id="btnResetLeaveForm">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                      <path d="M3 3v5h5"></path>
-                    </svg>
+
                     <span>Nhập lại</span>
                   </button>
 
                   <button type="submit" class="btn btn-primary leave-submit-btn" id="btnSubmitLeave">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
+
                     <span>Gửi Đơn Xin Nghỉ</span>
                   </button>
                 </div>
@@ -234,10 +207,10 @@
             <div class="leave-history-card">
               <div class="leave-history-header">
                 <div class="leave-history-title-wrap">
-                  <span class="leave-history-icon">📜</span>
-                  <h3 class="leave-history-title">Lịch Sử Đơn Xin Nghỉ Của Bạn</h3>
+
+                <h3 class="leave-history-title">Bảng xin nghỉ công khai</h3>
                 </div>
-                <span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
+                <button type="button" class="btn btn-outline btn-sm" id="btnRefreshLeaveBoard">Tải lại</button><span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
               </div>
               <div class="table-responsive">
                 <table class="leave-table">
@@ -249,7 +222,7 @@
                       <th>Buổi học xin nghỉ</th>
                       <th>Lý do</th>
                       <th>Thời gian gửi</th>
-                      <th>Trạng thái</th>
+                      <th>Trạng thái / Xử lý</th>
                     </tr>
                   </thead>
                   <tbody id="leaveHistoryTableBody">

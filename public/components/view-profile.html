@@ -18,7 +18,7 @@
           <div class="profile-header-card">
             <div class="profile-header-content">
               <div class="profile-breadcrumb">
-                <span>Cổng Sinh viên</span>
+                <span>Cổng Trainee Program</span>
                 <span class="breadcrumb-sep">&rsaquo;</span>
                 <span class="breadcrumb-current">Hồ sơ cá nhân</span>
               </div>
@@ -55,16 +55,12 @@
                   <div class="avatar-upload-actions">
                     <input type="file" id="profileAvatarFileInput" accept="image/*" style="display: none;">
                     <button type="button" class="btn btn-primary btn-sm" id="btnUploadProfileAvatar">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
+
                       <span>Tải ảnh mới</span>
                     </button>
                     <button type="button" class="btn btn-outline btn-sm" id="btnRemoveProfileAvatar"
                       title="Gỡ ảnh về chữ viết tắt">
-                      <span>🗑️ Gỡ ảnh</span>
+                      <span> Gỡ ảnh</span>
                     </button>
                   </div>
                   <p class="profile-avatar-hint">
@@ -75,19 +71,19 @@
 
                 <div class="profile-badge-summary">
                   <div class="profile-badge-item">
-                    <span class="badge-label">Mã số học viên:</span>
+                    <span class="badge-label">Mã số Trainee:</span>
                     <strong class="badge-value" id="profileBadgeId">--</strong>
                   </div>
                   <div class="profile-badge-item">
                     <span class="badge-label">Vai trò:</span>
-                    <span class="badge badge-success" id="profileBadgeRole">Sinh viên UIT</span>
+                    <span class="badge badge-success" id="profileBadgeRole">Trainee UIT</span>
                   </div>
                   <div class="profile-badge-item">
                     <span class="badge-label">Khóa đào tạo:</span>
                     <strong class="badge-value" id="profileBadgeBatch">Trainee 2026</strong>
                   </div>
                   <div class="profile-badge-item">
-                    <span class="badge-label">Ngành / Khoa:</span>
+                    <span class="badge-label">Nhóm:</span>
                     <strong class="badge-value" id="profileBadgeTrack">Khoa học Máy tính</strong>
                   </div>
                 </div>
@@ -100,7 +96,7 @@
               <!-- Card 1: Chỉnh sửa thông tin cá nhân (Họ tên & Email) -->
               <div class="portal-card profile-form-card">
                 <div class="profile-card-header">
-                  <div class="card-icon-box blue-bg">👤</div>
+
                   <div>
                     <h3 class="card-title">Thông Tin Cá Nhân Cơ Bản</h3>
                     <p class="card-subtitle">Chỉnh sửa họ tên và email liên hệ (lưu trực tiếp lên MongoDB)</p>
@@ -122,12 +118,12 @@
                         required>
                     </div>
                     <div class="form-group">
-                      <label for="profileInputId" class="form-label">Mã số sinh viên (MSSV)</label>
+                      <label for="profileInputId" class="form-label">Mã số Trainee (MSSV)</label>
                       <input type="text" id="profileInputId" class="form-input" readonly disabled
                         style="opacity: 0.75; cursor: not-allowed;">
                     </div>
                     <div class="form-group">
-                      <label for="profileInputTrack" class="form-label">Khoa / Ngành học</label>
+                      <label for="profileInputTrack" class="form-label">Nhóm</label>
                       <input type="text" id="profileInputTrack" class="form-input" readonly disabled
                         style="opacity: 0.75; cursor: not-allowed;">
                     </div>
@@ -135,13 +131,8 @@
 
                   <div class="profile-form-footer">
                     <button type="submit" class="btn btn-primary" id="btnSaveProfileInfo">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                        <polyline points="17 21 17 13 7 13 7 21" />
-                        <polyline points="7 3 7 8 15 8" />
-                      </svg>
-                      <span>💾 Lưu Thay Đổi Thông Tin</span>
+
+                      <span> Lưu Thay Đổi Thông Tin</span>
                     </button>
                   </div>
                 </form>
@@ -150,7 +141,7 @@
               <!-- Card 2: Đổi mật khẩu tài khoản -->
               <div class="portal-card profile-form-card" style="margin-top: 20px;">
                 <div class="profile-card-header">
-                  <div class="card-icon-box yellow-bg">🔑</div>
+
                   <div>
                     <h3 class="card-title">Đổi Mật Khẩu Đăng Nhập</h3>
                     <p class="card-subtitle">Cập nhật mật khẩu tài khoản và đồng bộ an toàn vào MongoDB Atlas</p>
@@ -181,12 +172,8 @@
 
                   <div class="profile-form-footer">
                     <button type="submit" class="btn btn-secondary" id="btnSaveNewPassword">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                      <span>🔑 Cập Nhật Mật Khẩu Mới</span>
+
+                      <span> Cập Nhật Mật Khẩu Mới</span>
                     </button>
                   </div>
                 </form>
@@ -195,7 +182,7 @@
               <!-- Card 3: Quên mật khẩu & Gửi yêu cầu hỗ trợ Admin -->
               <div class="portal-card profile-forgot-card" style="margin-top: 20px;">
                 <div class="forgot-card-inner">
-                  <div class="forgot-card-icon">❓</div>
+
                   <div class="forgot-card-content">
                     <h4 class="forgot-card-title">Bạn quên mật khẩu hoặc cần admin hỗ trợ?</h4>
                     <p class="forgot-card-desc">
@@ -206,12 +193,7 @@
                   </div>
                   <div class="forgot-card-action">
                     <button type="button" class="btn btn-danger" id="btnProfileSendForgotReq">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                      </svg>
+
                       <span>Quên mật khẩu? Gửi yêu cầu tới Admin</span>
                     </button>
                   </div>
