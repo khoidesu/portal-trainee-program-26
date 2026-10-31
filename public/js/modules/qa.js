@@ -1,14 +1,14 @@
 /**
  * ==============================================================================
  * COMPONENT: Q&A Module (Diễn Đàn Hỏi Đáp & Giải Đáp Cộng Đồng)
- * CHỨC NĂNG CHÍNH: Nơi sinh viên đặt câu hỏi (hỗ trợ ẩn danh) và nhận câu trả lời
- *                  chính thức từ Giảng viên / Mentor.
+ * CHỨC NĂNG CHÍNH: Nơi Trainee đặt câu hỏi (hỗ trợ ẩn danh) và nhận câu trả lời
+ *                  chính thức từ Trainer.
  * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, public/js/api.js
  * NHIỆM VỤ CHI TIẾT:
  *   - initQaModule: Nạp danh sách câu hỏi từ API / MongoDB
  *   - Form đặt câu hỏi: Tùy chọn ẩn danh, chọn chủ đề, tiêu đề, nội dung chi tiết
  *   - renderQuestionsTable: Bảng danh sách câu hỏi, lọc theo chủ đề & tìm kiếm
- *   - openQaDetailModal: Modal xem chi tiết câu hỏi & form trả lời cho Giảng viên
+ *   - openQaDetailModal: Modal xem chi tiết câu hỏi & form trả lời cho Trainer
  * ==============================================================================
  */
 
@@ -16,108 +16,16 @@
 // DIỄN ĐÀN HỎI ĐÁP & ĐẶT CÂU HỎI (Q&A MODULE)
 // ==========================================
 
-const DEFAULT_QUESTIONS = [
-  {
-    _id: 'q_init_01',
-    code: 'Q-2026-001',
-    mssv: '25520918',
-    fullName: 'Khôi Trương Trần Anh',
-    isAnonymous: false,
-    category: 'Kỹ thuật & Code',
-    title: 'Lỗi MongooseServerSelectionError khi kết nối MongoDB Atlas',
-    content: 'Em chạy server node server.js thì báo lỗi MongooseServerSelectionError: Could not connect to any servers in your MongoDB Atlas cluster. Đã kiểm tra chuỗi kết nối URI và mật khẩu đúng.',
-    status: 'answered',
-    answer: 'Chào em, lỗi này thường do IP mạng Wifi em đang dùng chưa được thêm vào whitelist của MongoDB Atlas. Em đăng nhập vào trang chủ MongoDB Cloud -> vào mục Security -> Network Access -> bấm Add IP Address -> chọn "Allow Access From Anywhere (0.0.0.0/0)" hoặc IP hiện tại rồi đợi 1 phút và thử lại nhé!',
-    answeredBy: 'TS. Dương Việt Hằng',
-    answeredRole: 'Giảng viên Hướng dẫn UIT',
-    answeredAt: '2026-10-27T14:30:00.000Z',
-    likesCount: 15,
-    likedBy: [],
-    createdAt: '2026-10-27T10:15:00.000Z'
-  },
-  {
-    _id: 'q_init_02',
-    code: 'Q-2026-002',
-    mssv: 'Ẩn danh',
-    fullName: 'Sinh viên ẩn danh',
-    isAnonymous: true,
-    category: 'Bài tập & Đồ án',
-    title: 'Hạn chót nộp bài tập Tuần 2 và cách gắn link GitHub',
-    content: 'Thầy cô cho em hỏi hạn nộp bài tập Tuần 2 môn Phát triển ứng dụng Web là ngày nào ạ? Khi nộp có cần deploy lên Vercel không hay chỉ cần nộp link GitHub?',
-    status: 'answered',
-    answer: 'Chào bạn, deadline nộp bài tập Tuần 2 là 23h59 Chủ nhật tuần này. Về yêu cầu nộp: bạn chỉ cần commit code lên Github repository (chế độ Public) và gửi link repo. Khuyến khích (được cộng thêm sao) nếu bạn deploy bản demo qua Render hoặc Vercel nhé!',
-    answeredBy: 'ThS. Nguyễn Văn A',
-    answeredRole: 'Mentor Trainee Program',
-    answeredAt: '2026-10-28T09:20:00.000Z',
-    likesCount: 8,
-    likedBy: [],
-    createdAt: '2026-10-28T08:00:00.000Z'
-  },
-  {
-    _id: 'q_init_03',
-    code: 'Q-2026-003',
-    mssv: '25520112',
-    fullName: 'Nguyễn Minh Tuấn',
-    isAnonymous: false,
-    category: 'Lịch học & Điểm danh',
-    title: 'Em có thể xem lại video ghi hình buổi học trực tuyến ở đâu?',
-    content: 'Buổi học thứ 3 vừa rồi em có việc bận gia đình nên xin nghỉ có phép. Thầy cô cho em hỏi đường link video Recording của buổi đó được đăng tải ở đâu để em ôn lại bài ạ?',
-    status: 'answered',
-    answer: 'Chào Tuấn, tất cả video ghi hình buổi học được tự động lưu trong kênh Microsoft Teams của lớp -> Tab "Files" -> thư mục "Recordings". Ngoài ra Ban Điều phối cũng cập nhật link trực tiếp tại mục Lịch đào tạo trên Cổng thông tin này nhé.',
-    answeredBy: 'Ban Điều phối UIT',
-    answeredRole: 'Quản trị viên Đào tạo',
-    answeredAt: '2026-10-28T16:00:00.000Z',
-    likesCount: 11,
-    likedBy: [],
-    createdAt: '2026-10-28T15:10:00.000Z'
-  },
-  {
-    _id: 'q_init_04',
-    code: 'Q-2026-004',
-    mssv: 'Ẩn danh',
-    fullName: 'Sinh viên ẩn danh',
-    isAnonymous: true,
-    category: 'Chương trình Trainee',
-    title: 'Quy chế xét tặng sao thưởng ⭐ trên Bảng xếp hạng Trainee',
-    content: 'Cho em hỏi cơ chế cộng sao rèn luyện trên Bảng xếp hạng: nếu phát biểu xây dựng bài trong buổi học online hoặc hoàn thành bài tập sớm thì được cộng bao nhiêu sao ạ?',
-    status: 'pending',
-    answer: '',
-    answeredBy: '',
-    answeredRole: '',
-    answeredAt: null,
-    likesCount: 5,
-    likedBy: [],
-    createdAt: '2026-10-28T20:30:00.000Z'
-  }
-];
 
 let questionsState = {
   questions: [],
+  loadState: 'loading',
+  loadError: '',
+  requestId: 0,
   currentFilter: 'all',
   searchQuery: '',
   selectedQuestion: null
 };
-
-function getSavedQuestions() {
-  try {
-    const raw = localStorage.getItem('uit_trainee_questions');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.warn('Lỗi đọc câu hỏi từ localStorage:', e);
-  }
-  return [...DEFAULT_QUESTIONS];
-}
-
-function saveQuestionsToStorage(list) {
-  try {
-    localStorage.setItem('uit_trainee_questions', JSON.stringify(list));
-  } catch (e) {
-    console.error('Lỗi lưu câu hỏi:', e);
-  }
-}
 
 async function renderQuestionsView() {
   const mssvInput = document.getElementById('questionInputMssv');
@@ -127,19 +35,20 @@ async function renderQuestionsView() {
     mssvInput.value = currentId;
   }
 
-  // Load questions
+  const requestId = ++questionsState.requestId;
+  questionsState.loadState = 'loading';
+  renderQuestionBoard();
   try {
-    let list = [];
-    if (window.API && API.getQuestions) {
-      list = await API.getQuestions();
-    }
-    if (!list || list.length === 0) {
-      list = getSavedQuestions();
-    }
+    const list = await API.getQuestions();
+    if (requestId !== questionsState.requestId) return;
     questionsState.questions = list;
-    saveQuestionsToStorage(list);
+    questionsState.loadState = 'ready';
+    questionsState.loadError = '';
   } catch (err) {
-    questionsState.questions = getSavedQuestions();
+    if (requestId !== questionsState.requestId) return;
+    questionsState.questions = [];
+    questionsState.loadState = 'error';
+    questionsState.loadError = err.message || 'Không tải được câu hỏi.';
   }
 
   renderQuestionBoard();
@@ -149,21 +58,18 @@ async function renderQuestionsView() {
 function updateQuestionStats() {
   const list = questionsState.questions || [];
   const total = list.length;
-  const answered = list.filter(q => q.status === 'answered').length;
-  const rate = total > 0 ? Math.round((answered / total) * 100) : 100;
-
-  const statRate = document.getElementById('statAnsweredRate');
-  const statTotal = document.getElementById('statTotalQuestions');
   const badge = document.getElementById('questionBoardCountBadge');
 
-  if (statRate) statRate.textContent = `${rate}%`;
-  if (statTotal) statTotal.textContent = total;
   if (badge) badge.textContent = `${total} câu hỏi`;
 }
 
 function renderQuestionBoard() {
   const tbody = document.getElementById('questionTableBody');
   if (!tbody) return;
+  if (questionsState.loadState !== 'ready') {
+    tbody.innerHTML = `<tr><td colspan="7">${questionsState.loadState === 'loading' ? 'Đang tải câu hỏi…' : `${escapeHtml(questionsState.loadError)} Bấm Làm mới để thử lại.`}</td></tr>`;
+    return;
+  }
 
   const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
   let list = [...questionsState.questions];
@@ -183,7 +89,7 @@ function renderQuestionBoard() {
   // 2. Search query
   if (questionsState.searchQuery) {
     const q = questionsState.searchQuery.toLowerCase().trim();
-    list = list.filter(item => 
+    list = list.filter(item =>
       (item.title && item.title.toLowerCase().includes(q)) ||
       (item.content && item.content.toLowerCase().includes(q)) ||
       (item.mssv && item.mssv.toLowerCase().includes(q)) ||
@@ -196,7 +102,7 @@ function renderQuestionBoard() {
     tbody.innerHTML = `
       <tr>
         <td colspan="7" style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
-          <div style="font-size: 2.2rem; margin-bottom: 8px;">🔍</div>
+          <div style="font-size: 2.2rem; margin-bottom: 8px;"></div>
           <div style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Không tìm thấy câu hỏi nào phù hợp</div>
           <p style="font-size: 0.85rem; margin: 0;">Hãy thử đổi từ khóa tìm kiếm hoặc bấm gửi câu hỏi mới ở form phía trên!</p>
         </td>
@@ -225,14 +131,11 @@ function renderQuestionBoard() {
     // Sender badge
     let senderHtml = '';
     if (item.isAnonymous) {
-      senderHtml = `<span class="badge-anon" title="Người gửi chọn ẩn danh">🎭 Ẩn danh</span>`;
+      senderHtml = `<span class="badge-anon" title="Người gửi chọn ẩn danh"> Ẩn danh</span>`;
     } else {
       senderHtml = `
         <div class="badge-mssv">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
+
           <span>${escapeHtml(item.mssv || '25520918')}</span>
         </div>
       `;
@@ -240,16 +143,16 @@ function renderQuestionBoard() {
 
     // Status
     const isAnswered = item.status === 'answered' && item.answer;
-    const statusHtml = isAnswered 
-      ? `<span class="q-status-badge answered"><span>✓</span> Đã giải đáp</span>`
-      : `<span class="q-status-badge pending"><span>⏳</span> Chờ giải đáp</span>`;
+    const statusHtml = isAnswered
+      ? `<span class="q-status-badge answered"> Đã giải đáp</span>`
+      : `<span class="q-status-badge pending"> Chờ giải đáp</span>`;
 
     // Answer snippet
     let answerSnippetHtml = '';
     if (isAnswered) {
       answerSnippetHtml = `
         <div class="q-answer-quote">
-          <strong>👨‍🏫 ${escapeHtml(item.answeredBy || 'Giảng viên UIT')}:</strong>
+          <strong> ${escapeHtml(item.answeredBy || 'Trainer')}:</strong>
           ${escapeHtml(item.answer.length > 90 ? item.answer.slice(0, 90) + '...' : item.answer)}
         </div>
       `;
@@ -265,7 +168,7 @@ function renderQuestionBoard() {
         <td>
           <span class="category-pill ${catClass}">${escapeHtml(item.category || 'Kỹ thuật')}</span>
         </td>
-        <td class="q-title-cell" onclick="openQuestionModal('${escapeHtml(item._id || item.code)}')">
+        <td class="q-title-cell">
           <span class="q-code-tag">${escapeHtml(item.code || '#Q')}</span>
           <div class="q-title-text">${escapeHtml(item.title)}</div>
           <div class="q-content-snippet">${escapeHtml(item.content)}</div>
@@ -280,17 +183,19 @@ function renderQuestionBoard() {
         <td style="text-align: center;">
           <div class="q-action-cell">
             <button type="button" class="q-like-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikeQuestionItem('${escapeHtml(item._id || item.code)}', event)" title="Thích / Hữu ích">
-              <span>👍</span>
+
               <span>${likes}</span>
             </button>
-            <button type="button" class="q-view-btn" onclick="openQuestionModal('${escapeHtml(item._id || item.code)}')" title="Xem chi tiết câu hỏi">
-              <span>💬</span>
-            </button>
+            <button type="button" class="q-view-btn" title="Xem chi tiết câu hỏi">${canManage('questions:manage') ? 'Giải đáp' : 'Xem chi tiết'}</button>
           </div>
         </td>
       </tr>
     `;
   }).join('');
+  tbody.querySelectorAll('.question-row').forEach(row => {
+    row.querySelector('.q-title-cell')?.addEventListener('click', () => openQuestionModal(row.dataset.id));
+    row.querySelector('.q-view-btn')?.addEventListener('click', () => openQuestionModal(row.dataset.id));
+  });
 }
 
 function openQuestionModal(id) {
@@ -324,9 +229,9 @@ function openQuestionModal(id) {
 
   if (modalSender) {
     if (item.isAnonymous) {
-      modalSender.innerHTML = `<span class="badge-anon">🎭 Sinh viên ẩn danh</span>`;
+      modalSender.innerHTML = `<span class="badge-anon"> Trainee ẩn danh</span>`;
     } else {
-      modalSender.innerHTML = `<strong>MSSV: ${escapeHtml(item.mssv)}</strong> (${escapeHtml(item.fullName || 'Sinh viên')})`;
+      modalSender.innerHTML = `<strong>MSSV: ${escapeHtml(item.mssv)}</strong> (${escapeHtml(item.fullName || 'Trainee')})`;
     }
   }
 
@@ -343,7 +248,7 @@ function openQuestionModal(id) {
   if (item.status === 'answered' && item.answer) {
     if (answerBox) answerBox.style.display = 'block';
     if (teacherEl) teacherEl.textContent = item.answeredBy || 'TS. Dương Việt Hằng';
-    if (teacherRole) teacherRole.textContent = item.answeredRole || 'Giảng viên Hướng dẫn UIT';
+    if (teacherRole) teacherRole.textContent = 'Trainer';
     if (answerBody) answerBody.textContent = item.answer;
     if (answerTime) {
       try {
@@ -357,14 +262,20 @@ function openQuestionModal(id) {
     if (answerBox) answerBox.style.display = 'none';
   }
 
-  // Admin/Mentor can reply
-  if (state.currentUser && state.currentUser.role === 'admin') {
+  // Admin/Trainer can reply
+  const replyInput = document.getElementById('qReplyInput');
+  const replyButton = document.getElementById('btnSubmitQReply');
+  const feedback = document.getElementById('qReplyFeedback');
+  if (feedback) feedback.textContent = '';
+  if (replyInput) replyInput.value = canManage('questions:manage') ? item.answer || '' : '';
+  if (replyButton) replyButton.textContent = item.answer ? 'Cập nhật giải đáp' : 'Gửi giải đáp';
+  if (canManage('questions:manage')) {
     if (replyBox) replyBox.style.display = 'block';
   } else {
     if (replyBox) replyBox.style.display = 'none';
   }
 
-  if (modal) modal.classList.add('active');
+  if (modal) modal.classList.add('open', 'show');
 }
 
 async function toggleLikeQuestionItem(id, event) {
@@ -383,7 +294,6 @@ async function toggleLikeQuestionItem(id, event) {
       item.likedBy.push(currentId);
       item.likesCount = (item.likesCount || 0) + 1;
     }
-    saveQuestionsToStorage(questionsState.questions);
     renderQuestionBoard();
 
     // Call API if possible
@@ -396,6 +306,9 @@ window.toggleLikeQuestionItem = toggleLikeQuestionItem;
 window.openQuestionModal = openQuestionModal;
 
 function setupQuestionEvents() {
+  const view = document.getElementById('viewQuestions');
+  if (!view || view.dataset.eventsBound) return;
+  view.dataset.eventsBound = 'true';
   const form = document.getElementById('questionSubmitForm');
   const anonCheck = document.getElementById('questionCheckAnonymous');
   const anonBox = document.getElementById('anonToggleBox');
@@ -420,26 +333,26 @@ function setupQuestionEvents() {
   function updateAnonUI(isAnon) {
     if (isAnon) {
       if (anonBox) anonBox.classList.add('active');
-      if (anonIcon) anonIcon.textContent = '🎭';
-      if (anonTitle) anonTitle.textContent = 'Gửi Ẩn Danh 🎭';
-      if (anonDesc) anonDesc.textContent = 'Bảo mật danh tính: MSSV được ẩn hoàn toàn, chỉ hiển thị "Sinh viên ẩn danh" trên bảng.';
+      if (anonIcon) anonIcon.textContent = '';
+      if (anonTitle) anonTitle.textContent = 'Gửi Ẩn Danh ';
+      if (anonDesc) anonDesc.textContent = 'Không hiển thị MSSV trên bảng câu hỏi công khai.';
       if (mssvStar) mssvStar.style.display = 'none';
       if (mssvInput) {
         mssvInput.required = false;
         mssvInput.placeholder = '(Tùy chọn khi bật Ẩn danh)';
       }
-      if (mssvHelp) mssvHelp.textContent = 'Chế độ ẩn danh đang BẬT: Bạn có thể nhập hoặc để trống MSSV.';
+      if (mssvHelp) mssvHelp.textContent = 'Ẩn danh: có thể để trống MSSV.';
     } else {
       if (anonBox) anonBox.classList.remove('active');
-      if (anonIcon) anonIcon.textContent = '🌐';
+      if (anonIcon) anonIcon.textContent = '';
       if (anonTitle) anonTitle.textContent = 'Công khai MSSV';
-      if (anonDesc) anonDesc.textContent = 'MSSV sẽ hiển thị cùng câu hỏi để Giảng viên dễ nhận diện và hỗ trợ.';
+      if (anonDesc) anonDesc.textContent = 'MSSV hiển thị trên bảng câu hỏi.';
       if (mssvStar) mssvStar.style.display = 'inline';
       if (mssvInput) {
         mssvInput.required = true;
         mssvInput.placeholder = 'Ví dụ: 25520918';
       }
-      if (mssvHelp) mssvHelp.textContent = 'Mã số sinh viên chính thức tại UIT của bạn.';
+      if (mssvHelp) mssvHelp.textContent = 'Mã số Trainee chính thức tại UIT của bạn.';
     }
   }
 
@@ -513,7 +426,7 @@ function setupQuestionEvents() {
 
       // Validation
       if (!isAnonymous && !mssv) {
-        if (window.showToast) window.showToast('Vui lòng nhập Mã số sinh viên (MSSV) hoặc bật Chế độ ẩn danh 🎭!', 'warning');
+        if (window.showToast) window.showToast('Vui lòng nhập Mã số Trainee (MSSV) hoặc bật Chế độ ẩn danh !', 'warning');
         mssvInput?.focus();
         return;
       }
@@ -528,54 +441,22 @@ function setupQuestionEvents() {
         return;
       }
 
-      const randomNum = Math.floor(100 + Math.random() * 900);
-      const code = `Q-2026-${Date.now().toString().slice(-3)}${randomNum.toString().slice(-1)}`;
-
-      const currentName = state.currentTrainee ? state.currentTrainee.fullName : (state.currentUser ? state.currentUser.fullName : 'Khôi Trương Trần Anh');
-
-      const newQuestion = {
-        _id: `q_${Date.now()}`,
-        code,
-        mssv: isAnonymous ? 'Ẩn danh' : (mssv || '25520918'),
-        realMssv: mssv,
-        fullName: isAnonymous ? 'Sinh viên ẩn danh' : currentName,
-        isAnonymous,
-        category,
-        title,
-        content,
-        status: 'pending',
-        answer: '',
-        answeredBy: '',
-        answeredRole: '',
-        answeredAt: null,
-        likesCount: 0,
-        likedBy: [],
-        createdAt: new Date().toISOString()
-      };
-
-      // Try API first
+      const currentName = state.currentTrainee?.fullName || state.currentUser?.fullName || '';
+      let newQuestion;
       try {
-        if (window.API && API.createQuestion) {
-          const apiRes = await API.createQuestion({
-            mssv: isAnonymous ? 'Ẩn danh' : mssv,
-            fullName: isAnonymous ? 'Sinh viên ẩn danh' : currentName,
-            isAnonymous,
-            category,
-            title,
-            content
-          });
-          if (apiRes && apiRes.data) {
-            newQuestion._id = apiRes.data._id || newQuestion._id;
-            newQuestion.code = apiRes.data.code || newQuestion.code;
-          }
-        }
-      } catch (err) {
-        console.warn('API error, saving locally:', err);
+        const result = await API.createQuestion({
+          mssv: isAnonymous ? 'Ẩn danh' : mssv,
+          fullName: isAnonymous ? 'Trainee ẩn danh' : currentName,
+          isAnonymous, category, title, content
+        });
+        if (!result.success || !result.data) throw new Error(result.message || 'Không gửi được câu hỏi.');
+        newQuestion = result.data;
+      } catch (error) {
+        window.showToast?.(error.message, 'danger');
+        return;
       }
-
-      // Add to local list
       questionsState.questions.unshift(newQuestion);
-      saveQuestionsToStorage(questionsState.questions);
+      questionsState.loadState = 'ready';
 
       // Show success alert
       if (successAlert) {
@@ -585,7 +466,7 @@ function setupQuestionEvents() {
         if (metaEl) {
           metaEl.innerHTML = `
             <span>Mã câu hỏi: <strong>${escapeHtml(newQuestion.code)}</strong></span>
-            <span>Chế độ: <strong>${isAnonymous ? '🎭 Ẩn danh (Bảo mật MSSV)' : '🌐 Công khai MSSV (' + escapeHtml(mssv) + ')'}</strong></span>
+            <span>Chế độ: <strong>${isAnonymous ? ' Ẩn danh (Bảo mật MSSV)' : ' Công khai MSSV (' + escapeHtml(mssv) + ')'}</strong></span>
             <span>Chủ đề: <strong>${escapeHtml(category)}</strong></span>
             <span>Thời gian gửi: <strong>Vừa xong (${new Date().toLocaleTimeString('vi-VN')} · ${new Date().toLocaleDateString('vi-VN')})</strong></span>
           `;
@@ -640,7 +521,8 @@ function setupQuestionEvents() {
 
   // 9. Close modal
   function closeModal() {
-    if (modal) modal.classList.remove('active');
+    if (modal) modal.classList.remove('open', 'show');
+    questionsState.selectedQuestion = null;
   }
   if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
   if (btnCloseQModal) btnCloseQModal.addEventListener('click', closeModal);
@@ -665,6 +547,7 @@ function setupQuestionEvents() {
   // 11. Modal Reply from mentor/admin
   if (btnSubmitQReply) {
     btnSubmitQReply.addEventListener('click', async () => {
+      if (!canManage('questions:manage') || btnSubmitQReply.disabled) return;
       const text = document.getElementById('qReplyInput')?.value?.trim();
       if (!text) {
         if (window.showToast) window.showToast('Vui lòng nhập câu trả lời!', 'warning');
@@ -673,24 +556,26 @@ function setupQuestionEvents() {
 
       if (questionsState.selectedQuestion) {
         const q = questionsState.selectedQuestion;
-        q.status = 'answered';
-        q.answer = text;
-        q.answeredBy = state.currentUser ? state.currentUser.fullName : 'TS. Dương Việt Hằng';
-        q.answeredRole = 'Giảng viên Hướng dẫn UIT';
-        q.answeredAt = new Date().toISOString();
-
-        saveQuestionsToStorage(questionsState.questions);
-        renderQuestionBoard();
-        updateQuestionStats();
-        openQuestionModal(q._id || q.code);
-
-        if (window.API && API.answerQuestion) {
-          API.answerQuestion(q._id, text, q.answeredBy, q.answeredRole).catch(() => {});
+        const id = q._id || q.code;
+        const feedback = document.getElementById('qReplyFeedback');
+        btnSubmitQReply.disabled = true;
+        if (feedback) feedback.textContent = 'Đang lưu giải đáp…';
+        try {
+          const result = await API.answerQuestion(id, text);
+          if (!result.success || !result.data) throw new Error(result.message || 'Không lưu được giải đáp.');
+          Object.assign(q, result.data);
+          renderQuestionBoard();
+          updateQuestionStats();
+          if ((questionsState.selectedQuestion?._id || questionsState.selectedQuestion?.code) === id) {
+            openQuestionModal(id);
+            if (feedback) feedback.textContent = 'Đã lưu giải đáp.';
+          }
+          window.showToast?.('Đã lưu giải đáp.', 'success');
+        } catch (error) {
+          if ((questionsState.selectedQuestion?._id || questionsState.selectedQuestion?.code) === id && feedback) feedback.textContent = error.message;
+        } finally {
+          btnSubmitQReply.disabled = false;
         }
-
-        if (window.showToast) window.showToast('Đã gửi phản hồi thành công!', 'success');
-        const replyInput = document.getElementById('qReplyInput');
-        if (replyInput) replyInput.value = '';
       }
     });
   }

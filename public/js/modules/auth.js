@@ -1,7 +1,7 @@
 /**
  * ==============================================================================
  * COMPONENT: Auth Module (Quản Lý Xác Thực & Phân Quyền Người Dùng)
- * CHỨC NĂNG CHÍNH: Xử lý trạng thái đăng nhập, xác thực quyền Admin / Sinh viên,
+ * CHỨC NĂNG CHÍNH: Xử lý trạng thái đăng nhập, xác thực quyền Admin / Trainee,
  *                  đồng bộ token JWT và điều hướng giao diện theo role.
  * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, public/login.html, localStorage
  * NHIỆM VỤ CHI TIẾT:
@@ -16,51 +16,40 @@
 // AUTHENTICATION & ACCESS CONTROL
 // ==========================================
 
-function initAuth() {
-  const savedUser = localStorage.getItem('uit_trainee_auth_user');
-  if (savedUser) {
-    try {
-      const parsed = JSON.parse(savedUser);
-      // Chỉ tài khoản Admin mới được xem là currentUser đã đăng nhập
-      if (parsed && parsed.role === 'admin') {
-        state.currentUser = parsed;
-      } else {
-        state.currentUser = null;
-        localStorage.removeItem('uit_trainee_auth_user');
-        localStorage.removeItem('uit_trainee_auth_token');
-      }
-    } catch (e) {
-      state.currentUser = null;
-      localStorage.removeItem('uit_trainee_auth_user');
-      localStorage.removeItem('uit_trainee_auth_token');
-    }
-  } else {
+async function initAuth() {
+  try {
+    localStorage.removeItem('uit_trainee_auth_token');
+    localStorage.removeItem('uit_trainee_auth_user');
+    const response = await fetch('/api/auth/me', { cache: 'no-store' });
+    const result = await response.json();
+    state.currentUser = response.ok ? result.user : null;
+  } catch {
     state.currentUser = null;
   }
-  // Khách & Sinh viên truy cập trực tiếp, KHÔNG chuyển hướng sang /login
+  // Khách & Trainee truy cập trực tiếp, KHÔNG chuyển hướng sang /login
   renderAuthState();
   return true;
 }
 
 function renderAuthState() {
   const u = state.currentUser;
-  const isAdmin = Boolean(u && u.role === 'admin');
+  const isAdmin = Boolean(u);
 
-  // 1. Sidebar Sections: Luôn hiển thị Học vụ cho Sinh viên, Quản trị Admin chỉ hiển thị khi đã đăng nhập Admin
+  // 1. Sidebar Sections: Luôn hiển thị Học vụ cho Trainee, Quản trị Admin chỉ hiển thị khi đã đăng nhập Admin
   if (elements.studentOnlyNavSections) {
     elements.studentOnlyNavSections.style.display = 'block';
   }
   if (elements.adminNavGroupLabel) {
-    elements.adminNavGroupLabel.style.display = isAdmin ? 'block' : 'none';
+    elements.adminNavGroupLabel.style.display = canManage('accounts:manage') ? 'block' : 'none';
   }
   if (elements.adminNavList) {
     elements.adminNavList.style.display = isAdmin ? 'block' : 'none';
   }
   if (elements.menuBtnGoAdmin) {
-    elements.menuBtnGoAdmin.style.display = isAdmin ? 'flex' : 'none';
+    elements.menuBtnGoAdmin.style.display = canManage('accounts:manage') ? 'flex' : 'none';
   }
   if (elements.menuBtnOpenChangePassword) {
-    elements.menuBtnOpenChangePassword.style.display = isAdmin ? 'flex' : 'none';
+    elements.menuBtnOpenChangePassword.style.display = u && !u.isOwner ? 'flex' : 'none';
   }
 
   // 2. Sidebar Login vs Logout items
@@ -90,37 +79,37 @@ function renderAuthState() {
       if (elements.headerAccountName) elements.headerAccountName.textContent = u.fullName || 'Quản Trị Viên (Admin)';
       if (elements.headerAccountId) elements.headerAccountId.textContent = 'Quản trị hệ thống';
       if (elements.menuAccountName) elements.menuAccountName.textContent = u.fullName || 'Admin';
-      if (elements.menuAccountRole) elements.menuAccountRole.textContent = 'Quản trị viên hệ thống (admin@uit.edu.vn)';
+      if (elements.menuAccountRole) elements.menuAccountRole.textContent = u.isOwner ? 'Quản trị gốc' : u.role === 'admin' ? 'Quản trị nội dung' : 'Trainer';
       if (elements.menuBtnOpenLogin) elements.menuBtnOpenLogin.style.display = 'none';
       if (elements.menuBtnGoProfile) elements.menuBtnGoProfile.style.display = 'none';
       if (elements.menuBtnLogout) elements.menuBtnLogout.style.display = 'flex';
-      if (elements.menuBtnGoAdmin) elements.menuBtnGoAdmin.style.display = 'flex';
+      if (elements.menuBtnGoAdmin) elements.menuBtnGoAdmin.style.display = canManage('accounts:manage') ? 'flex' : 'none';
     } else {
-      // Chế độ xem dành cho Sinh viên & Khách (Không cần đăng nhập)
+      // Chế độ xem dành cho Trainee & Khách (Không cần đăng nhập)
       elements.headerAccountPill.classList.remove('is-admin');
       const activeTrainee = state.currentTrainee;
-      const avatarUrl = activeTrainee 
-        ? getTraineeDicebearAvatar(activeTrainee) 
-        : 'https://api.dicebear.com/9.x/avataaars/svg?seed=uit-student&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf';
-      
+      const avatarUrl = activeTrainee
+        ? getTraineeDicebearAvatar(activeTrainee)
+        : getTraineeDicebearAvatar('guest');
+
       if (elements.headerAccountAvatar) {
         elements.headerAccountAvatar.style.background = 'transparent';
         elements.headerAccountAvatar.innerHTML = `<img src="${avatarUrl}" alt="Student Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
       }
       if (elements.headerAccountName) {
-        elements.headerAccountName.textContent = activeTrainee ? activeTrainee.fullName : 'Sinh viên Trainee';
+        elements.headerAccountName.textContent = activeTrainee ? activeTrainee.fullName : 'Trainee';
       }
       if (elements.headerAccountId) {
         elements.headerAccountId.textContent = activeTrainee ? `MSSV: ${activeTrainee.traineeId}` : 'Xem lịch & thứ hạng';
       }
       if (elements.menuAccountName) {
-        elements.menuAccountName.textContent = activeTrainee ? activeTrainee.fullName : 'Khách / Sinh viên UIT';
+        elements.menuAccountName.textContent = activeTrainee ? activeTrainee.fullName : 'Khách / Trainee UIT';
       }
       if (elements.menuAccountRole) {
-        elements.menuAccountRole.textContent = activeTrainee ? `Sinh viên (MSSV: ${activeTrainee.traineeId})` : 'Chế độ xem mở - Không cần đăng nhập';
+        elements.menuAccountRole.textContent = activeTrainee ? `Trainee (MSSV: ${activeTrainee.traineeId})` : 'Chế độ xem mở - Không cần đăng nhập';
       }
       if (elements.menuBtnOpenLogin) elements.menuBtnOpenLogin.style.display = 'flex';
-      if (elements.menuBtnOpenLoginText) elements.menuBtnOpenLoginText.textContent = 'Đăng nhập Admin';
+      if (elements.menuBtnOpenLoginText) elements.menuBtnOpenLoginText.textContent = 'Đăng nhập';
       if (elements.menuBtnGoProfile) elements.menuBtnGoProfile.style.display = 'flex';
       if (elements.menuBtnLogout) elements.menuBtnLogout.style.display = 'none';
       if (elements.menuBtnGoAdmin) elements.menuBtnGoAdmin.style.display = 'none';
@@ -129,16 +118,28 @@ function renderAuthState() {
 
   // 5. Profile banner greeting tag
   if (elements.studentGreetingTag) {
-    elements.studentGreetingTag.textContent = isAdmin ? 'QUẢN TRỊ VIÊN,' : 'SINH VIÊN TRAINEE,';
+    elements.studentGreetingTag.textContent = isAdmin ? 'QUẢN TRỊ VIÊN,' : 'Trainee,';
   }
 
   // 6. Cập nhật quyền hiển thị các phần tử chỉ dành cho Admin (admin-only-element)
   document.querySelectorAll('.admin-only-element').forEach(el => {
-    el.style.display = isAdmin ? '' : 'none';
+    const page = el.closest?.('[id^="view"]')?.id;
+    const permission = el.dataset.permission || ({ viewSchedule: 'schedules:manage', viewQuestions: 'questions:manage', viewAssignments: 'assignments:manage', viewGrades: 'attendance:manage', viewLeaderboard: 'trainees:manage' })[page];
+    el.style.display = permission ? (canManage(permission) ? '' : 'none') : (isAdmin ? '' : 'none');
   });
 
+  document.querySelectorAll('[data-permission]').forEach(element => { element.style.display = canManage(element.dataset.permission) ? '' : 'none'; });
+  const manager = window.duolingoManager;
+  if (manager) {
+    manager.renderPath();
+    if (manager.selectedAssignment?.status === 'locked' && !canManage('assignments:manage')) {
+      document.getElementById('duoAssignmentModal')?.classList.remove('active');
+      manager.selectedAssignment = null;
+    }
+  }
+
   // Người dùng thường không thể truy cập tab admin
-  if (!isAdmin && state.activeTab === 'admin') {
+  if (!canManage('accounts:manage') && state.activeTab === 'admin') {
     switchTab('schedule');
   }
 }
@@ -158,10 +159,18 @@ function closeLoginModal() {
   // Modal has been migrated to dedicated /login page
 }
 
-function handleLogout() {
+async function handleLogout() {
+  try {
+    const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!response.ok) throw new Error();
+  } catch {
+    window.showToast?.('Chưa đăng xuất được. Vui lòng thử lại.', 'danger');
+    return;
+  }
   state.currentUser = null;
   localStorage.removeItem('uit_trainee_auth_user');
   localStorage.removeItem('uit_trainee_auth_token');
+  await loadTrainees();
   renderAuthState();
   switchTab('schedule');
   if (window.showToast) {
@@ -171,7 +180,7 @@ function handleLogout() {
 
 
 function checkAdminAuth() {
-  return Boolean(state.currentUser && state.currentUser.role === 'admin');
+  return canManage('accounts:manage');
 }
 
 function updateAuthUI() {

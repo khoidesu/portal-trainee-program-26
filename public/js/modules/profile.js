@@ -44,7 +44,7 @@ async function handleChangePasswordSubmit(e) {
   }
 
   if (newPass.length < 4) {
-    showChangePassFeedback('Mật khẩu mới phải có tối thiểu 4 ký tự!', 'danger');
+    showChangePassFeedback('Mật khẩu mới phải có tối thiểu 12 ký tự!', 'danger');
     return;
   }
 
@@ -59,8 +59,9 @@ async function handleChangePasswordSubmit(e) {
       } else {
         alert('Đổi mật khẩu thành công!');
       }
-      await loadTrainees();
-      renderAdminView();
+      state.currentUser = null;
+      renderAuthState();
+      window.location.href = '/login';
     } else {
       showChangePassFeedback(res?.message || 'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại!', 'danger');
     }
@@ -120,7 +121,7 @@ function renderProfileView() {
     trainee = state.trainees[0];
   } else {
     trainee = {
-      fullName: 'Sinh viên Trainee',
+      fullName: 'Trainee',
       traineeId: '25520918',
       email: 'trainee@uit.edu.vn',
       track: 'Khoa Khoa học Máy tính'
@@ -146,7 +147,7 @@ function renderProfileView() {
     elements.profileBadgeId.textContent = trainee.traineeId || u.traineeId || u.username || '--';
   }
   if (elements.profileBadgeRole) {
-    elements.profileBadgeRole.textContent = u.role === 'admin' ? 'Quản trị viên' : 'Sinh viên UIT';
+    elements.profileBadgeRole.textContent = u.role === 'admin' ? 'Quản trị viên' : 'Trainee UIT';
     elements.profileBadgeRole.className = u.role === 'admin' ? 'badge badge-danger' : 'badge badge-success';
   }
   if (elements.profileBadgeBatch) {
@@ -251,7 +252,7 @@ async function handleProfileAvatarChange(file) {
       renderLeaderboardTable();
       renderAdminTable();
 
-      // Đồng bộ ngầm lại danh sách thực tập sinh
+      // Đồng bộ ngầm lại danh sách Trainee
       API.getTrainees().then(ts => {
         if (ts && ts.length > 0) {
           state.trainees = ts;

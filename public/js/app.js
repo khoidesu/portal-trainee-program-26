@@ -15,7 +15,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Khởi tạo xác thực & giao diện
-  const isAuthed = initAuth();
+  const isAuthed = await initAuth();
   initTheme();
   setupEventListeners();
 
@@ -53,5 +53,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  console.log('🚀 Trainee Portal 2026 Modular App Initialized Successfully!');
+  console.log(' Trainee Portal 2026 Modular App Initialized Successfully!');
 });

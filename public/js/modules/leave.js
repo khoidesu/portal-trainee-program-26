@@ -1,344 +1,210 @@
-/**
- * ==============================================================================
- * COMPONENT: Leave Request Module (Đơn Xin Nghỉ Học Trực Tuyến)
- * CHỨC NĂNG CHÍNH: Cho phép sinh viên đăng ký xin nghỉ học trực tuyến kèm lý do,
- *                  minh chứng và quản lý lịch sử đơn từ.
- * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, localStorage
- * NHIỆM VỤ CHI TIẾT:
- *   - initLeaveModule: Gắn sự kiện submit form xin nghỉ học
- *   - getSavedLeaveHistory & saveLeaveHistory: Lưu trữ lịch sử đơn
- *   - renderLeaveHistoryTable: Hiển thị danh sách các đơn đã nộp kèm trạng thái duyệt
- * ==============================================================================
- */
-
-// ==========================================
-// ĐƠN XIN NGHỈ HỌC TRỰC TUYẾN (LEAVE REQUEST MODULE)
-// ==========================================
+let leaveChallengeWidget;
+let leaveChallengeToken = '';
+let leaveConfigPromise;
 
 function getSavedLeaveHistory() {
   try {
-    const raw = localStorage.getItem('uit_trainee_leave_history');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.warn('Lỗi đọc lịch sử xin nghỉ:', e);
+    const list = JSON.parse(localStorage.getItem('uit_trainee_leave_receipts_v2') || '[]');
+    return Array.isArray(list) ? list.slice(0, 20) : [];
+  } catch {
+    return [];
   }
-  return [
-    {
-      id: 'leave_init_01',
-      mssv: '25520918',
-      fullName: 'Khôi Trương Trần Anh',
-      scheduleCode: 'TP-M10.02',
-      scheduleTitle: 'Buổi 2: Thiết kế Cơ sở dữ liệu MongoDB Atlas & Mongoose Modeling',
-      date: '2026-10-13',
-      time: '19:30 - 21:30',
-      reason: 'Trùng lịch thi giữa kỳ môn Cơ sở dữ liệu tại trường UIT.',
-      submittedAt: '2026-10-12T14:20:00.000Z',
-      status: 'Đã duyệt (Có phép)'
-    }
-  ];
 }
 
 function saveLeaveHistory(list) {
   try {
-    localStorage.setItem('uit_trainee_leave_history', JSON.stringify(list));
-  } catch (e) {
-    console.error('Lỗi lưu lịch sử xin nghỉ:', e);
+    localStorage.setItem('uit_trainee_leave_receipts_v2', JSON.stringify(list.slice(0, 20)));
+  } catch {}
+}
+
+function leaveFeedback(message, isError = false) {
+  const element = document.getElementById('leaveFeedback');
+  if (element) {
+    element.textContent = message;
+    element.className = isError ? 'form-help-text text-danger' : 'form-help-text';
   }
 }
 
+async function loadLeaveChallenge() {
+  if (!leaveConfigPromise) {
+    leaveConfigPromise = fetch('/api/public-config').then(async response => {
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error('Không tải được cấu hình xin nghỉ.');
+      return result.data;
+    }).catch(error => { leaveConfigPromise = null; throw error; });
+  }
+  const config = await leaveConfigPromise;
+  if (!config.turnstileSiteKey || leaveChallengeWidget !== undefined) return;
+  if (!window.turnstile) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Không tải được xác minh chống spam. Vui lòng tải lại trang.'));
+      document.head.appendChild(script);
+    });
+  }
+  leaveChallengeWidget = window.turnstile.render('#leaveChallenge', {
+    sitekey: config.turnstileSiteKey,
+    action: 'leave',
+    callback: token => { leaveChallengeToken = token; },
+    'expired-callback': () => { leaveChallengeToken = ''; },
+    'error-callback': () => { leaveChallengeToken = ''; leaveFeedback('Xác minh chống spam gặp lỗi. Vui lòng tải lại trang.', true); }
+  });
+}
+
 async function renderLeaveView() {
-  const mssvInput = document.getElementById('leaveInputMssv');
-  const nameInput = document.getElementById('leaveInputFullName');
-  const selectSchedule = document.getElementById('leaveSelectSchedule');
-
-  // 1. Tự động điền thông tin sinh viên hiện tại
-  const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
-  const currentName = state.currentTrainee ? state.currentTrainee.fullName : (state.currentUser ? state.currentUser.fullName : 'Khôi Trương Trần Anh');
-
-  if (mssvInput && !mssvInput.value) {
-    mssvInput.value = currentId;
+  const select = document.getElementById('leaveSelectSchedule');
+  const submit = document.getElementById('btnSubmitLeave');
+  if (!select) return;
+  submit.disabled = true;
+  leaveFeedback('Đang tải lịch học…');
+  try {
+    const month = window.ScheduleManager?.selectedMonth || new Date().getMonth() + 1;
+    const year = window.ScheduleManager?.selectedYear || new Date().getFullYear();
+    const response = await fetch(`/api/schedules?month=${month}&year=${year}`);
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error('Không tải được lịch học. Vui lòng thử lại.');
+    const selected = select.value;
+    select.innerHTML = '<option value="">-- Chọn buổi học bạn muốn xin nghỉ --</option>' + result.data.map(item =>
+      `<option value="${escapeHtml(item.code)}" data-title="${escapeHtml(item.title)}" data-date="${escapeHtml(item.date)}" data-time="${escapeHtml(item.startTime)} - ${escapeHtml(item.endTime)}" data-instructor="${escapeHtml(item.instructor)}">[${escapeHtml(item.code)}] ${escapeHtml(item.title)} (${escapeHtml(item.date)})</option>`
+    ).join('');
+    select.value = selected;
+    await loadLeaveChallenge();
+    leaveFeedback(result.data.length ? 'Mỗi Trainee chỉ gửi một đơn cho mỗi buổi học. Đơn mới được hiển thị công khai và chờ Ban Tổ chức xem xét.' : 'Tháng này chưa có lịch học. Hãy chọn tháng tại mục Thời khóa biểu rồi quay lại.');
+    submit.disabled = result.data.length === 0;
+  } catch (error) {
+    leaveFeedback(error.message || 'Không tải được biểu mẫu. Vui lòng tải lại trang.', true);
   }
-  if (nameInput && !nameInput.value) {
-    nameInput.value = currentName;
-  }
-
-  // 2. Nạp danh sách buổi học từ Database lịch học
-  if (selectSchedule) {
-    let schedules = [];
-    if (window.ScheduleManager && window.ScheduleManager.cachedSchedules && window.ScheduleManager.cachedSchedules.length > 0) {
-      schedules = window.ScheduleManager.cachedSchedules;
-    } else if (state.schedules && state.schedules.length > 0) {
-      schedules = state.schedules;
-    } else if (typeof DEFAULT_MONTHLY_SCHEDULES !== 'undefined' && Array.isArray(DEFAULT_MONTHLY_SCHEDULES)) {
-      schedules = DEFAULT_MONTHLY_SCHEDULES;
-    }
-
-    if (schedules.length === 0) {
-      try {
-        const res = await (API.getSchedules ? API.getSchedules(10, 2026) : fetch('/api/schedules?month=10&year=2026').then(r => r.json()));
-        schedules = res.data || [];
-        state.schedules = schedules;
-      } catch (e) {
-        if (typeof DEFAULT_MONTHLY_SCHEDULES !== 'undefined') schedules = DEFAULT_MONTHLY_SCHEDULES;
-      }
-    }
-
-    const currentSelected = selectSchedule.value;
-    selectSchedule.innerHTML = '<option value="">-- Vui lòng chọn buổi học bạn muốn xin nghỉ --</option>' +
-      schedules.map(s => {
-        const dateStr = s.dayOfWeekText ? `${s.dayOfWeekText}, ${formatDateVN(s.date)}` : formatDateVN(s.date);
-        return `<option value="${escapeHtml(s.code)}" 
-                  data-code="${escapeHtml(s.code)}" 
-                  data-title="${escapeHtml(s.title)}" 
-                  data-date="${escapeHtml(s.date)}" 
-                  data-time="${escapeHtml(s.startTime || '19:30')} - ${escapeHtml(s.endTime || '21:30')}" 
-                  data-instructor="${escapeHtml(s.instructor || 'Giảng viên UIT')}">
-                  [${escapeHtml(s.code)}] ${escapeHtml(s.title)} (${dateStr} · ${escapeHtml(s.startTime || '19:30')} - ${escapeHtml(s.endTime || '21:30')})
-                </option>`;
-      }).join('');
-
-    if (currentSelected) {
-      selectSchedule.value = currentSelected;
-    }
-
-    // Update session preview
-    updateLeaveSchedulePreview();
-  }
-
-  // 3. Render danh sách lịch sử đơn đã gửi
+  updateLeaveSchedulePreview();
   renderLeaveHistoryTable();
 }
 
 function updateLeaveSchedulePreview() {
-  const selectSchedule = document.getElementById('leaveSelectSchedule');
-  const previewBox = document.getElementById('leaveSchedulePreview');
-  if (!selectSchedule || !previewBox) return;
-
-  const selectedOpt = selectSchedule.options[selectSchedule.selectedIndex];
-  if (!selectedOpt || !selectedOpt.value) {
-    previewBox.style.display = 'none';
+  const select = document.getElementById('leaveSelectSchedule');
+  const box = document.getElementById('leaveSchedulePreview');
+  const selected = select?.selectedOptions[0];
+  if (!box || !selected?.value) {
+    if (box) box.style.display = 'none';
     return;
   }
-
-  const code = selectedOpt.getAttribute('data-code') || selectedOpt.value;
-  const title = selectedOpt.getAttribute('data-title') || '';
-  const date = selectedOpt.getAttribute('data-date') || '';
-  const time = selectedOpt.getAttribute('data-time') || '';
-  const instructor = selectedOpt.getAttribute('data-instructor') || 'Giảng viên UIT';
-
-  const previewCode = document.getElementById('previewSessionCode');
-  const previewTitle = document.getElementById('previewSessionTitle');
-  const previewTime = document.getElementById('previewSessionTime');
-  const previewInstructor = document.getElementById('previewSessionInstructor');
-
-  if (previewCode) previewCode.textContent = code;
-  if (previewTitle) previewTitle.textContent = title;
-  if (previewTime) previewTime.textContent = `${formatDateVN(date)} · ${time}`;
-  if (previewInstructor) previewInstructor.textContent = instructor;
-
-  previewBox.style.display = 'flex';
+  const values = {
+    previewSessionCode: selected.value, previewSessionTitle: selected.dataset.title,
+    previewSessionTime: `${selected.dataset.date} · ${selected.dataset.time}`,
+    previewSessionInstructor: selected.dataset.instructor
+  };
+  Object.entries(values).forEach(([id, value]) => { const element = document.getElementById(id); if (element) element.textContent = value || ''; });
+  box.style.display = 'flex';
 }
 
-function renderLeaveHistoryTable() {
-  const tbody = document.getElementById('leaveHistoryTableBody');
+let leaveBoardRequest = 0;
+async function renderLeaveHistoryTable() {
+  const body = document.getElementById('leaveHistoryTableBody');
   const badge = document.getElementById('leaveHistoryCountBadge');
-  if (!tbody) return;
-
-  const list = getSavedLeaveHistory();
-  if (badge) badge.textContent = `${list.length} đơn`;
-
-  if (list.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
-          Bạn chưa gửi đơn xin nghỉ nào. Điền form bên trên để gửi đơn xin phép khi cần.
-        </td>
-      </tr>
-    `;
-    return;
+  if (!body) return;
+  const request = ++leaveBoardRequest;
+  body.innerHTML = '<tr><td colspan="7">Đang tải bảng xin nghỉ…</td></tr>';
+  try {
+    const list = await API.getPublicLeave();
+    if (request !== leaveBoardRequest) return;
+    if (badge) badge.textContent = list.length + ' đơn';
+    if (!list.length) { body.innerHTML = '<tr><td colspan="7">Chưa có đơn xin nghỉ công khai.</td></tr>'; return; }
+    body.innerHTML = list.map((item, index) => `<tr>
+      <td>${index + 1}</td><td>${escapeHtml(item.traineeId)}</td><td>${escapeHtml(item.fullName)}</td>
+      <td><strong>${escapeHtml(item.scheduleTitle)}</strong><br>${escapeHtml(item.scheduleDate)} · ${escapeHtml(item.scheduleTime)}</td>
+      <td class="leave-public-reason">${escapeHtml(item.reason)}</td>
+      <td><time datetime="${escapeHtml(item.submittedAt)}">${escapeHtml(new Date(item.submittedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }))}</time></td>
+      <td><span>${({ pending: 'Chờ xem xét', resolved: 'Đã duyệt', rejected: 'Từ chối' })[item.status] || 'Chờ xem xét'}</span>
+      ${window.canManage?.('leave:manage') && item.status === 'pending' ? `<div class="context-actions"><button type="button" class="btn btn-primary btn-xs leave-review" data-id="${escapeHtml(item.id)}" data-status="resolved">Duyệt</button><button type="button" class="btn btn-outline btn-xs leave-review" data-id="${escapeHtml(item.id)}" data-status="rejected">Từ chối</button></div>` : ''}</td>
+    </tr>`).join('');
+    body.querySelectorAll('.leave-review').forEach(button => button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const result = await API.updateLeave(button.dataset.id, button.dataset.status);
+        if (!result.success) throw new Error(result.message);
+        await renderLeaveHistoryTable();
+      } catch (error) { leaveFeedback(error.message, true); button.disabled = false; }
+    }));
+  } catch (error) {
+    if (request !== leaveBoardRequest) return;
+    body.innerHTML = '<tr><td colspan="7">Không tải được bảng xin nghỉ. Bấm Tải lại để thử.</td></tr>';
+    if (badge) badge.textContent = '—';
   }
-
-  tbody.innerHTML = list.map((item, idx) => {
-    let dateSubmittedStr = '';
-    try {
-      const d = new Date(item.submittedAt);
-      dateSubmittedStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    } catch (e) {
-      dateSubmittedStr = item.submittedAt || '';
-    }
-
-    return `
-      <tr>
-        <td style="font-weight: 700; color: var(--text-muted); text-align: center;">${idx + 1}</td>
-        <td><strong>${escapeHtml(item.mssv)}</strong></td>
-        <td>${escapeHtml(item.fullName)}</td>
-        <td>
-          <span class="preview-badge" style="display: inline-block; margin-bottom: 2px;">${escapeHtml(item.scheduleCode)}</span>
-          <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-main);">${escapeHtml(item.scheduleTitle)}</div>
-        </td>
-        <td style="max-width: 280px; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
-          ${escapeHtml(item.reason)}
-        </td>
-        <td style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap;">
-          ${escapeHtml(dateSubmittedStr)}
-        </td>
-        <td>
-          <span class="leave-status-badge approved">
-            <span>✓</span> ${escapeHtml(item.status || 'Đã duyệt (Có phép)')}
-          </span>
-        </td>
-      </tr>
-    `;
-  }).join('');
 }
 
 function setupLeaveFormEvents() {
+  const reload = document.getElementById('btnRefreshLeaveBoard');
+  if (reload && !reload.dataset.bound) { reload.dataset.bound = 'true'; reload.addEventListener('click', renderLeaveHistoryTable); }
   const form = document.getElementById('leaveApplicationForm');
-  const selectSchedule = document.getElementById('leaveSelectSchedule');
+  const select = document.getElementById('leaveSelectSchedule');
   const reasonInput = document.getElementById('leaveInputReason');
-  const resetBtn = document.getElementById('btnResetLeaveForm');
-  const dismissBtn = document.getElementById('btnDismissLeaveSuccess');
-  const successAlert = document.getElementById('leaveSuccessAlert');
-
-  // 1. Khi chọn buổi học -> hiện preview
-  if (selectSchedule) {
-    selectSchedule.addEventListener('change', updateLeaveSchedulePreview);
-  }
-
-  // 2. Bấm các gợi ý lý do nhanh (chips)
-  document.querySelectorAll('.leave-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const text = btn.getAttribute('data-reason');
-      if (reasonInput && text) {
-        if (reasonInput.value.trim()) {
-          reasonInput.value += `\n- ${text}`;
-        } else {
-          reasonInput.value = text;
-        }
-        reasonInput.focus();
-      }
-    });
+  const banner = document.getElementById('leaveSuccessAlert');
+  select?.addEventListener('change', updateLeaveSchedulePreview);
+  document.querySelectorAll('.leave-chip').forEach(button => button.addEventListener('click', () => {
+    reasonInput.value = [reasonInput.value.trim(), button.dataset.reason].filter(Boolean).join('\n').slice(0, 3000);
+    reasonInput.focus();
+  }));
+  document.getElementById('btnDismissLeaveSuccess')?.addEventListener('click', () => { banner.style.display = 'none'; });
+  document.getElementById('btnResetLeaveForm')?.addEventListener('click', () => {
+    form.reset();
+    banner.style.display = 'none';
+    updateLeaveSchedulePreview();
+    leaveFeedback('');
   });
-
-  // 3. Nút nhập lại (Reset form)
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      if (form) form.reset();
-      const previewBox = document.getElementById('leaveSchedulePreview');
-      if (previewBox) previewBox.style.display = 'none';
-      if (successAlert) successAlert.style.display = 'none';
-
-      // Giữ lại MSSV và họ tên mặc định
-      const mssvInput = document.getElementById('leaveInputMssv');
-      const nameInput = document.getElementById('leaveInputFullName');
-      const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
-      const currentName = state.currentTrainee ? state.currentTrainee.fullName : (state.currentUser ? state.currentUser.fullName : 'Khôi Trương Trần Anh');
-      if (mssvInput) mssvInput.value = currentId;
-      if (nameInput) nameInput.value = currentName;
-    });
-  }
-
-  // 4. Đóng thông báo thành công
-  if (dismissBtn && successAlert) {
-    dismissBtn.addEventListener('click', () => {
-      successAlert.style.display = 'none';
-    });
-  }
-
-  // 5. Gửi đơn xin nghỉ (Submit Form)
-  if (form) {
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      const mssv = (document.getElementById('leaveInputMssv')?.value || '').trim();
-      const fullName = (document.getElementById('leaveInputFullName')?.value || '').trim();
-      const scheduleCode = selectSchedule ? selectSchedule.value : '';
-      const selectedOpt = selectSchedule ? selectSchedule.options[selectSchedule.selectedIndex] : null;
-      const scheduleTitle = selectedOpt ? (selectedOpt.getAttribute('data-title') || selectedOpt.text) : '';
-      const reason = (reasonInput?.value || '').trim();
-      const commitChecked = document.getElementById('leaveCheckCommit')?.checked;
-
-      // Validation
-      if (!mssv) {
-        if (window.showToast) window.showToast('Vui lòng nhập Mã số sinh viên (MSSV)!', 'warning');
-        document.getElementById('leaveInputMssv')?.focus();
-        return;
-      }
-      if (!fullName) {
-        if (window.showToast) window.showToast('Vui lòng nhập Họ và tên sinh viên!', 'warning');
-        document.getElementById('leaveInputFullName')?.focus();
-        return;
-      }
-      if (!scheduleCode) {
-        if (window.showToast) window.showToast('Vui lòng chọn Buổi học bạn cần xin nghỉ!', 'warning');
-        selectSchedule?.focus();
-        return;
-      }
-      if (!reason || reason.length < 10) {
-        if (window.showToast) window.showToast('Vui lòng nhập chi tiết lý do xin nghỉ (ít nhất 10 ký tự)!', 'warning');
-        reasonInput?.focus();
-        return;
-      }
-      if (!commitChecked) {
-        if (window.showToast) window.showToast('Vui lòng tích xác nhận cam kết tự giác xem lại bài học!', 'warning');
-        return;
-      }
-
-      // Tạo đối tượng đơn xin nghỉ mới
-      const newLeaveRecord = {
-        id: `leave_${Date.now()}`,
-        mssv,
-        fullName,
-        scheduleCode,
-        scheduleTitle,
-        reason,
-        submittedAt: new Date().toISOString(),
-        status: 'Đã duyệt (Có phép)'
+  if (!form || form.dataset.initialized) return;
+  form.dataset.initialized = 'true';
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = document.getElementById('btnSubmitLeave');
+    if (submit.disabled) return;
+    banner.style.display = 'none';
+    const mssv = document.getElementById('leaveInputMssv').value.trim();
+    const fullName = document.getElementById('leaveInputFullName').value.trim();
+    const selected = select.selectedOptions[0];
+    const reason = reasonInput.value.trim();
+    if (!/^\d{6,12}$/.test(mssv) || !fullName || !selected?.value || reason.length < 10 || reason.length > 3000 || !document.getElementById('leaveCheckCommit').checked) {
+      leaveFeedback('Vui lòng nhập đầy đủ MSSV, họ tên, buổi học, lý do (10–3000 ký tự) và xác nhận cam kết.', true);
+      return;
+    }
+    if (leaveChallengeWidget !== undefined && !leaveChallengeToken) {
+      leaveFeedback('Vui lòng hoàn tất xác minh chống spam.', true);
+      return;
+    }
+    submit.disabled = true;
+    submit.setAttribute('aria-busy', 'true');
+    leaveFeedback('Đang gửi đơn xin nghỉ…');
+    try {
+      const result = await API.submitLeave({
+        traineeId: mssv, fullName, scheduleCode: selected.value, scheduleDate: selected.dataset.date,
+        reason, commit: true, turnstileToken: leaveChallengeToken
+      });
+      const receipt = {
+        id: result.data.id, mssv, fullName, scheduleCode: selected.value, scheduleTitle: selected.dataset.title,
+        submittedAt: result.data.submittedAt,
+        status: result.data.status === 'resolved' ? 'Đã duyệt' : result.data.status === 'rejected' ? 'Từ chối' : 'Chờ xem xét khi gửi'
       };
-
-      // Lưu vào danh sách lịch sử
-      const list = getSavedLeaveHistory();
-      list.unshift(newLeaveRecord);
-      saveLeaveHistory(list);
-
-      // Cập nhật banner thành công
-      if (successAlert) {
-        const metaEl = document.getElementById('leaveSuccessMeta');
-        if (metaEl) {
-          metaEl.innerHTML = `
-            <span>Sinh viên: <strong>${escapeHtml(fullName)} (${escapeHtml(mssv)})</strong></span>
-            <span>Buổi nghỉ: <strong>${escapeHtml(scheduleCode)} - ${escapeHtml(scheduleTitle)}</strong></span>
-            <span>Thời gian nộp: <strong>Vừa xong (${new Date().toLocaleTimeString('vi-VN')} · ${new Date().toLocaleDateString('vi-VN')})</strong></span>
-            <span>Trạng thái: <strong style="color: #059669;">Đã tiếp nhận có phép</strong></span>
-          `;
-        }
-        successAlert.style.display = 'flex';
-        successAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-
-      // Render lại lịch sử
+      saveLeaveHistory([receipt, ...getSavedLeaveHistory().filter(item => item.id !== receipt.id)]);
+      document.getElementById('leaveSuccessDesc').textContent = result.message;
+      document.getElementById('leaveSuccessMeta').textContent = `Mã đơn: ${receipt.id} · ${receipt.fullName} (${receipt.mssv}) · ${receipt.scheduleCode}`;
+      banner.style.display = 'flex';
+      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       renderLeaveHistoryTable();
-
-      // Thông báo toast
-      if (window.showToast) {
-        window.showToast(`Đã gửi đơn xin nghỉ thành công cho buổi [${scheduleCode}]!`, 'success');
+      leaveFeedback(result.message);
+      window.showToast?.('Đã ghi nhận đơn xin nghỉ.', 'success');
+    } catch (error) {
+      leaveFeedback(error.message || 'Chưa gửi được đơn. Vui lòng thử lại.', true);
+    } finally {
+      submit.disabled = false;
+      submit.removeAttribute('aria-busy');
+      if (leaveChallengeWidget !== undefined) {
+        leaveChallengeToken = '';
+        window.turnstile.reset(leaveChallengeWidget);
       }
-
-      // Xóa ô lý do để tránh gửi trùng
-      if (reasonInput) reasonInput.value = '';
-    });
-  }
+    }
+  });
 }
 
-
-function initLeaveModule() {
-  setupLeaveFormEvents();
-}
-
-// Expose to global window
+function initLeaveModule() { setupLeaveFormEvents(); }
 window.initLeaveModule = initLeaveModule;
 window.renderLeaveView = renderLeaveView;
 window.getSavedLeaveHistory = getSavedLeaveHistory;

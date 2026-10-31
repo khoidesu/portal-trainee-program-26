@@ -17,7 +17,7 @@
 // Application State
 const state = {
   currentUser: null, // Logged in user: { username, fullName, role, email, avatar, traineeId } (Chỉ admin mới đăng nhập)
-  currentTraineeId: '25520918', // Khôi Trương Trần Anh
+  currentTraineeId: null, // Khôi Trương Trần Anh
   activeTab: 'schedule',
   scheduleWeekOffset: 0,
   scheduleViewMode: 'week',
@@ -36,24 +36,47 @@ const state = {
 };
 
 /**
- * Tạo URL avatar Dicebear SVG độc nhất cho từng tài khoản Trainee dựa theo MSSV
- * Style avataaars với bảng màu nền pastel cao cấp
+ * Chọn avatar cá voi ổn định theo mã Trainee.
  */
 function getTraineeDicebearAvatar(traineeOrId, name = '') {
   let seed = '';
   if (typeof traineeOrId === 'object' && traineeOrId !== null) {
-    if (traineeOrId.avatar && (traineeOrId.avatar.startsWith('data:image') || traineeOrId.avatar.includes('dicebear.com'))) {
-      return traineeOrId.avatar;
-    }
     seed = traineeOrId.traineeId || traineeOrId.username || traineeOrId.email || traineeOrId.fullName || 'student';
   } else {
     seed = String(traineeOrId || 'student').trim();
   }
-  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+  const hash = Array.from(String(seed)).reduce((value, character) => (value * 31 + character.charCodeAt(0)) >>> 0, 0);
+  return `/assets/whale_${hash % 4 + 1}.png`;
 }
 
 function getAdminAvatar() {
   return 'https://api.dicebear.com/9.x/bottts/svg?seed=uit-admin&backgroundColor=d1d4f9';
+}
+
+function canManage(permission) {
+  const user = state.currentUser;
+  return Boolean(user && (user.isOwner || user.permissions?.includes(permission)));
+}
+
+async function refreshPortalData() {
+  await loadTrainees();
+  renderLeaderboard();
+  if (canManage('trainees:manage')) renderAdminTable();
+  if (state.activeTab === 'grades') await renderGradesView(false);
+}
+
+function formatTraineeMetric(value, suffix = '') {
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) + suffix : '—';
+}
+
+function formatStarDelta(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
+  const number = Number(value);
+  return (number > 0 ? '+' : '') + number;
+}
+
+function attendanceLabel(status) {
+  return { present: 'Có mặt', absent_excused: 'Vắng có phép', absent_unexcused: 'Vắng không phép', not_recorded: 'Chưa có bản ghi' }[status] || 'Chưa có bản ghi';
 }
 
 // DOM Elements
@@ -85,7 +108,7 @@ const elements = {
   pageMainTitle: document.getElementById('pageMainTitle'),
   pageSubBreadcrumb: document.getElementById('pageSubBreadcrumb'),
   traineeCountBadge: document.getElementById('traineeCountBadge'),
-  
+
   // Timetable & Monthly Schedule Elements
   scheduleMonthContainer: document.getElementById('scheduleMonthContainer'),
   btnModeAgenda: document.getElementById('btnModeAgenda'),
@@ -96,7 +119,7 @@ const elements = {
   btnGoogleCalendar: document.getElementById('btnGoogleCalendar'),
   btnOpenScheduleEditor: document.getElementById('btnOpenScheduleEditor'),
   scheduleFilterForm: document.getElementById('scheduleFilterForm'),
-  
+
   // Schedule Modal Elements
   scheduleModal: document.getElementById('scheduleModal'),
   closeScheduleModalBtn: document.getElementById('closeScheduleModalBtn'),
@@ -116,15 +139,16 @@ const elements = {
   courseTypeSelect: document.getElementById('courseTypeSelect'),
   courseInstructorInput: document.getElementById('courseInstructorInput'),
   courseTeamsUrl: document.getElementById('courseTeamsUrl'),
+  courseDocumentUrl: document.getElementById('courseDocumentUrl'),
   courseNoteInput: document.getElementById('courseNoteInput'),
   scheduleModalTitle: document.getElementById('scheduleModalTitle'),
-  
+
   // Admin Schedule Table Elements
   adminScheduleTableBody: document.getElementById('adminScheduleTableBody'),
   btnAdminAddSchedule: document.getElementById('btnAdminAddSchedule'),
   btnAdminGoSchedule: document.getElementById('btnAdminGoSchedule'),
   btnAdminResetSchedule: document.getElementById('btnAdminResetSchedule'),
-  
+
   // Header controls & Theme dropdown
   traineeSelect: document.getElementById('traineeSelect'),
   themeModeWrapper: document.getElementById('themeModeWrapper'),
@@ -135,7 +159,7 @@ const elements = {
   dbStatusButton: document.getElementById('dbStatusButton'),
   dbStatusDot: document.getElementById('dbStatusDot'),
   dbStatusText: document.getElementById('dbStatusText'),
-  
+
   // Header User Account Pill & Dropdown
   openLoginModalBtn: document.getElementById('openLoginModalBtn'),
   headerLogoutBtn: document.getElementById('headerLogoutBtn'),
@@ -420,15 +444,15 @@ function applyThemeMode(mode, save = true) {
     document.documentElement.classList.remove('dark-theme');
     document.documentElement.classList.add('light-theme');
     document.documentElement.setAttribute('data-theme', 'light');
-    document.documentElement.style.backgroundColor = '#f4f6fa';
+    document.documentElement.style.backgroundColor = '#eaf4ff';
     document.documentElement.style.colorScheme = 'light';
 
     document.body.classList.remove('dark-theme');
     document.body.classList.add('light-theme');
-    document.body.style.backgroundColor = '#f4f6fa';
+    document.body.style.backgroundColor = '#eaf4ff';
     document.body.style.colorScheme = 'light';
 
-    if (themeMeta) themeMeta.content = '#f4f6fa';
+    if (themeMeta) themeMeta.content = '#eaf4ff';
   }
 
   // Cập nhật icon trên nút theme
@@ -449,19 +473,19 @@ function applyThemeMode(mode, save = true) {
 
 function updateThemeButtonIcon(mode) {
   if (!elements.themeToggleBtn) return;
-  const iconSystem = elements.themeToggleBtn.querySelector('.icon-system');
-  const iconSun = elements.themeToggleBtn.querySelector('.icon-sun');
-  const iconMoon = elements.themeToggleBtn.querySelector('.icon-moon');
-
-  if (iconSystem) iconSystem.style.display = mode === 'system' ? 'block' : 'none';
-  if (iconSun) iconSun.style.display = mode === 'light' ? 'block' : 'none';
-  if (iconMoon) iconMoon.style.display = mode === 'dark' ? 'block' : 'none';
+  const label = elements.themeToggleBtn.querySelector('.theme-toggle-label');
+  const icon = elements.themeToggleBtn.querySelector('use');
+  const name = { light: 'sun', dark: 'moon', system: 'monitor' }[mode] || 'monitor';
+  if (label) label.textContent = { light: 'Sáng', dark: 'Tối', system: 'Hệ thống' }[mode] || 'Giao diện';
+  if (icon) icon.setAttribute('href', `#theme-icon-${name}`);
+  elements.themeToggleBtn.setAttribute('aria-label', `Chế độ giao diện: ${label ? label.textContent : mode}`);
 }
 
 function updateThemeDropdownUI(mode) {
   if (!elements.themeOptionItems) return;
   elements.themeOptionItems.forEach((btn) => {
     const itemMode = btn.getAttribute('data-mode');
+    btn.setAttribute('aria-pressed', String(itemMode === mode));
     if (itemMode === mode) {
       btn.classList.add('active');
     } else {
@@ -491,6 +515,8 @@ function toggleThemeDropdown(show) {
 function toggleSidebar() {
   state.isSidebarCollapsed = !state.isSidebarCollapsed;
   elements.sidebar.classList.toggle('collapsed', state.isSidebarCollapsed);
+  elements.collapseSidebarBtn.textContent = state.isSidebarCollapsed ? 'Mở' : 'Thu gọn';
+  elements.collapseSidebarBtn.setAttribute('aria-expanded', String(!state.isSidebarCollapsed));
 }
 
 
@@ -510,8 +536,8 @@ async function loadDatabaseStatus() {
       elements.dbStatusText.title = 'Đang kết nối cơ sở dữ liệu MongoDB Atlas';
     } else {
       elements.dbStatusDot.style.backgroundColor = '#f59e0b';
-      elements.dbStatusText.textContent = 'Mock DB';
-      elements.dbStatusText.title = 'Đang chạy Mock Database (Sẵn sàng nối MongoDB)';
+      elements.dbStatusText.textContent = 'Dữ liệu cục bộ';
+      elements.dbStatusText.title = 'Đang đọc dữ liệu đã nhập trên máy local';
     }
   }
 }
@@ -540,6 +566,17 @@ async function loadTrainees() {
     });
   }
 
+  const tracks = [...new Set(state.trainees.map(trainee => trainee.track || trainee.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  ['leaderboardTrackFilter', 'adminTrackFilter', 'selectGradesTrack'].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const previous = select.value;
+    select.innerHTML = '<option value="all">Tất cả</option>' + tracks.map(track => `<option value="${escapeHtml(track)}">${escapeHtml(track)}</option>`).join('');
+    select.value = tracks.includes(previous) ? previous : 'all';
+  });
+  const options = document.getElementById('traineeTrackOptions');
+  if (options) options.innerHTML = tracks.map(track => `<option value="${escapeHtml(track)}"></option>`).join('');
+
   // Refresh active view with newly loaded trainees
   if (state.activeTab === 'admin') {
     renderAdminView();
@@ -548,7 +585,7 @@ async function loadTrainees() {
   }
 }
 
-// 3. Tải chi tiết thực tập sinh hiện tại
+// 3. Tải chi tiết Trainee hiện tại
 async function loadCurrentTrainee(id) {
   let targetId = id;
   if (!targetId) {
@@ -612,7 +649,7 @@ function openMongoModal() {
   if (status.isMongoDBConnected) {
     elements.modalStatusDot.style.backgroundColor = '#10b981';
     elements.modalStatusTitle.textContent = 'Trạng thái: ĐÃ KẾT NỐI MONGODB ATLAS';
-    elements.modalStatusDesc.textContent = 'Dữ liệu sinh viên đang được lưu trữ và truy vấn trực tiếp từ cụm MongoDB của bạn.';
+    elements.modalStatusDesc.textContent = 'Dữ liệu Trainee đang được lưu trữ và truy vấn trực tiếp từ cụm MongoDB của bạn.';
   } else {
     elements.modalStatusDot.style.backgroundColor = '#f59e0b';
     elements.modalStatusTitle.textContent = 'Trạng thái: MOCK DATABASE (Sẵn sàng nối MongoDB)';
@@ -673,6 +710,8 @@ function setThemeMode(mode) {
 }
 
 // Expose to global window
+window.canManage = canManage;
+window.refreshPortalData = refreshPortalData;
 window.state = state;
 window.elements = elements;
 window.getTraineeDicebearAvatar = getTraineeDicebearAvatar;

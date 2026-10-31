@@ -1,12 +1,12 @@
 /**
  * ==============================================================================
  * COMPONENT: Admin Module (Trung Tâm Quản Trị Hệ Thống Toàn Diện)
- * CHỨC NĂNG CHÍNH: Quản trị danh sách thực tập sinh (CRUD), cộng sao theo buổi học,
+ * CHỨC NĂNG CHÍNH: Quản trị danh sách Trainee (CRUD), cộng sao theo buổi học,
  *                  quản lý 11 bài tập rèn luyện (deadline & link), xử lý hỗ trợ.
  * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, public/js/api.js, public/js/duolingo.js
  * NHIỆM VỤ CHI TIẾT:
  *   - renderAdminView: Vẽ bảng điều khiển tổng quan quản trị
- *   - Quản lý Sinh viên: Modal tạo mới, sửa chỉ số KPI, xóa sinh viên
+ *   - Quản lý Trainee: Modal tạo mới, sửa chỉ số KPI, xóa Trainee
  *   - setupAdminAwardStarsSection: Giao diện cộng sao hàng loạt theo danh sách buổi học
  *   - Quản lý 11 bài tập: renderAdminAssignmentsTable, sửa deadline countdown, lưu link
  *   - renderAdminSupportRequests: Duyệt và giải quyết yêu cầu quên mật khẩu
@@ -17,30 +17,101 @@
 // ADMIN DASHBOARD & USER MANAGEMENT
 // ==========================================
 
-function renderAdminView() {
-  if (!state.currentUser || state.currentUser.role !== 'admin') return;
+const permissionLabels = {
+  'trainees:manage': 'Hồ sơ Trainee', 'schedules:manage': 'Lịch giảng dạy',
+  'attendance:manage': 'Điểm danh và điểm sao', 'assignments:manage': 'Bài tập và bài nộp',
+  'questions:manage': 'Q&A', 'leave:manage': 'Duyệt xin nghỉ'
+};
+let managedAccounts = [];
 
-  const trainees = state.trainees || [];
-  const totalUsers = trainees.length;
-  const totalStars = trainees.reduce((sum, t) => sum + (Number(t.accumulatedStars) || 0), 0);
-  const avgAttRate = totalUsers > 0 
-    ? (trainees.reduce((sum, t) => sum + (Number(t.attendanceRate) || 0), 0) / totalUsers).toFixed(1)
-    : 0;
-  const avgScore = totalUsers > 0 
-    ? (trainees.reduce((sum, t) => sum + (Number(t.assignmentScore) || 0), 0) / totalUsers).toFixed(2)
-    : 0;
+async function renderAdminView() {
+  if (!canManage('accounts:manage')) return;
+  const form = document.getElementById('accountEditorForm');
+  const body = document.getElementById('accountsTableBody');
+  if (!form || !body) return;
+  if (!form.dataset.bound) {
+    form.dataset.bound = 'true';
+    document.getElementById('accountPermissions').innerHTML = '<legend>Quyền chỉnh sửa</legend>' +
+      Object.entries(permissionLabels).map(([value, label]) => `<label><input type="checkbox" name="accountPermission" value="${value}"> ${label}</label>`).join('');
+    document.getElementById('btnResetAccountForm').addEventListener('click', resetAccountEditor);
+    document.getElementById('btnReloadAccounts').addEventListener('click', renderAdminView);
+    document.getElementById('accountRole').addEventListener('change', updateAccountPermissionInputs);
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = document.getElementById('btnSaveAccount');
+      button.disabled = true;
+      try {
+        const id = document.getElementById('accountEditId').value;
+        await API.saveAccount(id, {
+          username: document.getElementById('accountUsername').value.trim(),
+          fullName: document.getElementById('accountFullName').value.trim(),
+          password: document.getElementById('accountPassword').value,
+          role: document.getElementById('accountRole').value,
+          active: document.getElementById('accountActive').checked,
+          permissions: [...form.querySelectorAll('[name="accountPermission"]:checked')].map(input => input.value)
+        });
+        resetAccountEditor();
+        document.getElementById('accountFeedback').textContent = 'Đã lưu tài khoản. Quyền mới có hiệu lực khi đăng nhập lại; các phiên cũ đã được thu hồi.';
+        await renderAdminView();
+      } catch (error) { document.getElementById('accountFeedback').textContent = error.message; }
+      finally { button.disabled = false; }
+    });
+    resetAccountEditor();
+  }
+  body.innerHTML = '<tr><td colspan="5">Đang tải tài khoản…</td></tr>';
+  try {
+    managedAccounts = await API.getAccounts();
+    body.innerHTML = managedAccounts.map(account => `<tr>
+      <td><strong>${escapeHtml(account.username)}</strong><br>${escapeHtml(account.fullName)}</td>
+      <td>${account.isOwner ? 'Quản trị gốc' : account.role === 'admin' ? 'Quản trị nội dung' : 'Trainer'}</td>
+      <td>${account.isOwner ? 'Toàn bộ, bao gồm quản lý tài khoản' : account.permissions.map(permission => permissionLabels[permission]).filter(Boolean).map(escapeHtml).join(', ') || 'Chỉ xem'}</td>
+      <td>${account.active ? 'Đang hoạt động' : 'Đã khóa'}</td>
+      <td>${account.isOwner ? 'Cấu hình qua biến môi trường' : `<div class="context-actions"><button type="button" class="btn btn-outline btn-xs account-edit" data-id="${escapeHtml(account.id)}">Sửa quyền</button><button type="button" class="btn btn-outline btn-xs account-toggle" data-id="${escapeHtml(account.id)}">${account.active ? 'Khóa' : 'Mở khóa'}</button></div>`}</td>
+    </tr>`).join('');
+    body.querySelectorAll('.account-edit').forEach(button => button.addEventListener('click', () => {
+      const account = managedAccounts.find(item => item.id === button.dataset.id);
+      document.getElementById('accountEditId').value = account.id;
+      document.getElementById('accountUsername').value = account.username;
+      document.getElementById('accountUsername').disabled = true;
+      document.getElementById('accountFullName').value = account.fullName;
+      document.getElementById('accountRole').value = account.role;
+      document.getElementById('accountPassword').value = '';
+      document.getElementById('accountPassword').required = false;
+      document.getElementById('accountActive').checked = account.active;
+      form.querySelectorAll('[name="accountPermission"]').forEach(input => { input.checked = account.permissions.includes(input.value); });
+      document.getElementById('accountEditorTitle').textContent = 'Sửa tài khoản ' + account.username;
+      updateAccountPermissionInputs();
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    body.querySelectorAll('.account-toggle').forEach(button => button.addEventListener('click', async () => {
+      const account = managedAccounts.find(item => item.id === button.dataset.id);
+      button.disabled = true;
+      try {
+        await API.saveAccount(account.id, { ...account, active: !account.active, password: '' });
+        await renderAdminView();
+      } catch (error) { document.getElementById('accountFeedback').textContent = error.message; button.disabled = false; }
+    }));
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="5">Không tải được tài khoản. Bấm Tải lại để thử.</td></tr>';
+    document.getElementById('accountFeedback').textContent = error.message;
+  }
+}
 
-  if (elements.adminMetricTotalUsers) elements.adminMetricTotalUsers.textContent = totalUsers;
-  if (elements.adminMetricTotalStars) elements.adminMetricTotalStars.textContent = totalStars;
-  if (elements.adminMetricAvgAttendance) elements.adminMetricAvgAttendance.textContent = `${avgAttRate}%`;
-  if (elements.adminMetricAvgScore) elements.adminMetricAvgScore.textContent = avgScore;
-  if (elements.adminTableCountBadge) elements.adminTableCountBadge.textContent = `${totalUsers} sinh viên`;
+function updateAccountPermissionInputs() {
+  const isAdmin = document.getElementById('accountRole').value === 'admin';
+  document.querySelectorAll('[name="accountPermission"]').forEach(input => {
+    input.disabled = isAdmin;
+    if (isAdmin) input.checked = true;
+  });
+}
 
-  renderAdminTable();
-  renderAdminScheduleTable();
-  renderAdminSupportRequests();
-  setupAdminAwardStarsSection();
-  renderAdminAssignmentsTable();
+function resetAccountEditor() {
+  document.getElementById('accountEditorForm').reset();
+  document.getElementById('accountEditId').value = '';
+  document.getElementById('accountUsername').disabled = false;
+  document.getElementById('accountPassword').required = true;
+  document.getElementById('accountEditorTitle').textContent = 'Tạo tài khoản';
+  updateAccountPermissionInputs();
 }
 
 function renderAdminTable() {
@@ -56,7 +127,7 @@ function renderAdminTable() {
   // Filter by search
   if (state.adminSearchQuery) {
     const q = state.adminSearchQuery.toLowerCase();
-    list = list.filter(t => 
+    list = list.filter(t =>
       (t.fullName || '').toLowerCase().includes(q) ||
       (t.traineeId || '').toLowerCase().includes(q) ||
       (t.email || '').toLowerCase().includes(q)
@@ -73,14 +144,14 @@ function renderAdminTable() {
 
   elements.adminTraineesTableBody.innerHTML = list.map(t => {
     const initials = getInitials(t.fullName);
-    const attended = t.attendedSessions !== undefined ? t.attendedSessions : 40;
-    const total = t.totalSessions !== undefined ? t.totalSessions : 45;
-    const attRate = t.attendanceRate || Math.round((attended / total) * 100);
-    const stars = t.accumulatedStars !== undefined ? t.accumulatedStars : 28;
-    const excused = t.absentExcused !== undefined ? t.absentExcused : 0;
-    const unexcused = t.absentUnexcused !== undefined ? t.absentUnexcused : 0;
-    const assignScore = (t.assignmentScore !== undefined) ? Number(t.assignmentScore).toFixed(1) : '9.0';
-    const rank = t.currentRank || t.rank || 1;
+    const attended = formatTraineeMetric(t.attendedSessions);
+    const total = formatTraineeMetric(t.totalSessions);
+    const attRate = Number.isFinite(t.attendanceRate) ? t.attendanceRate : null;
+    const stars = formatTraineeMetric(t.accumulatedStars);
+    const excused = formatTraineeMetric(t.absentExcused);
+    const unexcused = formatTraineeMetric(t.absentUnexcused);
+    const assignScore = Number.isFinite(t.assignmentScore) ? t.assignmentScore.toFixed(1) : '—';
+    const rank = Number.isFinite(t.accumulatedStars) ? t.currentRank || t.rank || '—' : '—';
 
     return `
       <tr data-trainee-id="${t.traineeId}">
@@ -90,7 +161,7 @@ function renderAdminTable() {
               <img src="${getTraineeDicebearAvatar(t)}" alt="${escapeHtml(t.fullName)}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
             </div>
             <div class="admin-user-info">
-              <span class="admin-user-name">${escapeHtml(t.fullName)}</span>
+              <span class="admin-user-name">${escapeHtml(t.fullName)}</span><span class="badge-tag ${t.status === 'Ngừng học' ? 'status-stopped' : 'status-active'}">${escapeHtml(t.status || 'Đang học')}</span>
               <span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong> · ${escapeHtml(t.email)}</span>
             </div>
           </div>
@@ -101,17 +172,17 @@ function renderAdminTable() {
         </td>
         <td>
           <div class="star-chip">
-            ⭐ <span>${stars}</span> sao
+             <span>${stars}</span> sao
           </div>
           <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
-            ${escapeHtml(t.starClassification || 'Hạng Vàng')}
+            ${escapeHtml(t.starClassification || 'Chưa có dữ liệu')}
           </div>
         </td>
         <td>
           <div class="admin-att-wrap">
-            <div class="admin-att-text">${attended}/${total} (${attRate}%)</div>
+            <div class="admin-att-text">${attended}/${total} (${formatTraineeMetric(attRate, '%')})</div>
             <div class="admin-att-bar">
-              <div class="admin-att-fill" style="width: ${Math.min(attRate, 100)}%;"></div>
+              <div class="admin-att-fill" style="width: ${Math.min(attRate || 0, 100)}%;"></div>
             </div>
           </div>
         </td>
@@ -125,22 +196,19 @@ function renderAdminTable() {
           <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">
             ${assignScore} <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: normal;">/ 10</span>
           </div>
-          <div style="font-size: 0.74rem; color: var(--text-muted);">
-            Đạt ${t.completedAssignments || 14}/${t.totalAssignments || 15} bài
-          </div>
         </td>
         <td>
           <div style="font-weight: 700; font-size: 0.92rem;">
-            ${rank === 1 ? '🥇 Top 1' : rank === 2 ? '🥈 Top 2' : rank === 3 ? '🥉 Top 3' : `Hạng ${rank}`}
+            ${rank === 1 ? ' Top 1' : rank === 2 ? ' Top 2' : rank === 3 ? ' Top 3' : `Hạng ${rank}`}
           </div>
         </td>
         <td>
           <div class="admin-actions-cell">
             <button type="button" class="btn-admin-action edit-btn" data-action="edit" data-id="${t.traineeId}" title="Sửa chỉ số và thông tin">
-              ✏️ Sửa
+               Sửa
             </button>
             <button type="button" class="btn-admin-action delete-btn" data-action="delete" data-id="${t.traineeId}" title="Xóa người dùng">
-              🗑️ Xóa
+               Xóa
             </button>
           </div>
         </td>
@@ -170,10 +238,10 @@ function openCreateTraineeModal() {
   if (elements.createBatch) elements.createBatch.value = 'KHMT2026.2';
   if (elements.createStars) elements.createStars.value = '25';
   if (elements.createAttended) elements.createAttended.value = '40';
-  if (elements.createTotalSessions) elements.createTotalSessions.value = '45';
+  if (elements.createTotalSessions) elements.createTotalSessions.value = '0';
   if (elements.createExcused) elements.createExcused.value = '0';
   if (elements.createUnexcused) elements.createUnexcused.value = '0';
-  if (elements.createAssignmentScore) elements.createAssignmentScore.value = '9.0';
+  if (elements.createAssignmentScore) elements.createAssignmentScore.value = '';
 
   elements.createTraineeModal.classList.add('open', 'show');
   if (elements.createTraineeId) elements.createTraineeId.focus();
@@ -194,15 +262,14 @@ async function handleCreateTraineeSubmit(e) {
     track: elements.createTrack.value,
     department: elements.createTrack.value.replace('Khoa ', ''),
     batch: elements.createBatch.value.trim(),
-    password: '1234',
     accumulatedStars: Number(elements.createStars.value) || 0,
     attendedSessions: Number(elements.createAttended.value) || 0,
-    totalSessions: Number(elements.createTotalSessions.value) || 45,
+    totalSessions: Number(elements.createTotalSessions.value) || 0,
     absentExcused: Number(elements.createExcused.value) || 0,
     absentUnexcused: Number(elements.createUnexcused.value) || 0,
-    assignmentScore: Number(elements.createAssignmentScore.value) || 0,
-    completedAssignments: 14,
-    totalAssignments: 15,
+    assignmentScore: elements.createAssignmentScore.value === '' ? null : Number(elements.createAssignmentScore.value),
+    completedAssignments: 0,
+    totalAssignments: 11,
     role: 'student'
   };
 
@@ -210,13 +277,11 @@ async function handleCreateTraineeSubmit(e) {
   if (res && res.success) {
     closeCreateTraineeModal();
     if (window.showToast) {
-      window.showToast(`Đã tạo mới sinh viên ${data.fullName} vào MongoDB Atlas!`, 'success');
+      window.showToast(`Đã tạo mới Trainee ${data.fullName} vào MongoDB Atlas!`, 'success');
     }
-    await loadTrainees();
-    renderAdminView();
-    renderLeaderboard();
+    await refreshPortalData();
   } else {
-    alert(res?.message || 'Lỗi khi tạo sinh viên');
+    alert(res?.message || 'Lỗi khi tạo Trainee');
   }
 }
 
@@ -232,13 +297,12 @@ function openEditTraineeModal(traineeId) {
   elements.editBatch.value = t.batch || '';
 
   elements.editAttendedSessions.value = t.attendedSessions !== undefined ? t.attendedSessions : 40;
-  elements.editTotalSessions.value = t.totalSessions !== undefined ? t.totalSessions : 45;
+  elements.editTotalSessions.value = t.totalSessions ?? '';
   elements.editAbsentExcused.value = t.absentExcused !== undefined ? t.absentExcused : 0;
   elements.editAbsentUnexcused.value = t.absentUnexcused !== undefined ? t.absentUnexcused : 0;
-  elements.editAssignmentScore.value = t.assignmentScore !== undefined ? t.assignmentScore : 9.0;
-  elements.editCompletedAssignments.value = t.completedAssignments !== undefined ? t.completedAssignments : 14;
+  elements.editAssignmentScore.value = t.assignmentScore ?? '';
 
-  // RÀNG BUỘC CẬP NHẬT SAO THEO TỪNG BUỔI HỌC CỦA SINH VIÊN
+  // RÀNG BUỘC CẬP NHẬT SAO THEO TỪNG BUỔI HỌC CỦA Trainee
   renderEditTraineeSessionStars(t);
 
   if (elements.btnDeleteFromEditModal) {
@@ -247,7 +311,7 @@ function openEditTraineeModal(traineeId) {
     };
   }
 
-  // Nút thêm buổi học mới cho sinh viên này
+  // Nút thêm buổi học mới cho Trainee này
   if (elements.btnAddSessionToStudentBtn) {
     elements.btnAddSessionToStudentBtn.onclick = () => {
       addNewSessionRowToStudentModal();
@@ -264,20 +328,15 @@ function renderEditTraineeSessionStars(t) {
 
   let sessionList = (t.sessionStars && t.sessionStars.length > 0) ? t.sessionStars : [];
 
-  // Nếu sinh viên chưa có sessionStars trong MongoDB, lấy danh sách buổi học chuẩn của chương trình
   if (sessionList.length === 0) {
-    sessionList = [
-      { sessionCode: 'TP-M10.01', sessionTitle: 'Buổi 1: Khai mạc, Quy chế & Thiết lập Môi trường Trainee', sessionDate: '2026-10-06', starsAwarded: 5, note: 'Điểm danh đúng giờ, hoàn thành cài đặt môi trường' },
-      { sessionCode: 'TP-M10.02', sessionTitle: 'Buổi 2: Kiến trúc Hệ thống Frontend Tối ưu & Clean Code', sessionDate: '2026-10-13', starsAwarded: 6, note: 'Tích cực tương tác trong buổi học' },
-      { sessionCode: 'TP-M10.03', sessionTitle: 'Buổi 3: Xây dựng RESTful API Backend & Kết nối MongoDB Atlas', sessionDate: '2026-10-20', starsAwarded: 8, note: 'Hoàn thành bài tập REST API sớm' },
-      { sessionCode: 'TP-M10.04', sessionTitle: 'Buổi 4: Quản lý Trạng thái Thực tế, Animation & Trải nghiệm UX', sessionDate: '2026-10-27', starsAwarded: 9, note: 'Xây dựng giao diện mượt mà và tối ưu' }
-    ];
+    container.textContent = 'Chưa có dữ liệu sao từng buổi. Thêm buổi học để ghi nhận thực tế.';
+    return;
   }
 
   container.innerHTML = sessionList.map((s, idx) => `
-    <div class="edit-session-card" data-code="${escapeHtml(s.sessionCode || `TP-M10.0${idx + 1}`)}" 
-         data-title="${escapeHtml(s.sessionTitle || `Buổi ${idx + 1}`)}" 
-         data-date="${escapeHtml(s.sessionDate || '2026-10-06')}" 
+    <div class="edit-session-card" data-code="${escapeHtml(s.sessionCode || `TP-M10.0${idx + 1}`)}"
+         data-title="${escapeHtml(s.sessionTitle || `Buổi ${idx + 1}`)}"
+         data-date="${escapeHtml(s.sessionDate || '2026-10-06')}"
          data-trainer="${escapeHtml(s.trainerName || 'Võ Thị Xuân Quỳnh')}"
          data-stage="${escapeHtml(s.stage || 'Giai đoạn 1')}"
          data-stagename="${escapeHtml(s.stageName || 'Training')}">
@@ -287,12 +346,12 @@ function renderEditTraineeSessionStars(t) {
           [${escapeHtml(s.sessionCode || `TP-M10.0${idx + 1}`)}] ${escapeHtml(s.sessionTitle)}
         </div>
         <div class="edit-session-date">
-          📅 ${s.sessionDate ? formatDateVN(s.sessionDate) : '2026-10-06'} · Trainer: <strong>${escapeHtml(s.trainerName || 'Võ Thị Xuân Quỳnh')}</strong>
+           ${s.sessionDate ? formatDateVN(s.sessionDate) : '2026-10-06'} · Trainer: <strong>${escapeHtml(s.trainerName || 'Võ Thị Xuân Quỳnh')}</strong>
         </div>
       </div>
       <div class="edit-session-inputs">
-        <span style="font-size: 0.76rem; font-weight: 700; color: #d97706;">+⭐</span>
-        <input type="number" class="session-star-num-input" min="0" max="100" value="${s.starsAwarded !== undefined ? s.starsAwarded : 0}" title="Số sao cộng buổi này">
+        <span style="font-size: 0.76rem; font-weight: 700; color: #d97706;">+</span>
+        <input type="number" class="session-star-num-input" min="-20" max="100" value="${s.starsAwarded !== undefined ? s.starsAwarded : 0}" title="Số sao cộng buổi này">
         <input type="text" class="session-note-txt-input" placeholder="Nhận xét / lý do cộng sao" value="${escapeHtml(s.note || '')}" title="Nhận xét của trainer trong buổi học">
       </div>
     </div>
@@ -302,7 +361,7 @@ function renderEditTraineeSessionStars(t) {
   const recalculateTotalStars = () => {
     let sum = 0;
     container.querySelectorAll('.session-star-num-input').forEach(inp => {
-      sum += Math.max(0, Number(inp.value) || 0);
+      sum += Number(inp.value) || 0;
     });
     if (elements.editStars) {
       elements.editStars.value = sum;
@@ -341,11 +400,11 @@ function addNewSessionRowToStudentModal() {
         [${nextCode}] Buổi ${nextNum}: Chuyên đề Thực hành Nâng cao & Đồ án
       </div>
       <div class="edit-session-date">
-        📅 ${formatDateVN(todayStr)} · Trainer: <strong>Võ Thị Xuân Quỳnh</strong>
+         ${formatDateVN(todayStr)} · Trainer: <strong>Võ Thị Xuân Quỳnh</strong>
       </div>
     </div>
     <div class="edit-session-inputs">
-      <span style="font-size: 0.76rem; font-weight: 700; color: #d97706;">+⭐</span>
+      <span style="font-size: 0.76rem; font-weight: 700; color: #d97706;">+</span>
       <input type="number" class="session-star-num-input" min="0" max="100" value="5" title="Số sao cộng buổi này">
       <input type="text" class="session-note-txt-input" placeholder="Nhận xét / lý do cộng sao" value="Tham gia tích cực buổi đào tạo" title="Nhận xét của trainer">
     </div>
@@ -392,11 +451,14 @@ async function handleEditTraineeSubmit(e) {
     const stage = card.getAttribute('data-stage') || 'Giai đoạn 1';
     const stageName = card.getAttribute('data-stagename') || 'Training';
     const trainerName = card.getAttribute('data-trainer') || 'Võ Thị Xuân Quỳnh';
-    const starsAwarded = Math.max(0, Number(starInp ? starInp.value : 0) || 0);
+    const starsAwarded = Number(starInp ? starInp.value : 0) || 0;
     const note = (noteInp && noteInp.value ? noteInp.value.trim() : '') || 'Hoàn thành buổi học';
 
     calculatedTotalStars += starsAwarded;
+    const previousLog = state.currentEditTrainee?.sessionStars?.find(log => log.sessionCode === code)
+      || state.trainees.find(trainee => trainee.traineeId === elements.editTraineeId.value)?.sessionStars?.find(log => log.sessionCode === code);
     sessionStars.push({
+      ...previousLog,
       sessionCode: code,
       sessionTitle: title,
       sessionDate: date,
@@ -416,17 +478,16 @@ async function handleEditTraineeSubmit(e) {
     accumulatedStars: calculatedTotalStars,
     sessionStars: sessionStars, // Cập nhật sessionStars đồng bộ MongoDB
     attendedSessions: Number(elements.editAttendedSessions.value),
-    totalSessions: Number(elements.editTotalSessions.value) || 45,
+    totalSessions: Number(elements.editTotalSessions.value) || 0,
     absentExcused: Number(elements.editAbsentExcused.value),
     absentUnexcused: Number(elements.editAbsentUnexcused.value),
-    assignmentScore: Number(elements.editAssignmentScore.value),
-    completedAssignments: Number(elements.editCompletedAssignments.value)
+    assignmentScore: elements.editAssignmentScore.value === '' ? null : Number(elements.editAssignmentScore.value)
   };
 
   const btnSubmit = document.getElementById('btnSubmitEditTrainee');
   if (btnSubmit) {
     btnSubmit.disabled = true;
-    btnSubmit.textContent = '⏳ Đang lưu vào MongoDB...';
+    btnSubmit.textContent = ' Đang lưu vào MongoDB...';
   }
 
   try {
@@ -434,24 +495,21 @@ async function handleEditTraineeSubmit(e) {
     if (res && res.success) {
       closeEditTraineeModal();
       if (window.showToast) {
-        window.showToast(`Đã lưu thay đổi theo từng buổi học cho sinh viên ${updateData.fullName} vào MongoDB! (Tổng: ${calculatedTotalStars} ⭐)`, 'success');
+        window.showToast(`Đã lưu thay đổi theo từng buổi học cho Trainee ${updateData.fullName} vào MongoDB! (Tổng: ${calculatedTotalStars} )`, 'success');
       }
-      await loadTrainees();
+      await refreshPortalData();
       if (state.currentTraineeId === id) {
         await loadCurrentTrainee(id);
       }
-      renderAdminView();
-      renderLeaderboard();
-      renderGradesView();
     } else {
-      alert(res?.message || 'Lỗi khi cập nhật sinh viên');
+      alert(res?.message || 'Lỗi khi cập nhật Trainee');
     }
   } catch (err) {
     alert('Lỗi kết nối máy chủ: ' + err.message);
   } finally {
     if (btnSubmit) {
       btnSubmit.disabled = false;
-      btnSubmit.textContent = '💾 Lưu Thay Đổi Vào MongoDB';
+      btnSubmit.textContent = ' Lưu Thay Đổi Vào MongoDB';
     }
   }
 }
@@ -464,7 +522,7 @@ function openDeleteModal(traineeId) {
   const name = t ? t.fullName : traineeId;
   if (elements.deleteTargetTraineeId) elements.deleteTargetTraineeId.value = traineeId;
   if (elements.deleteConfirmMessage) {
-    elements.deleteConfirmMessage.innerHTML = `Bạn có chắc chắn muốn XÓA sinh viên <strong>${escapeHtml(name)}</strong> (MSSV: <code>${escapeHtml(traineeId)}</code>) khỏi cơ sở dữ liệu MongoDB Atlas?`;
+    elements.deleteConfirmMessage.innerHTML = `Bạn có chắc chắn muốn XÓA Trainee <strong>${escapeHtml(name)}</strong> (MSSV: <code>${escapeHtml(traineeId)}</code>) khỏi cơ sở dữ liệu MongoDB Atlas?`;
   }
   if (elements.deleteTraineeConfirmModal) {
     elements.deleteTraineeConfirmModal.classList.add('open', 'show');
@@ -492,17 +550,15 @@ async function confirmDeleteTrainee() {
       closeDeleteModal();
       closeEditTraineeModal();
       if (window.showToast) {
-        window.showToast(res.message || `Đã xóa sinh viên khỏi MongoDB Atlas thành công!`, 'info');
+        window.showToast(res.message || `Đã xóa Trainee khỏi MongoDB Atlas thành công!`, 'info');
       }
-      await loadTrainees();
+      await refreshPortalData();
       if (state.currentTraineeId === traineeId && state.trainees.length > 0) {
         state.currentTraineeId = state.trainees[0].traineeId;
         await loadCurrentTrainee(state.currentTraineeId);
       }
-      renderAdminView();
-      renderLeaderboard();
     } else {
-      alert(res?.message || 'Lỗi khi xóa tài khoản sinh viên');
+      alert(res?.message || 'Lỗi khi xóa tài khoản Trainee');
     }
   } catch (err) {
     console.error('Lỗi khi xóa người dùng:', err);
@@ -510,7 +566,7 @@ async function confirmDeleteTrainee() {
   } finally {
     if (elements.confirmDeleteTraineeBtn) {
       elements.confirmDeleteTraineeBtn.disabled = false;
-      elements.confirmDeleteTraineeBtn.textContent = '🗑️ Đồng ý xóa vĩnh viễn';
+      elements.confirmDeleteTraineeBtn.textContent = ' Đồng ý xóa vĩnh viễn';
     }
   }
 }
@@ -525,104 +581,79 @@ function handleDeleteTrainee(traineeId) {
 // ==========================================
 
 async function renderAdminSupportRequests() {
-  if (!elements.adminSupportTableBody) return;
-
+  const body = elements.adminSupportTableBody;
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="9">Đang tải yêu cầu…</td></tr>';
+  if (elements.adminSupportEmptyState) elements.adminSupportEmptyState.style.display = 'none';
   try {
     const requests = await API.getSupportRequests();
-    const pendingCount = (requests || []).filter(r => r.status === 'pending').length;
-
-    if (elements.adminSupportPendingBadge) {
-      elements.adminSupportPendingBadge.textContent = `${pendingCount} chờ xử lý`;
-      elements.adminSupportPendingBadge.className = pendingCount > 0 ? 'badge badge-warning' : 'badge badge-success';
-    }
-
-    if (!requests || requests.length === 0) {
-      elements.adminSupportTableBody.innerHTML = '';
+    const pending = requests.filter(item => item.status === 'pending').length;
+    if (elements.adminSupportPendingBadge) elements.adminSupportPendingBadge.textContent = `${pending} chờ xử lý`;
+    if (!requests.length) {
+      body.innerHTML = '';
       if (elements.adminSupportEmptyState) elements.adminSupportEmptyState.style.display = 'block';
       return;
     }
-
-    if (elements.adminSupportEmptyState) elements.adminSupportEmptyState.style.display = 'none';
-
-    elements.adminSupportTableBody.innerHTML = requests.map((r, index) => {
-      const isPending = r.status === 'pending';
-      const createdDate = r.createdAt ? new Date(r.createdAt).toLocaleString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      }) : '--';
-
-      const typeBadge = r.type === 'forgot_password'
-        ? `<span class="badge-request-forgot">🔑 Quên MK</span>`
-        : `<span class="badge-request-feedback">💬 Phản hồi</span>`;
-
-      const statusBadge = isPending
-        ? `<span class="badge-status-pending">Chờ xử lý</span>`
-        : `<span class="badge-status-resolved">✓ Đã cấp lại MK (${r.resolvedPassword || '1234'})</span>`;
-
-      const resolveBtn = isPending
-        ? `<button type="button" class="btn btn-sm btn-primary" onclick="window.handleResolveSupport('${r._id}', '${r.traineeId}')" title="Đặt lại mật khẩu về 1234">
-             <span>🔑 Đặt lại MK (1234)</span>
-           </button>`
-        : `<button type="button" class="btn btn-sm btn-secondary" onclick="window.handleResolveSupport('${r._id}', '${r.traineeId}')" title="Đặt lại một lần nữa về 1234">
-             <span>↺ Cấp lại 1234</span>
-           </button>`;
-
-      return `
-        <tr>
-          <td style="text-align: center; font-weight: 600; color: var(--text-muted);">${index + 1}</td>
-          <td>${typeBadge}</td>
-          <td><strong style="color: var(--primary-blue);">${escapeHtml(r.traineeId || '--')}</strong></td>
-          <td><strong>${escapeHtml(r.fullName || '--')}</strong></td>
-          <td>
-            <div>${escapeHtml(r.email || '--')}</div>
-            ${r.phone ? `<small style="color: var(--text-muted);">SĐT: ${escapeHtml(r.phone)}</small>` : ''}
-          </td>
-          <td style="max-width: 240px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
-            ${escapeHtml(r.note || r.message || '--')}
-          </td>
-          <td style="text-align: center; font-size: 0.8rem; color: var(--text-muted);">${createdDate}</td>
-          <td style="text-align: center;">${statusBadge}</td>
-          <td style="text-align: center; white-space: nowrap;">
-            <div style="display: inline-flex; align-items: center; gap: 6px;">
-              ${resolveBtn}
-              <button type="button" class="btn btn-sm btn-outline text-danger" onclick="window.handleDeleteSupport('${r._id}')" title="Xóa yêu cầu">
-                <span>🗑️</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
+    body.innerHTML = requests.map((item, index) => {
+      const leave = item.type === 'leave';
+      const type = leave ? 'Xin nghỉ' : item.type === 'forgot_password' ? 'Quên mật khẩu' : 'Hỗ trợ';
+      const status = item.status === 'pending' ? 'Chờ xử lý' : item.status === 'rejected' ? 'Từ chối' : leave ? 'Đã duyệt' : 'Đã xử lý';
+      const button = (action, label) => `<button type="button" class="btn btn-sm btn-secondary" data-support-action="${action}" data-support-id="${escapeHtml(item._id)}">${label}</button>`;
+      let actions = '';
+      if (leave) {
+        if (item.status === 'pending') actions += button('approve', 'Duyệt') + button('reject', 'Từ chối');
+      } else {
+        if (item.type === 'forgot_password') actions += button('password', 'Đặt lại MK');
+        actions += button('delete', 'Xóa');
+      }
+      return `<tr>
+        <td>${index + 1}</td><td>${type}</td><td>${escapeHtml(item.traineeId)}</td>
+        <td>${escapeHtml(item.fullName)}</td>
+        <td>${escapeHtml(item.email || '--')}${item.phone ? '<br>' + escapeHtml(item.phone) : ''}</td>
+        <td>${leave ? escapeHtml(item.scheduleCode + ' · ' + item.scheduleDate) + '<br>' : ''}${escapeHtml(item.message || '--')}</td>
+        <td>${escapeHtml(new Date(item.createdAt).toLocaleString('vi-VN'))}</td>
+        <td>${status}</td><td>${actions}</td>
+      </tr>`;
     }).join('');
-  } catch (err) {
-    console.error('Lỗi khi render support requests:', err);
+    body.onclick = async event => {
+      const button = event.target.closest('[data-support-action]');
+      if (!button || !body.contains(button)) return;
+      const { supportAction: action, supportId: id } = button.dataset;
+      if (action === 'password') return window.handleResolveSupport(id);
+      if (action === 'delete') return window.handleDeleteSupport(id);
+      if (!confirm('Xác nhận xử lý đơn? Chuyên cần được cập nhật riêng trong bảng Trainee.')) return;
+      button.disabled = true;
+      try {
+        const result = await API.updateLeave(id, action === 'approve' ? 'resolved' : 'rejected');
+        window.showToast?.(result.message || 'Đã xử lý.', result.success ? 'success' : 'danger');
+        await renderAdminSupportRequests();
+      } catch {
+        window.showToast?.('Không kết nối được máy chủ. Vui lòng thử lại.', 'danger');
+        button.disabled = false;
+      }
+    };
+  } catch {
+    body.innerHTML = '<tr><td colspan="9">Không tải được yêu cầu. Vui lòng đăng nhập lại hoặc bấm làm mới.</td></tr>';
   }
 }
 
-window.handleResolveSupport = async function(id, traineeId) {
-  if (!confirm(`Bạn có chắc muốn đặt lại mật khẩu của sinh viên (${traineeId}) về mặc định là 1234?`)) return;
-
-  if (window.showToast) window.showToast('Đang cập nhật mật khẩu trên MongoDB Atlas...', 'info');
-
-  const res = await API.resolveSupportRequest(id, '1234');
-  if (res && res.success) {
-    if (window.showToast) window.showToast(`Đã đặt lại mật khẩu của ${traineeId} về 1234 và lưu vào MongoDB Atlas!`, 'success');
-    await loadTrainees();
-    renderAdminTable();
-    renderAdminSupportRequests();
-  } else {
-    if (window.showToast) window.showToast((res && res.message) || 'Lỗi khi đặt lại mật khẩu!', 'danger');
+window.handleResolveSupport = async function(id) {
+  const password = prompt('Nhập mật khẩu tạm mới cho Trainee (12–256 ký tự):');
+  if (!password) return;
+  if (password.length < 12 || password.length > 256) {
+    window.showToast?.('Mật khẩu cần 12–256 ký tự.', 'warning');
+    return;
   }
+  const result = await API.resolveSupportRequest(id, password);
+  window.showToast?.(result.success ? 'Đã đặt lại mật khẩu.' : result.message || 'Không thể đặt lại mật khẩu.', result.success ? 'success' : 'danger');
+  await renderAdminSupportRequests();
 };
 
 window.handleDeleteSupport = async function(id) {
   if (!confirm('Bạn có chắc muốn xóa yêu cầu này?')) return;
-
-  const res = await API.deleteSupportRequest(id);
-  if (res && res.success) {
-    if (window.showToast) window.showToast('Đã xóa yêu cầu hỗ trợ!', 'success');
-    renderAdminSupportRequests();
-  } else {
-    if (window.showToast) window.showToast((res && res.message) || 'Lỗi khi xóa yêu cầu!', 'danger');
-  }
+  const result = await API.deleteSupportRequest(id);
+  window.showToast?.(result.success ? 'Đã xóa yêu cầu.' : result.message || 'Không thể xóa yêu cầu.', result.success ? 'success' : 'danger');
+  await renderAdminSupportRequests();
 };
 
 
@@ -652,8 +683,9 @@ async function setupAdminAwardStarsSection() {
     let schedules = state.schedules || [];
     if (schedules.length === 0) {
       try {
-        const res = await (API.getSchedules ? API.getSchedules(10, 2026) : fetch('/api/schedules?month=10&year=2026').then(r => r.json()));
-        schedules = res.data || [];
+        const month = window.ScheduleManager.selectedMonth;
+        const year = window.ScheduleManager.selectedYear;
+        schedules = await API.getSchedules({ month, year });
         state.schedules = schedules;
       } catch (e) {
         console.warn('Lỗi tải schedules cho award form:', e);
@@ -661,27 +693,27 @@ async function setupAdminAwardStarsSection() {
     }
 
     if (schedules.length > 0) {
-      selectSchedule.innerHTML = schedules.map(s => 
+      selectSchedule.innerHTML = schedules.map(s =>
         `<option value="${escapeHtml(s.code)}" data-title="${escapeHtml(s.title)}" data-date="${escapeHtml(s.date)}">[${escapeHtml(s.code)}] ${escapeHtml(s.title)} (${formatDateVN(s.date)})</option>`
       ).join('');
     } else {
-      selectSchedule.innerHTML = `<option value="TP-M10.05" data-title="Buổi 5: Tối ưu Trải nghiệm, Tải dữ liệu Báo cáo & Đồ án Khóa học" data-date="2026-10-29">[TP-M10.05] Buổi 5: Tối ưu Trải nghiệm, Tải dữ liệu Báo cáo & Đồ án Khóa học (29/10/2026)</option>`;
+      selectSchedule.innerHTML = '<option value="">Chưa có lịch học cho tháng đang chọn</option>';
     }
   }
 
-  // Nạp danh sách sinh viên
+  // Nạp danh sách Trainee
   if (selectTrainee) {
     const trainees = state.trainees || [];
     selectTrainee.innerHTML = `
-      <option value="all">⭐ Tất cả sinh viên (Cộng đồng loạt ${trainees.length} sinh viên)</option>
-      ${trainees.map(t => `<option value="${escapeHtml(t.traineeId)}">${escapeHtml(t.traineeId)} - ${escapeHtml(t.fullName)} (${t.accumulatedStars || 0} ⭐)</option>`).join('')}
+      <option value="all"> Tất cả Trainee (Cộng đồng loạt ${trainees.length} Trainee)</option>
+      ${trainees.map(t => `<option value="${escapeHtml(t.traineeId)}">${escapeHtml(t.traineeId)} - ${escapeHtml(t.fullName)} (${t.accumulatedStars || 0} )</option>`).join('')}
     `;
   }
 
   // Render bảng lịch sử cộng sao gần nhất
   renderAdminRecentAwardsTable();
 
-  // Khởi tạo Bảng Chấm Điểm & Cập Nhật Sao Theo Buổi (Cho Toàn Bộ Sinh Viên)
+  // Khởi tạo Bảng Chấm Điểm & Cập Nhật Sao Theo Buổi (Cho Toàn Bộ Trainee)
   if (selectSchedule) {
     selectSchedule.addEventListener('change', () => {
       renderAdminSessionGradingRoster(selectSchedule.value);
@@ -690,21 +722,21 @@ async function setupAdminAwardStarsSection() {
     renderAdminSessionGradingRoster(selectSchedule.value);
   }
 
-  // Nút gán sao nhanh cho tất cả sinh viên trong bảng chấm điểm buổi
+  // Nút gán sao nhanh cho tất cả Trainee trong bảng chấm điểm buổi
   const btnQuick5 = document.getElementById('btnQuickSetAllStars');
   const btnQuick10 = document.getElementById('btnQuickSetAllStars10');
   if (btnQuick5 && !btnQuick5.dataset.bound) {
     btnQuick5.dataset.bound = 'true';
     btnQuick5.onclick = () => {
       document.querySelectorAll('#adminSessionGradingTableBody .grading-star-input').forEach(inp => inp.value = 5);
-      if (window.showToast) window.showToast('Đã đặt +5 ⭐ cho tất cả sinh viên buổi này!', 'info');
+      if (window.showToast) window.showToast('Đã đặt +5  cho tất cả Trainee buổi này!', 'info');
     };
   }
   if (btnQuick10 && !btnQuick10.dataset.bound) {
     btnQuick10.dataset.bound = 'true';
     btnQuick10.onclick = () => {
       document.querySelectorAll('#adminSessionGradingTableBody .grading-star-input').forEach(inp => inp.value = 10);
-      if (window.showToast) window.showToast('Đã đặt +10 ⭐ cho tất cả sinh viên buổi này!', 'info');
+      if (window.showToast) window.showToast('Đã đặt +10  cho tất cả Trainee buổi này!', 'info');
     };
   }
 
@@ -722,7 +754,7 @@ async function setupAdminAwardStarsSection() {
       const stageName = stageOption ? stageOption.getAttribute('data-stagename') : 'Training';
       const trainerName = (inputTrainer && inputTrainer.value ? inputTrainer.value.trim() : '') || 'Võ Thị Xuân Quỳnh';
 
-      // Thu thập điểm của từng sinh viên
+      // Thu thập điểm của từng Trainee
       const rows = document.querySelectorAll('#adminSessionGradingTableBody tr');
       const studentRatings = [];
 
@@ -730,22 +762,22 @@ async function setupAdminAwardStarsSection() {
         const traineeId = tr.getAttribute('data-trainee-id');
         const starInp = tr.querySelector('.grading-star-input');
         const noteInp = tr.querySelector('.grading-note-input');
-        if (traineeId && starInp) {
+        if (traineeId && starInp && !starInp.disabled && starInp.value !== '') {
           studentRatings.push({
             traineeId,
-            starsAwarded: Math.max(0, Number(starInp.value) || 0),
+            starsAwarded: Number(starInp.value) || 0,
             note: noteInp ? noteInp.value.trim() : 'Hoàn thành bài tập & tham gia tích cực'
           });
         }
       });
 
       if (studentRatings.length === 0) {
-        if (window.showToast) window.showToast('Không có dữ liệu sinh viên để lưu!', 'warning');
+        if (window.showToast) window.showToast('Không có dữ liệu Trainee để lưu!', 'warning');
         return;
       }
 
       btnSaveBatch.disabled = true;
-      btnSaveBatch.innerHTML = `<span>⏳ Đang lưu vào MongoDB...</span>`;
+      btnSaveBatch.innerHTML = `<span> Đang lưu vào MongoDB...</span>`;
 
       try {
         const res = await API.batchUpdateSessionStars({
@@ -760,7 +792,7 @@ async function setupAdminAwardStarsSection() {
 
         if (res && res.success) {
           if (window.showToast) {
-            window.showToast(res.message || `Đã cập nhật bảng điểm ${sessionCode} cho toàn bộ sinh viên thành công!`, 'success');
+            window.showToast(res.message || `Đã cập nhật bảng điểm ${sessionCode} cho toàn bộ Trainee thành công!`, 'success');
           }
 
           await loadTrainees();
@@ -785,12 +817,8 @@ async function setupAdminAwardStarsSection() {
       } finally {
         btnSaveBatch.disabled = false;
         btnSaveBatch.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-            <polyline points="17 21 17 13 7 13 7 21"></polyline>
-            <polyline points="7 3 7 8 15 8"></polyline>
-          </svg>
-          <span>💾 Lưu Điểm Buổi Học Này Vào MongoDB</span>
+
+          <span> Lưu Điểm Buổi Học Này Vào MongoDB</span>
         `;
       }
     };
@@ -821,7 +849,7 @@ async function setupAdminAwardStarsSection() {
       const btnSubmit = document.getElementById('btnSubmitAwardStars');
       if (btnSubmit) {
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = `<span>⏳ Đang đồng bộ MongoDB...</span>`;
+        btnSubmit.innerHTML = `<span> Đang đồng bộ MongoDB...</span>`;
       }
 
       try {
@@ -840,7 +868,7 @@ async function setupAdminAwardStarsSection() {
         if (res && res.success) {
           if (window.showToast) window.showToast(res.message || 'Cộng sao thành công!', 'success');
 
-          // Tải lại danh sách sinh viên & sinh viên hiện tại
+          // Tải lại danh sách Trainee & Trainee hiện tại
           await loadTrainees();
           if (state.currentTrainee) {
             await loadCurrentTrainee(state.currentTrainee.traineeId);
@@ -866,10 +894,8 @@ async function setupAdminAwardStarsSection() {
         if (btnSubmit) {
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-            <span>⭐ Xác Nhận Cộng Sao &amp; Đồng Bộ</span>
+
+            <span> Xác Nhận Cộng Sao &amp; Đồng Bộ</span>
           `;
         }
       }
@@ -883,14 +909,14 @@ function renderAdminSessionGradingRoster(sessionCode) {
 
   const trainees = state.trainees || [];
   if (trainees.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">Đang tải danh sách sinh viên...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">Đang tải danh sách Trainee...</td></tr>`;
     return;
   }
 
   tbody.innerHTML = trainees.map((t, idx) => {
     const existingLog = (t.sessionStars || []).find(s => s.sessionCode === sessionCode);
-    const stars = existingLog !== undefined ? existingLog.starsAwarded : 5;
-    const note = existingLog ? existingLog.note : 'Tham gia đầy đủ và hoàn thành tốt bài tập buổi học';
+    const stars = existingLog !== undefined ? existingLog.starsAwarded : '';
+    const note = existingLog ? existingLog.note : '';
     const cumulative = existingLog ? existingLog.cumulativeStars : (t.accumulatedStars || 0);
     const avatarUrl = getTraineeDicebearAvatar(t);
 
@@ -913,13 +939,13 @@ function renderAdminSessionGradingRoster(sessionCode) {
           <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(t.track || 'Khoa KHMT')}</div>
         </td>
         <td style="text-align: center;">
-          <input type="number" class="grading-star-input" min="0" max="100" value="${stars}" title="Số sao cộng cho sinh viên trong buổi này">
+          <input type="number" class="grading-star-input" min="-20" max="100" value="${stars}" ${!existingLog && t.status === 'Ngừng học' ? 'disabled' : ''} placeholder="Chưa ghi nhận" title="Số sao cộng cho Trainee trong buổi này">
         </td>
         <td>
           <input type="text" class="grading-note-input" value="${escapeHtml(note)}" placeholder="Nhận xét / lý do cộng sao">
         </td>
         <td style="text-align: center; font-weight: 700; color: #d97706;">
-          ${cumulative} ⭐
+          ${cumulative}
         </td>
       </tr>
     `;
@@ -944,11 +970,11 @@ async function renderAdminRecentAwardsTable() {
       <td><span class="grades-code-pill">${escapeHtml(s.sessionCode || '')}</span></td>
       <td><strong>${escapeHtml(s.sessionTitle || '')}</strong></td>
       <td style="text-align: center;">${formatDateVN(s.sessionDate)}</td>
-      <td style="text-align: center;"><span class="grades-badge-awarded">+${s.starsAwarded} ⭐</span></td>
+      <td style="text-align: center;"><span class="grades-badge-awarded">${formatStarDelta(s.starsAwarded)} </span></td>
       <td style="font-size: 0.82rem; color: var(--text-secondary);">${escapeHtml(s.note || '')}</td>
       <td style="text-align: center;">
         <button type="button" class="btn btn-outline btn-xs btn-delete-award" data-trainee="${targetId}" data-id="${s._id}" style="color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3);">
-          🗑️ Xóa
+           Xóa
         </button>
       </td>
     </tr>
@@ -988,24 +1014,101 @@ async function renderAdminRecentAwardsTable() {
 // ==========================================
 
 let adminAssignmentsList = [];
+let assignmentReviewRequest = 0;
+
+function setupAssignmentSubmissions() {
+  const select = document.getElementById('adminReviewAssignment');
+  if (!select) return;
+  const previous = select.value;
+  select.innerHTML = adminAssignmentsList.map(item => `<option value="${Number(item.assignmentId)}">${escapeHtml(item.title)}</option>`).join('');
+  if (adminAssignmentsList.some(item => String(item.assignmentId) === previous)) select.value = previous;
+  if (!select.dataset.bound) {
+    select.addEventListener('change', renderAssignmentSubmissions);
+    document.getElementById('btnRefreshAssignmentSubmissions')?.addEventListener('click', renderAssignmentSubmissions);
+    select.dataset.bound = 'true';
+  }
+  renderAssignmentSubmissions();
+}
+
+async function renderAssignmentSubmissions() {
+  const tbody = document.getElementById('adminAssignmentSubmissionsBody');
+  const feedback = document.getElementById('assignmentReviewFeedback');
+  const id = document.getElementById('adminReviewAssignment')?.value;
+  if (!tbody) return;
+  const request = ++assignmentReviewRequest;
+  feedback.textContent = '';
+  const formLink = document.getElementById('adminReviewFormLink');
+  const link = adminAssignmentsList.find(item => String(item.assignmentId) === id)?.link || '';
+  formLink.hidden = !/^https:\/\//i.test(link);
+  formLink.href = formLink.hidden ? '#' : link;
+  if (!id) {
+    tbody.innerHTML = '<tr><td colspan="6">Chưa có bài tập để đối chiếu.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '<tr><td colspan="6">Đang tải xác nhận…</td></tr>';
+  const statuses = { not_submitted: 'Chưa ghi nhận', submitted: 'Đã nộp', needs_revision: 'Cần bổ sung', completed: 'Hoàn thành' };
+  try {
+    const records = await window.API.getAssignmentSubmissions(id);
+    if (request !== assignmentReviewRequest) return;
+    tbody.innerHTML = records.length ? records.map(record => {
+      const date = record.submittedAt ? new Date(new Date(record.submittedAt).getTime() + 7 * 3600000).toISOString().slice(0, 16) : '';
+      const reviewed = record.reviewedAt ? new Date(record.reviewedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '';
+      return `<tr data-trainee-id="${escapeHtml(record.traineeId)}">
+        <td><strong>${escapeHtml(record.fullName)}</strong><br>${escapeHtml(record.traineeId)}</td>
+        <td><select class="form-input review-status" aria-label="Trạng thái của ${escapeHtml(record.fullName)}">${Object.entries(statuses).map(([value, label]) => `<option value="${value}" ${record.status === value ? 'selected' : ''}>${label}</option>`).join('')}</select></td>
+        <td><input class="form-input review-response" maxlength="120" value="${escapeHtml(record.responseId || '')}" aria-label="Mã phản hồi Forms"></td>
+        <td><input type="datetime-local" class="form-input review-date" value="${date}" aria-label="Thời điểm nộp giờ Việt Nam"></td>
+        <td><textarea class="form-input review-note" rows="2" maxlength="2000" aria-label="Ghi chú riêng">${escapeHtml(record.note || '')}</textarea></td>
+        <td><button type="button" class="btn btn-primary btn-sm review-save">Lưu xác nhận</button><small class="review-audit">${escapeHtml(reviewed)}</small></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="6">Chưa có Trainee trong danh sách.</td></tr>';
+    tbody.querySelectorAll('.review-save').forEach(button => button.addEventListener('click', async () => {
+      const row = button.closest('tr');
+      button.disabled = true;
+      try {
+        const date = row.querySelector('.review-date').value;
+        const saved = await window.API.updateAssignmentSubmission(id, row.dataset.traineeId, {
+          status: row.querySelector('.review-status').value,
+          responseId: row.querySelector('.review-response').value,
+          submittedAt: date ? new Date(date + ':00+07:00').toISOString() : null,
+          note: row.querySelector('.review-note').value
+        });
+        row.querySelector('.review-audit').textContent = new Date(saved.reviewedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+        feedback.textContent = 'Đã lưu xác nhận cho ' + row.dataset.traineeId + '.';
+      } catch (err) {
+        feedback.textContent = err.message;
+      } finally {
+        button.disabled = false;
+      }
+    }));
+  } catch (err) {
+    if (request !== assignmentReviewRequest) return;
+    tbody.innerHTML = '<tr><td colspan="6">Không tải được dữ liệu. Bấm Tải lại để thử.</td></tr>';
+    feedback.textContent = err.message;
+  }
+}
 
 async function renderAdminAssignmentsTable() {
   const tbody = document.getElementById('adminAssignmentsTableBody');
   if (!tbody) return;
 
   setupAdminAssignmentsEvents();
+  tbody.innerHTML = '<tr><td colspan="6">Đang tải bài tập…</td></tr>';
 
   try {
     const list = await window.API.getAssignments();
-    if (Array.isArray(list) && list.length > 0) {
+    if (Array.isArray(list)) {
       adminAssignmentsList = list;
+      setupAssignmentSubmissions();
     }
   } catch (err) {
     console.warn('Lỗi lấy assignments cho Admin:', err);
+    tbody.innerHTML = '<tr><td colspan="6">Không tải được danh sách bài tập. Vui lòng thử lại.</td></tr>';
+    return;
   }
 
   if (adminAssignmentsList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Đang tải danh sách 11 bài tập từ MongoDB Atlas...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Chưa có bài tập nào được công bố.</td></tr>`;
     return;
   }
 
@@ -1015,26 +1118,26 @@ async function renderAdminAssignmentsTable() {
     const target = new Date(deadline).getTime();
     if (isNaN(target)) return `<span class="badge" style="background: rgba(148,163,184,0.15); color: #64748b; font-size: 0.72rem;">Không giới hạn</span>`;
     const diff = target - Date.now();
-    if (diff <= 0) return `<span class="badge badge-danger" style="font-size: 0.72rem;">🚨 Đã hết hạn nộp</span>`;
+    if (diff <= 0) return `<span class="badge badge-danger" style="font-size: 0.72rem;"> Đã hết hạn nộp</span>`;
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const m = Math.floor((diff / (1000 * 60)) % 60);
     if (d >= 1) {
-      return `<span class="badge ${d > 2 ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem;">⏰ ${d} ngày ${h} h còn lại</span>`;
+      return `<span class="badge ${d > 2 ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem;"> ${d} ngày ${h} h còn lại</span>`;
     }
-    return `<span class="badge badge-danger" style="font-size: 0.72rem;">⏰ ${h} h ${m} phút còn lại</span>`;
+    return `<span class="badge badge-danger" style="font-size: 0.72rem;"> ${h} h ${m} phút còn lại</span>`;
   };
 
   const toInputDateTime = (isoStr) => {
     if (!isoStr) return '';
     try {
-      const d = new Date(isoStr);
+      const d = new Date(new Date(isoStr).getTime() + 7 * 3600000);
       if (isNaN(d.getTime())) return '';
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const h = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const h = String(d.getUTCHours()).padStart(2, '0');
+      const min = String(d.getUTCMinutes()).padStart(2, '0');
       return `${y}-${m}-${day}T${h}:${min}`;
     } catch (e) {
       return '';
@@ -1044,7 +1147,7 @@ async function renderAdminAssignmentsTable() {
   tbody.innerHTML = adminAssignmentsList.map((a, idx) => {
     const id = a.assignmentId || a.id || (idx + 1);
     const hasLink = a.link && a.link.trim() !== '#' && a.link.trim() !== '';
-    const statusClass = a.status === 'completed' ? 'completed' : (a.status === 'active' ? 'active' : 'locked');
+    const statusClass = a.status === 'closed' ? 'closed' : (a.status === 'active' ? 'active' : 'locked');
     const deadlineVal = toInputDateTime(a.deadline);
     const countdownBadge = formatAdminDeadlineBadge(a.deadline);
 
@@ -1063,22 +1166,22 @@ async function renderAdminAssignmentsTable() {
         </td>
         <td style="text-align: center;">
           <select class="admin-assignment-status-select ${statusClass}" data-id="${id}" style="font-size: 0.78rem;">
-            <option value="completed" ${a.status === 'completed' ? 'selected' : ''}>✓ Đã hoàn thành</option>
-            <option value="active" ${a.status === 'active' ? 'selected' : ''}>★ Đang mở</option>
-            <option value="locked" ${a.status === 'locked' ? 'selected' : ''}>🔒 Khóa</option>
+            <option value="closed" ${a.status === 'closed' ? 'selected' : ''}> Đã đóng</option>
+            <option value="active" ${a.status === 'active' ? 'selected' : ''}> Đang mở</option>
+            <option value="locked" ${a.status === 'locked' ? 'selected' : ''}> Khóa</option>
           </select>
         </td>
         <td>
           <div style="display: flex; gap: 6px; align-items: center;">
-            <input type="url" class="admin-assignment-link-input" data-id="${id}" 
-                   value="${escapeHtml(a.link || '')}" 
-                   placeholder="Dán link bài tập: https://github.com/... hoặc https://colab...">
+            <input type="url" class="admin-assignment-link-input" data-id="${id}"
+                   value="${escapeHtml(a.link || '')}"
+                   placeholder="Dán link Microsoft Forms: https://forms.office.com/...">
           </div>
         </td>
         <td style="text-align: center;">
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
             <input type="datetime-local" class="admin-assignment-deadline-input" data-id="${id}"
-                   value="${deadlineVal}" 
+                   value="${deadlineVal}"
                    style="font-size: 0.75rem; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); max-width: 175px;">
             <div class="admin-countdown-badge-wrap" data-id="${id}">
               ${countdownBadge}
@@ -1086,25 +1189,18 @@ async function renderAdminAssignmentsTable() {
           </div>
         </td>
         <td style="text-align: center;">
-          <div style="font-size: 0.78rem; font-weight: 700; color: #16a34a;">+${a.xp || 50} XP</div>
-          <div style="font-size: 0.72rem; color: #3b82f6;">+${a.gems || 10} 💎</div>
-        </td>
-        <td style="text-align: center;">
-          <div style="display: inline-flex; align-items: center; gap: 6px;">
-            <a href="${hasLink ? escapeHtml(a.link) : 'javascript:void(0)'}" 
-               target="${hasLink ? '_blank' : '_self'}" 
-               class="btn btn-outline btn-xs btn-open-assigned-link ${!hasLink ? 'disabled' : ''}" 
+          <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <a href="${hasLink ? escapeHtml(a.link) : 'javascript:void(0)'}"
+               target="${hasLink ? '_blank' : '_self'}"
+               class="btn btn-outline btn-xs btn-open-assigned-link ${!hasLink ? 'disabled' : ''}"
                data-id="${id}"
-               title="Mở kiểm tra đường link này" 
+               title="Mở kiểm tra đường link này"
                style="${!hasLink ? 'opacity: 0.5; pointer-events: none;' : ''}">
-              <span>🔗 Mở</span>
+              <span> Mở</span>
             </a>
-            <button type="button" class="btn btn-outline btn-xs btn-edit-assignment-detail" data-id="${id}" title="Chỉnh sửa chi tiết bài tập & deadline">
-              <span>✏️</span>
-            </button>
-            <button type="button" class="btn btn-primary btn-xs btn-save-single-assignment" data-id="${id}" title="Lưu nhanh bài tập này">
-              <span>💾</span>
-            </button>
+            <button type="button" class="btn btn-outline btn-xs btn-edit-assignment-detail" data-id="${id}" title="Chỉnh sửa chi tiết bài tập & deadline">Sửa</button>
+            <button type="button" class="btn btn-primary btn-xs btn-save-single-assignment" data-id="${id}" title="Lưu nhanh bài tập này">Lưu</button>
+            <button type="button" class="btn btn-outline btn-xs btn-delete-assignment" data-id="${id}">Xóa</button>
           </div>
         </td>
       </tr>
@@ -1130,14 +1226,14 @@ async function renderAdminAssignmentsTable() {
       const deadlineInput = row.querySelector('.admin-assignment-deadline-input');
       const newLink = linkInput ? linkInput.value.trim() : '';
       const newStatus = statusSelect ? statusSelect.value : 'active';
-      const deadlineVal = deadlineInput && deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null;
+      const deadlineVal = deadlineInput && deadlineInput.value ? new Date(deadlineInput.value + ':00+07:00').toISOString() : null;
 
       btn.disabled = true;
-      btn.textContent = '⏳';
+      btn.textContent = '';
 
       try {
-        const res = await window.API.updateAssignment(id, { 
-          link: newLink, 
+        const res = await window.API.updateAssignment(id, {
+          link: newLink,
           status: newStatus,
           deadline: deadlineVal
         });
@@ -1172,7 +1268,7 @@ async function renderAdminAssignmentsTable() {
         if (window.showToast) window.showToast('Lỗi kết nối máy chủ: ' + err.message, 'danger');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>💾</span>';
+        btn.textContent = 'Lưu';
       }
     };
   });
@@ -1185,11 +1281,35 @@ async function renderAdminAssignmentsTable() {
       if (item) openAdminEditAssignmentModal(item);
     };
   });
+
+  tbody.querySelectorAll('.btn-delete-assignment').forEach(button => {
+    button.onclick = async () => {
+      if (!canManage('assignments:manage')) return;
+      const id = button.dataset.id;
+      const item = adminAssignmentsList.find(assignment => String(assignment.assignmentId) === id);
+      if (!item || !confirm(`Xóa bài tập "${item.title}" khỏi lộ trình? Các xác nhận bài nộp đã có vẫn được lưu để đối chiếu.`)) return;
+      const feedback = document.getElementById('assignmentManagementFeedback');
+      button.disabled = true;
+      feedback.textContent = 'Đang xóa bài tập…';
+      try {
+        await API.deleteAssignment(id);
+        await renderAdminAssignmentsTable();
+        await window.duolingoManager?.fetchAssignmentsFromAPI();
+        feedback.textContent = 'Đã xóa bài tập khỏi lộ trình. Xác nhận bài nộp vẫn được lưu để đối chiếu.';
+      } catch (error) { feedback.textContent = error.message; }
+      finally { button.disabled = false; }
+    };
+  });
 }
 
 function setupAdminAssignmentsEvents() {
   const btnSaveAll = document.getElementById('btnAdminSaveAllAssignments');
   const btnReset = document.getElementById('btnAdminResetAssignments');
+  const btnAdd = document.getElementById('btnAdminAddAssignment');
+  if (btnAdd && !btnAdd.dataset.bound) {
+    btnAdd.dataset.bound = 'true';
+    btnAdd.onclick = () => openAdminEditAssignmentModal();
+  }
 
   if (btnSaveAll && !btnSaveAll.dataset.bound) {
     btnSaveAll.dataset.bound = 'true';
@@ -1207,7 +1327,7 @@ function setupAdminAssignmentsEvents() {
             assignmentId: Number(id),
             link: linkInp ? linkInp.value.trim() : '',
             status: statusSel ? statusSel.value : 'active',
-            deadline: deadlineInp && deadlineInp.value ? new Date(deadlineInp.value).toISOString() : null
+            deadline: deadlineInp && deadlineInp.value ? new Date(deadlineInp.value + ':00+07:00').toISOString() : null
           });
         }
       });
@@ -1215,13 +1335,13 @@ function setupAdminAssignmentsEvents() {
       if (payload.length === 0) return;
 
       btnSaveAll.disabled = true;
-      btnSaveAll.innerHTML = `<span>⏳ Đang lưu vào MongoDB...</span>`;
+      btnSaveAll.innerHTML = `<span> Đang lưu vào MongoDB...</span>`;
 
       try {
         const res = await window.API.batchUpdateAssignments(payload);
         if (res && res.success) {
           if (window.showToast) {
-            window.showToast('Đã lưu toàn bộ 11 đường link bài tập vào MongoDB Atlas thành công!', 'success');
+            window.showToast(`Đã lưu ${payload.length} bài tập thành công!`, 'success');
           }
           await renderAdminAssignmentsTable();
           if (window.duolingoManager) {
@@ -1235,12 +1355,8 @@ function setupAdminAssignmentsEvents() {
       } finally {
         btnSaveAll.disabled = false;
         btnSaveAll.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-            <polyline points="17 21 17 13 7 13 7 21"></polyline>
-            <polyline points="7 3 7 8 15 8"></polyline>
-          </svg>
-          <span>💾 Lưu Toàn Bộ Link Vào MongoDB</span>
+
+          <span> Lưu Toàn Bộ Link Vào MongoDB</span>
         `;
       }
     };
@@ -1249,15 +1365,15 @@ function setupAdminAssignmentsEvents() {
   if (btnReset && !btnReset.dataset.bound) {
     btnReset.dataset.bound = 'true';
     btnReset.onclick = async () => {
-      if (!confirm('Bạn có chắc chắn muốn khôi phục 11 bài tập về liên kết và nội dung mặc định ban đầu?')) return;
+      if (!confirm('Khôi phục danh mục bài tập mẫu? Các bài tự thêm và thay đổi hiện tại sẽ được thay thế.')) return;
 
       btnReset.disabled = true;
-      btnReset.innerHTML = `<span>⏳ Đang reset...</span>`;
+      btnReset.innerHTML = `<span> Đang reset...</span>`;
 
       try {
         const res = await window.API.resetAssignments();
         if (res && res.success) {
-          if (window.showToast) window.showToast('Đã khôi phục 11 bài tập về mặc định ban đầu!', 'success');
+          if (window.showToast) window.showToast('Đã khôi phục danh mục bài tập mẫu!', 'success');
           await renderAdminAssignmentsTable();
           if (window.duolingoManager) {
             window.duolingoManager.fetchAssignmentsFromAPI();
@@ -1270,10 +1386,7 @@ function setupAdminAssignmentsEvents() {
       } finally {
         btnReset.disabled = false;
         btnReset.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="1 4 1 10 7 10"></polyline>
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-          </svg>
+
           <span>Khôi phục mặc định</span>
         `;
       }
@@ -1309,82 +1422,87 @@ function setupAdminAssignmentsEvents() {
     form.dataset.bound = 'true';
     form.onsubmit = async (e) => {
       e.preventDefault();
+      if (!canManage('assignments:manage')) return;
       const id = document.getElementById('editAssignmentIdHidden').value;
       const title = document.getElementById('editAssignmentTitle').value.trim();
       const desc = document.getElementById('editAssignmentDesc').value.trim();
+      const details = document.getElementById('editAssignmentDetails').value.trim();
       const link = document.getElementById('editAssignmentLink').value.trim();
       const status = document.getElementById('editAssignmentStatus').value;
-      const xp = Number(document.getElementById('editAssignmentXp').value) || 50;
-      const gems = Number(document.getElementById('editAssignmentGems').value) || 10;
       const deadlineInput = document.getElementById('editAssignmentDeadline');
       const deadlineVal = deadlineInput ? deadlineInput.value : '';
-      const deadline = deadlineVal ? new Date(deadlineVal).toISOString() : null;
+      const deadline = deadlineVal ? new Date(deadlineVal + ':00+07:00').toISOString() : null;
 
       const btnSubmit = document.getElementById('btnSubmitAdminEditAssignment');
+      const feedback = document.getElementById('assignmentEditorFeedback');
+      feedback.textContent = '';
       if (btnSubmit) {
         btnSubmit.disabled = true;
-        btnSubmit.textContent = '⏳ Đang lưu...';
+        btnSubmit.textContent = ' Đang lưu...';
       }
 
       try {
-        const res = await window.API.updateAssignment(id, { title, desc, link, status, xp, gems, deadline });
+        const data = { title, desc, details, link, status, deadline };
+        const res = id ? await window.API.updateAssignment(id, data) : { success: true, data: await API.createAssignment(data) };
         if (res && res.success) {
           closeModal();
           if (window.showToast) {
-            window.showToast(`Đã lưu thay đổi bài tập "${title}" vào MongoDB Atlas!`, 'success');
+            window.showToast(`Đã ${id ? 'cập nhật' : 'thêm'} bài tập "${title}".`, 'success');
           }
           await renderAdminAssignmentsTable();
           if (window.duolingoManager) {
-            window.duolingoManager.fetchAssignmentsFromAPI();
+            await window.duolingoManager.fetchAssignmentsFromAPI();
           }
         } else {
-          if (window.showToast) window.showToast((res && res.message) || 'Lỗi khi lưu bài tập!', 'danger');
+          feedback.textContent = res?.message || 'Không lưu được bài tập.';
         }
       } catch (err) {
-        if (window.showToast) window.showToast('Lỗi kết nối máy chủ: ' + err.message, 'danger');
+        feedback.textContent = err.message;
       } finally {
         if (btnSubmit) {
           btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<span>💾 Lưu Thay Đổi Vào MongoDB</span>';
+          btnSubmit.textContent = id ? 'Lưu thay đổi' : 'Thêm bài tập';
         }
       }
     };
   }
 }
 
-function openAdminEditAssignmentModal(item) {
+function openAdminEditAssignmentModal(item = {}) {
+  if (!canManage('assignments:manage')) return;
+  setupAdminAssignmentsEvents();
   const modal = document.getElementById('adminEditAssignmentModal');
   if (!modal) return;
 
-  const id = item.assignmentId || item.id;
+  const id = item.assignmentId || item.id || '';
   const subTitle = document.getElementById('editAssignmentSubTitle');
   const inputId = document.getElementById('editAssignmentIdHidden');
   const inputTitle = document.getElementById('editAssignmentTitle');
   const inputDesc = document.getElementById('editAssignmentDesc');
   const inputLink = document.getElementById('editAssignmentLink');
   const selectStatus = document.getElementById('editAssignmentStatus');
-  const inputXp = document.getElementById('editAssignmentXp');
-  const inputGems = document.getElementById('editAssignmentGems');
   const inputDeadline = document.getElementById('editAssignmentDeadline');
 
-  if (subTitle) subTitle.textContent = `Bài tập #${id} - Cập nhật tiêu đề, mô tả và đường link`;
+  document.getElementById('editAssignmentModalTitle').textContent = id ? 'Chỉnh sửa chi tiết bài tập' : 'Thêm bài tập';
+  document.getElementById('btnSubmitAdminEditAssignment').textContent = id ? 'Lưu thay đổi' : 'Thêm bài tập';
+  document.getElementById('assignmentEditorFeedback').textContent = '';
+  if (subTitle) subTitle.textContent = id ? `Bài tập #${id} - Cập nhật tiêu đề, mô tả và đường link` : 'Mã bài tập được cấp tự động. Có thể bổ sung link nộp bài sau.';
   if (inputId) inputId.value = id;
   if (inputTitle) inputTitle.value = item.title || '';
   if (inputDesc) inputDesc.value = item.desc || '';
+  document.getElementById('editAssignmentDetails').value = item.details || '';
   if (inputLink) inputLink.value = item.link || '';
   if (selectStatus) selectStatus.value = item.status || 'locked';
-  if (inputXp) inputXp.value = item.xp || 50;
-  if (inputGems) inputGems.value = item.gems || 10;
 
   if (inputDeadline) {
     if (item.deadline) {
-      const d = new Date(item.deadline);
+      const d = new Date(new Date(item.deadline).getTime() + 7 * 3600000);
       if (!isNaN(d.getTime())) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const mins = String(d.getMinutes()).padStart(2, '0');
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const hours = String(d.getUTCHours()).padStart(2, '0');
+        const mins = String(d.getUTCMinutes()).padStart(2, '0');
         inputDeadline.value = `${year}-${month}-${day}T${hours}:${mins}`;
       } else {
         inputDeadline.value = '';

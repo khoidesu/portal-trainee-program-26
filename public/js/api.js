@@ -7,20 +7,41 @@
 const API = {
   baseUrl: '/api',
 
+  async request(path, options = {}) {
+    const response = await fetch(this.baseUrl + path, { ...options, headers: this.getAuthHeaders(options.headers) });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      if (response.status === 401 && window.state) {
+        window.state.currentUser = null;
+        window.updateAuthUI?.();
+      }
+      throw new Error(result.message || 'Không hoàn tất được thao tác.');
+    }
+    return result.data;
+  },
+
+  getAccounts() { return this.request('/auth/accounts'); },
+  saveAccount(id, data) { return this.request('/auth/accounts' + (id ? '/' + encodeURIComponent(id) : ''), { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }); },
+  getPublicLeave() { return this.request('/requests/leave'); },
+  createAssignment(data) { return this.request('/assignments', { method: 'POST', body: JSON.stringify(data) }); },
+  deleteAssignment(id) { return this.request('/assignments/' + encodeURIComponent(id), { method: 'DELETE' }); },
+  saveAttendance(id, code, data) { return this.request('/admin/attendance/' + encodeURIComponent(id) + '/' + encodeURIComponent(code), { method: 'PUT', body: JSON.stringify(data) }); },
+
+  prepareTrainee(trainee) {
+    if (!trainee) return trainee;
+    const result = { ...trainee };
+    for (const key of ['starClassification', 'rankClassification', 'starTrend', 'rankNote']) {
+      if (typeof result[key] === 'string') result[key] = result[key].replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').trim();
+    }
+    return result;
+  },
+
   // Lấy Headers kèm token xác thực an toàn
   getAuthHeaders(extraHeaders = {}) {
     const headers = {
       'Content-Type': 'application/json',
       ...extraHeaders
     };
-    try {
-      const token = localStorage.getItem('uit_trainee_auth_token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token.trim()}`;
-      }
-    } catch (e) {
-      console.warn('Lỗi đọc token từ localStorage:', e);
-    }
     return headers;
   },
 
@@ -36,7 +57,7 @@ const API = {
     }
   },
 
-  // Lấy danh sách thực tập sinh cho Bảng Xếp Hạng
+  // Lấy danh sách Trainee cho Bảng Xếp Hạng
   async getTrainees({ search = '', track = '', sort = 'rank' } = {}) {
     try {
       const params = new URLSearchParams();
@@ -46,19 +67,19 @@ const API = {
 
       const res = await fetch(`${this.baseUrl}/trainees?${params.toString()}`);
       const json = await res.json();
-      return json.data || [];
+      return (json.data || []).map(trainee => this.prepareTrainee(trainee));
     } catch (err) {
       console.error('Lỗi khi fetch danh sách trainee:', err);
       return [];
     }
   },
 
-  // Lấy chi tiết 1 thực tập sinh cho Dashboard
+  // Lấy chi tiết 1 Trainee cho Dashboard
   async getTraineeById(id) {
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`);
       const json = await res.json();
-      return json.data;
+      return this.prepareTrainee(json.data);
     } catch (err) {
       console.error(`Lỗi khi fetch trainee ${id}:`, err);
       return null;
@@ -100,9 +121,6 @@ const API = {
         body: JSON.stringify({ username, password })
       });
       const data = await res.json();
-      if (data && data.success && data.token) {
-        localStorage.setItem('uit_trainee_auth_token', data.token);
-      }
       return data;
     } catch (err) {
       return { success: false, message: 'Lỗi kết nối tới máy chủ: ' + err.message };
@@ -123,7 +141,7 @@ const API = {
     }
   },
 
-  // Thêm mới thực tập sinh (Admin - kèm Token)
+  // Thêm mới Trainee (Admin - kèm Token)
   async createTrainee(traineeData) {
     try {
       const res = await fetch(`${this.baseUrl}/trainees`, {
@@ -133,11 +151,11 @@ const API = {
       });
       return await res.json();
     } catch (err) {
-      return { success: false, message: 'Lỗi thêm sinh viên: ' + err.message };
+      return { success: false, message: 'Lỗi thêm Trainee: ' + err.message };
     }
   },
 
-  // Cập nhật thông tin thực tập sinh (Admin - kèm Token)
+  // Cập nhật thông tin Trainee (Admin - kèm Token)
   async updateTrainee(id, updateData) {
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`, {
@@ -147,11 +165,11 @@ const API = {
       });
       return await res.json();
     } catch (err) {
-      return { success: false, message: 'Lỗi cập nhật sinh viên: ' + err.message };
+      return { success: false, message: 'Lỗi cập nhật Trainee: ' + err.message };
     }
   },
 
-  // Xóa thực tập sinh (Admin - kèm Token)
+  // Xóa Trainee (Admin - kèm Token)
   async deleteTrainee(id) {
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`, {
@@ -160,7 +178,7 @@ const API = {
       });
       return await res.json();
     } catch (err) {
-      return { success: false, message: 'Lỗi xóa sinh viên: ' + err.message };
+      return { success: false, message: 'Lỗi xóa Trainee: ' + err.message };
     }
   },
 
@@ -188,17 +206,18 @@ const API = {
         headers: this.getAuthHeaders()
       });
       const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Không tải được yêu cầu.');
       return json.data || [];
     } catch (err) {
       console.error('Lỗi khi lấy danh sách yêu cầu:', err);
-      return [];
+      throw err;
     }
   },
 
   // Giải quyết yêu cầu và cấp lại mật khẩu (Admin - kèm Token)
-  async resolveSupportRequest(id, newPassword = '1234') {
+  async resolveSupportRequest(id, newPassword) {
     try {
-      const res = await fetch(`${this.baseUrl}/requests/${id}/resolve`, {
+      const res = await fetch(`${this.baseUrl}/requests/${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ newPassword })
@@ -208,6 +227,23 @@ const API = {
       return { success: false, message: 'Lỗi xử lý yêu cầu: ' + err.message };
     }
   },
+
+  async submitLeave(data) {
+    const response = await fetch(`${this.baseUrl}/requests/leave`, {
+      method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || 'Không gửi được đơn xin nghỉ.');
+    return result;
+  },
+
+  async updateLeave(id, status) {
+    const response = await fetch(`${this.baseUrl}/requests/${encodeURIComponent(id)}`, {
+      method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ status })
+    });
+    return response.json();
+  },
+
 
   // Xóa yêu cầu hỗ trợ (Admin - kèm Token)
   async deleteSupportRequest(id) {
@@ -294,14 +330,15 @@ const API = {
 
       const res = await fetch(`${this.baseUrl}/questions?${params.toString()}`);
       const json = await res.json();
+      if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error(json.message || 'Không tải được câu hỏi.');
       return json.data || [];
     } catch (err) {
       console.warn('Lỗi khi fetch câu hỏi từ API:', err);
-      return [];
+      throw err;
     }
   },
 
-  // Sinh viên gửi câu hỏi mới
+  // Trainee gửi câu hỏi mới
   async createQuestion(data) {
     try {
       const res = await fetch(`${this.baseUrl}/questions`, {
@@ -315,8 +352,8 @@ const API = {
     }
   },
 
-  // Giảng viên / Mentor trả lời câu hỏi (Admin - kèm Token)
-  async answerQuestion(id, answer, answeredBy = 'Giảng viên UIT', answeredRole = 'Ban Cố vấn & Đào tạo') {
+  // Trainer trả lời câu hỏi (Admin - kèm Token)
+  async answerQuestion(id, answer, answeredBy = 'Trainer', answeredRole = 'Ban Tổ chức Trainee Program') {
     try {
       const res = await fetch(`${this.baseUrl}/questions/${encodeURIComponent(id)}/answer`, {
         method: 'PUT',
@@ -359,15 +396,12 @@ const API = {
   // ==========================================
   // QUẢN LÝ LỊCH HỌC (SCHEDULE APIs)
   // ==========================================
-  async getSchedules({ month = 10, year = 2026 } = {}) {
-    try {
-      const res = await fetch(`${this.baseUrl}/schedules?month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`);
-      const json = await res.json();
-      return json.data || [];
-    } catch (err) {
-      console.warn('Lỗi fetch schedules:', err);
-      return [];
-    }
+  async getSchedules({ month, year } = {}) {
+    const today = getVietnamDateParts();
+    const res = await fetch(`${this.baseUrl}/schedules?month=${encodeURIComponent(month || today.month)}&year=${encodeURIComponent(year || today.year)}`);
+    const json = await res.json();
+    if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error('Không tải được lịch học.');
+    return json.data;
   },
 
   async createSchedule(data) {
@@ -430,10 +464,11 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/assignments`);
       const json = await res.json();
+      if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error('Không tải được danh sách bài tập.');
       return json.data || [];
     } catch (err) {
       console.warn('Lỗi fetch assignments từ API:', err);
-      return [];
+      throw err;
     }
   },
 
@@ -466,6 +501,22 @@ const API = {
   },
 
   // Khôi phục 11 bài tập về mặc định (Admin - kèm Token)
+  async getAssignmentSubmissions(id) {
+    const response = await fetch(`${this.baseUrl}/assignments/${encodeURIComponent(id)}/submissions`);
+    const result = await response.json();
+    if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error(result.message || 'Không tải được phản hồi nộp bài.');
+    return result.data;
+  },
+
+  async updateAssignmentSubmission(id, traineeId, data) {
+    const response = await fetch(`${this.baseUrl}/assignments/${encodeURIComponent(id)}/submissions/${encodeURIComponent(traineeId)}`, {
+      method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || 'Không lưu được xác nhận.');
+    return result.data;
+  },
+
   async resetAssignments() {
     try {
       const res = await fetch(`${this.baseUrl}/assignments/reset`, {

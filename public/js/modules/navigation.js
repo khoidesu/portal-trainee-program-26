@@ -288,16 +288,10 @@ function setupEventListeners() {
     });
   }
 
-  if (elements.filterPills) {
-    elements.filterPills.forEach(pill => {
-      pill.addEventListener('click', () => {
-        elements.filterPills.forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-        state.selectedTrack = pill.dataset.track;
-        renderLeaderboardTable();
-      });
-    });
-  }
+  document.getElementById('leaderboardTrackFilter')?.addEventListener('change', event => {
+    state.selectedTrack = event.target.value;
+    renderLeaderboardTable();
+  });
 
   if (elements.leaderboardSortSelect) {
     elements.leaderboardSortSelect.addEventListener('change', (e) => {
@@ -452,7 +446,7 @@ function switchTab(tab) {
     if (elements.viewSchedule) elements.viewSchedule.classList.add('active');
 
     elements.pageMainTitle.textContent = 'Thời khóa biểu';
-    elements.pageSubBreadcrumb.textContent = 'Danh sách lớp đã đăng ký học phần và lịch học theo tuần';
+    elements.pageSubBreadcrumb.textContent = 'Lịch học và hoạt động của Trainee Program';
 
     renderScheduleView();
   } else if (tab === 'assignments') {
@@ -460,7 +454,8 @@ function switchTab(tab) {
     if (elements.viewAssignments) elements.viewAssignments.classList.add('active');
 
     elements.pageMainTitle.textContent = 'Bài tập rèn luyện';
-    elements.pageSubBreadcrumb.textContent = 'Lộ trình bài tập thực hành Trainee Program (Duolingo Style)';
+    elements.pageSubBreadcrumb.textContent = 'Bài tập và ghi nhận bài nộp Trainee Program';
+    if (canManage('assignments:manage')) renderAdminAssignmentsTable();
 
     if (window.initDuolingoModule) {
       window.initDuolingoModule();
@@ -469,16 +464,16 @@ function switchTab(tab) {
     if (elements.navLeaderboard) elements.navLeaderboard.classList.add('active');
     if (elements.viewLeaderboard) elements.viewLeaderboard.classList.add('active');
 
-    elements.pageMainTitle.textContent = 'Bảng Xếp Hạng Sinh Viên & Trainee';
-    elements.pageSubBreadcrumb.textContent = 'Tổng hợp thành tích & đánh giá năng lực thực tập sinh';
+    elements.pageMainTitle.textContent = 'Bảng Xếp Hạng Trainee';
+    elements.pageSubBreadcrumb.textContent = 'Tổng hợp thành tích & đánh giá năng lực Trainee';
 
-    renderLeaderboard();
+    loadTrainees().then(() => { renderLeaderboard(); if (canManage('trainees:manage')) renderAdminTable(); });
   } else if (tab === 'grades') {
     if (elements.navGrades) elements.navGrades.classList.add('active');
     if (elements.viewGrades) elements.viewGrades.classList.add('active');
 
     elements.pageMainTitle.textContent = 'Bảng Điểm Sao Buổi Học';
-    elements.pageSubBreadcrumb.textContent = 'Theo dõi chi tiết số sao cộng thêm của từng học viên sau mỗi buổi học thực tế';
+    elements.pageSubBreadcrumb.textContent = 'Theo dõi chi tiết số sao cộng thêm của từng Trainee sau mỗi buổi học thực tế';
 
     renderGradesView();
   } else if (tab === 'leave') {
@@ -493,13 +488,13 @@ function switchTab(tab) {
     if (elements.navQuestions) elements.navQuestions.classList.add('active');
     if (elements.viewQuestions) elements.viewQuestions.classList.add('active');
 
-    elements.pageMainTitle.textContent = 'Diễn Đàn Hỏi Đáp & Đặt Câu Hỏi';
-    elements.pageSubBreadcrumb.textContent = 'Gửi câu hỏi thắc mắc tới Giảng viên, Mentor và Ban Điều phối UIT';
+    elements.pageMainTitle.textContent = 'Hỏi đáp';
+    elements.pageSubBreadcrumb.textContent = 'Trao đổi với Trainer';
 
     renderQuestionsView();
   } else if (tab === 'admin') {
     // SECURITY CHECK: Only allow admin role
-    if (!state.currentUser || state.currentUser.role !== 'admin') {
+    if (!canManage('accounts:manage')) {
       if (window.showToast) {
         window.showToast('Chỉ Quản trị viên (Admin) mới có quyền truy cập trang này!', 'danger');
       }
@@ -511,8 +506,8 @@ function switchTab(tab) {
     if (elements.navAdmin) elements.navAdmin.classList.add('active');
     if (elements.viewAdmin) elements.viewAdmin.classList.add('active');
 
-    elements.pageMainTitle.textContent = 'Bảng Điều Khiển Quản Trị Hệ Thống';
-    elements.pageSubBreadcrumb.textContent = 'Cập nhật số sao, số buổi học, buổi vắng, điểm bài tập & Quản lý người dùng MongoDB';
+    elements.pageMainTitle.textContent = 'Tài khoản và phân quyền';
+    elements.pageSubBreadcrumb.textContent = 'Quản lý tài khoản, khóa truy cập và cấp quyền chỉnh sửa';
 
     renderAdminView();
   }

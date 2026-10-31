@@ -40,10 +40,8 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     unit: 'Unit 10',
     type: 'lesson',
     icon: 'check',
-    status: 'completed',
-    score: 100,
-    xp: 50,
-    gems: 10,
+    status: 'active',
+
     link: 'https://github.com',
     deadline: null,
     offset: 'offset-center'
@@ -55,10 +53,8 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     unit: 'Unit 10',
     type: 'lesson',
     icon: 'check',
-    status: 'completed',
-    score: 95,
-    xp: 60,
-    gems: 15,
+    status: 'active',
+
     link: 'https://github.com',
     deadline: null,
     offset: 'offset-right-1'
@@ -70,10 +66,8 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     unit: 'Unit 10',
     type: 'lesson',
     icon: 'check',
-    status: 'completed',
-    score: 98,
-    xp: 70,
-    gems: 20,
+    status: 'active',
+
     link: 'https://developer.mozilla.org',
     deadline: null,
     offset: 'offset-right-2'
@@ -85,10 +79,8 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     unit: 'Unit 10',
     type: 'lesson',
     icon: 'check',
-    status: 'completed',
-    score: 92,
-    xp: 75,
-    gems: 20,
+    status: 'active',
+
     link: 'https://expressjs.com',
     deadline: null,
     offset: 'offset-right-1'
@@ -100,10 +92,8 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     unit: 'Unit 10',
     type: 'lesson',
     icon: 'check',
-    status: 'completed',
-    score: 96,
-    xp: 80,
-    gems: 25,
+    status: 'active',
+
     link: 'https://mongodb.com',
     // Mẫu hạn nộp dưới 1 ngày (< 24h) để hiển thị "x h x phút còn lại"
     deadline: new Date(Date.now() + 18 * 3600 * 1000).toISOString(),
@@ -117,10 +107,7 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     type: 'lesson',
     icon: 'star',
     status: 'active', // Ô hiện tại đang học
-    isCurrent: true,
-    score: 0,
-    xp: 85,
-    gems: 25,
+
     link: 'https://jwt.io',
     // Mẫu hạn nộp trên 1 ngày (> 24h) để hiển thị "x ngày x h còn lại"
     deadline: new Date(Date.now() + (3 * 24 + 4) * 3600 * 1000).toISOString(),
@@ -134,9 +121,7 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     type: 'lesson',
     icon: 'lock',
     status: 'locked',
-    score: 0,
-    xp: 90,
-    gems: 30,
+
     link: '#',
     deadline: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
     offset: 'offset-left-2'
@@ -149,9 +134,7 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     type: 'lesson',
     icon: 'lock',
     status: 'locked',
-    score: 0,
-    xp: 90,
-    gems: 30,
+
     link: '#',
     deadline: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(),
     offset: 'offset-left-1'
@@ -164,9 +147,7 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     type: 'lesson',
     icon: 'lock',
     status: 'locked',
-    score: 0,
-    xp: 95,
-    gems: 35,
+
     link: '#',
     deadline: null,
     offset: 'offset-center'
@@ -179,9 +160,7 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     type: 'lesson',
     icon: 'lock',
     status: 'locked',
-    score: 0,
-    xp: 100,
-    gems: 40,
+
     link: '#',
     deadline: null,
     offset: 'offset-right-1'
@@ -194,29 +173,19 @@ const DEFAULT_DUOLINGO_ASSIGNMENTS = [
     type: 'lesson',
     icon: 'lock',
     status: 'locked',
-    score: 0,
-    xp: 150,
-    gems: 50,
+
     link: '#',
     deadline: null,
     offset: 'offset-right-2'
   }
 ];
 
-// SVG Icons
-const DUO_ICONS = {
-  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  book: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
-  star: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
-  chest: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H4v4"/><rect x="2" y="8" width="20" height="12" rx="2"/><path d="M10 12h4"/></svg>`
-};
-
 class DuolingoManager {
   constructor() {
     this.assignments = this.loadCachedAssignments();
     this.selectedAssignment = null;
     this.timerInterval = null;
+    this.loadState = 'loading';
     this.init();
     // Tải dữ liệu 11 bài tập mới nhất từ MongoDB Atlas
     this.fetchAssignmentsFromAPI();
@@ -227,7 +196,7 @@ class DuolingoManager {
       const saved = localStorage.getItem('uit_duo_assignments_v11') || localStorage.getItem('uit_duo_assignments');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === DEFAULT_DUOLINGO_ASSIGNMENTS.length) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -238,30 +207,40 @@ class DuolingoManager {
   }
 
   async fetchAssignmentsFromAPI() {
+    this.loadState = 'loading';
+    this.renderPath();
     try {
-      if (window.API && typeof window.API.getAssignments === 'function') {
-        const list = await window.API.getAssignments();
-        if (Array.isArray(list) && list.length > 0) {
-          this.assignments = list;
-          this.saveAssignments();
-          this.renderPath();
-          // Cập nhật modal nếu đang mở
-          if (this.selectedAssignment) {
-            const curId = this.selectedAssignment.assignmentId || this.selectedAssignment.id;
-            const updated = this.assignments.find(a => (a.assignmentId || a.id) === curId);
-            if (updated) this.openAssignmentModal(updated);
-          }
+      const list = await window.API.getAssignments();
+      if (!Array.isArray(list)) throw new Error('Danh sách bài tập không hợp lệ.');
+      this.assignments = list.map(item => ({ ...item, status: item.status === 'completed' ? 'active' : item.status }));
+      this.loadState = 'ready';
+      this.saveAssignments();
+      this.renderPath();
+      if (this.selectedAssignment) {
+        const id = this.selectedAssignment.assignmentId || this.selectedAssignment.id;
+        const updated = this.assignments.find(item => (item.assignmentId || item.id) === id);
+        if (updated) this.openAssignmentModal(updated);
+        else {
+          this.selectedAssignment = null;
+          document.getElementById('duoAssignmentModal')?.classList.remove('active');
         }
       }
     } catch (err) {
-      console.warn('Không thể tải assignments từ API, sử dụng cache cục bộ:', err);
+      this.loadState = 'error';
+      this.renderPath();
+      console.warn('Không tải được danh sách bài tập:', err);
     }
   }
 
   saveAssignments() {
     try {
-      localStorage.setItem('uit_duo_assignments_v11', JSON.stringify(this.assignments));
-      localStorage.setItem('uit_duo_assignments', JSON.stringify(this.assignments));
+      const cached = this.assignments.map(item => {
+        if (item.status !== 'locked') return item;
+        const { desc, details, link, ...preview } = item;
+        return preview;
+      });
+      localStorage.setItem('uit_duo_assignments_v11', JSON.stringify(cached));
+      localStorage.setItem('uit_duo_assignments', JSON.stringify(cached));
     } catch (e) {
       console.error('Lỗi lưu assignments vào localStorage:', e);
     }
@@ -269,7 +248,6 @@ class DuolingoManager {
 
   init() {
     this.renderPath();
-    this.renderChart();
     this.setupModalEvents();
     this.startCountdownLoop();
   }
@@ -312,19 +290,19 @@ class DuolingoManager {
     const now = Date.now();
     const diff = target - now;
 
-    const dObj = new Date(target);
-    const dd = String(dObj.getDate()).padStart(2, '0');
-    const mm = String(dObj.getMonth() + 1).padStart(2, '0');
-    const yyyy = dObj.getFullYear();
-    const hh = String(dObj.getHours()).padStart(2, '0');
-    const min = String(dObj.getMinutes()).padStart(2, '0');
+    const dObj = new Date(target + 7 * 3600000);
+    const dd = String(dObj.getUTCDate()).padStart(2, '0');
+    const mm = String(dObj.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = dObj.getUTCFullYear();
+    const hh = String(dObj.getUTCHours()).padStart(2, '0');
+    const min = String(dObj.getUTCMinutes()).padStart(2, '0');
     const formattedDeadline = `${hh}:${min} · ${dd}/${mm}/${yyyy}`;
 
     if (diff <= 0) {
       return {
         hasDeadline: true,
         isExpired: true,
-        text: '🚨 ĐÃ HẾT HẠN',
+        text: ' ĐÃ HẾT HẠN',
         shortText: 'Đã hết hạn nộp',
         badgeClass: 'timer-expired',
         days: 0,
@@ -357,7 +335,7 @@ class DuolingoManager {
     return {
       hasDeadline: true,
       isExpired: false,
-      text: `⏰ ${shortText}`,
+      text: ` ${shortText}`,
       shortText,
       badgeClass,
       days,
@@ -380,9 +358,11 @@ class DuolingoManager {
         if (item) {
           const cd = this.getCountdownInfo(item.deadline);
           el.className = `duo-step-timer ${cd.badgeClass}`;
-          el.innerHTML = `<span>⏰</span> <span>${cd.shortText}</span>`;
+          el.textContent = cd.shortText;
         }
       });
+
+      if (this.sidebarMinute !== Math.floor(Date.now() / 60000)) this.renderSidebar();
 
       // 2. Cập nhật đồng hồ đếm ngược trong Modal nếu đang mở
       if (this.selectedAssignment) {
@@ -448,9 +428,17 @@ class DuolingoManager {
   // ==========================================
   renderPath() {
     const container = document.getElementById('duoPathContainer');
+    const heading = document.getElementById('duoPathHeading');
+    if (heading) heading.textContent = this.loadState === 'ready' ? `Lộ trình ${this.assignments.length} bài tập thực hành` : 'Lộ trình bài tập thực hành';
+    this.renderSidebar();
     if (!container) return;
+    if (this.loadState !== 'ready' || !this.assignments.length) {
+      container.innerHTML = `<p class="duo-path-message">${this.loadState === 'loading' ? 'Đang tải bài tập…' : this.loadState === 'error' ? 'Không tải được bài tập. Vui lòng thử lại.' : 'Chưa có bài tập nào được công bố.'}</p>`;
+      return;
+    }
 
     container.innerHTML = '';
+    const startAssignment = this.assignments.find(item => item.status === 'active' && !this.getCountdownInfo(item.deadline).isExpired);
 
     this.assignments.forEach((item, index) => {
       const stepEl = document.createElement('div');
@@ -458,59 +446,58 @@ class DuolingoManager {
       const itemId = item.assignmentId || item.id || (index + 1);
       const safeTitle = escapeHtmlDuo(item.title);
       const countdown = this.getCountdownInfo(item.deadline);
+      const locked = item.status === 'locked' && !window.canManage?.('assignments:manage');
 
       if (item.type === 'chest') {
         // Treasure Chest
         stepEl.innerHTML = `
-          <div class="duo-chest-node" data-id="${itemId}" title="${safeTitle}">
-            <div style="font-size: 26px;">🎁</div>
-            <div class="duo-chest-lock"></div>
-          </div>
+          <button type="button" class="duo-chest-node" data-id="${itemId}" title="${safeTitle}" aria-label="${safeTitle}" ${locked ? 'disabled' : ''}>
+            <span class="duo-node-number">${itemId}</span>
+          </button>
           <!-- Đếm thời gian còn lại ở dưới bài tập -->
           <div class="duo-step-timer ${countdown.badgeClass}" data-id="${itemId}" title="Hạn nộp: ${countdown.formattedDeadline}">
-            <span>⏰</span> <span>${countdown.shortText}</span>
+            <span>${countdown.shortText}</span>
           </div>
         `;
       } else {
         // Standard Circle Node
         let nodeColorClass = 'duo-node-grey';
-        let iconHtml = DUO_ICONS.lock;
 
-        if (item.status === 'completed') {
+        if (item.status === 'closed') {
           nodeColorClass = 'duo-node-gold';
-          iconHtml = DUO_ICONS[item.icon] || DUO_ICONS.check;
-        } else if (item.status === 'active' || item.isCurrent) {
+        } else if (item.status === 'active') {
           nodeColorClass = 'duo-node-green';
-          iconHtml = DUO_ICONS.star;
         }
 
         let startBubbleHtml = '';
-        if (item.isCurrent) {
+        if (item === startAssignment) {
           stepEl.classList.add('has-current-bubble');
           startBubbleHtml = `<div class="duo-start-bubble" data-id="${itemId}">BẮT ĐẦU</div>`;
         }
 
         let pulseRingHtml = '';
-        if (item.status === 'active' || item.isCurrent) {
+        if (item.status === 'active') {
           pulseRingHtml = `<div class="duo-node-active-ring"></div>`;
         }
 
         stepEl.innerHTML = `
           ${startBubbleHtml}
-          <button type="button" class="duo-node-btn ${nodeColorClass}" data-id="${itemId}" title="${safeTitle}" aria-label="${safeTitle}">
+          <button type="button" class="duo-node-btn ${nodeColorClass}" data-id="${itemId}" title="${safeTitle}" aria-label="${safeTitle}" ${locked ? 'disabled' : ''}>
             ${pulseRingHtml}
-            <span class="duo-node-icon">${iconHtml}</span>
+            <span class="duo-node-number">${itemId}</span>
           </button>
+          <span class="duo-step-status">${item.status === 'closed' ? 'Đã đóng' : item.status === 'active' ? 'Đang mở' : 'Chưa mở'}</span>
           <!-- Đếm thời gian còn lại ở dưới mỗi bài tập trong 11 bài -->
           <div class="duo-step-timer ${countdown.badgeClass}" data-id="${itemId}" title="Hạn nộp: ${countdown.formattedDeadline}">
-            <span>⏰</span> <span>${countdown.shortText}</span>
+            <span>${countdown.shortText}</span>
           </div>
         `;
       }
 
       // Click event for the step (button, chest, or bubble)
-      stepEl.style.cursor = 'pointer';
+      stepEl.style.cursor = locked ? 'default' : 'pointer';
       stepEl.addEventListener('click', () => {
+        if (locked) return;
         this.openAssignmentModal(item);
       });
 
@@ -523,7 +510,12 @@ class DuolingoManager {
   // ==========================================
   openAssignmentModal(item) {
     const itemId = item.assignmentId || item.id;
-    const currentItem = this.assignments.find(a => (a.assignmentId || a.id) === itemId) || item;
+    const currentItem = this.assignments.find(a => (a.assignmentId || a.id) === itemId);
+    if (!currentItem || (currentItem.status === 'locked' && !window.canManage?.('assignments:manage'))) {
+      this.selectedAssignment = null;
+      document.getElementById('duoAssignmentModal')?.classList.remove('active');
+      return;
+    }
     this.selectedAssignment = currentItem;
 
     const modal = document.getElementById('duoAssignmentModal');
@@ -532,9 +524,7 @@ class DuolingoManager {
     const badgeEl = document.getElementById('duoModalBadge');
     const titleEl = document.getElementById('duoModalTitle');
     const descEl = document.getElementById('duoModalDesc');
-    const scoreEl = document.getElementById('duoModalScore');
-    const xpEl = document.getElementById('duoModalXp');
-    const gemsEl = document.getElementById('duoModalGems');
+    const detailsEl = document.getElementById('duoModalDetails');
     const launchBtn = document.getElementById('duoBtnLaunch');
     const displayInput = document.getElementById('duoDisplayLink');
     const linkInput = document.getElementById('duoLinkInput');
@@ -543,23 +533,21 @@ class DuolingoManager {
     const adminBox = document.getElementById('duoAdminQuickEditBox');
 
     if (badgeEl) {
-      if (currentItem.status === 'completed') {
+      if (currentItem.status === 'closed') {
         badgeEl.className = 'duo-modal-badge gold';
-        badgeEl.textContent = '✓ ĐÃ HOÀN THÀNH';
-      } else if (currentItem.status === 'active' || currentItem.isCurrent) {
+        badgeEl.textContent = ' ĐÃ ĐÓNG';
+      } else if (currentItem.status === 'active') {
         badgeEl.className = 'duo-modal-badge green';
-        badgeEl.textContent = '★ ĐANG MỞ - BÀI HỌC TIẾP THEO';
+        badgeEl.textContent = ' ĐANG MỞ';
       } else {
         badgeEl.className = 'duo-modal-badge grey';
-        badgeEl.textContent = '🔒 CHƯA MỞ KHÓA';
+        badgeEl.textContent = ' CHƯA MỞ KHÓA';
       }
     }
 
     if (titleEl) titleEl.textContent = currentItem.title;
     if (descEl) descEl.textContent = currentItem.desc;
-    if (scoreEl) scoreEl.textContent = `${currentItem.score || 0}/100`;
-    if (xpEl) xpEl.textContent = `+${currentItem.xp || 50} XP`;
-    if (gemsEl) gemsEl.textContent = `+${currentItem.gems || 10} Gems`;
+    if (detailsEl) detailsEl.textContent = currentItem.details || 'Trainer chưa bổ sung yêu cầu chi tiết. Vui lòng xem hướng dẫn trong form nộp bài.';
 
     // Cập nhật đồng hồ đếm ngược thời gian còn lại
     this.updateModalCountdown(currentItem);
@@ -589,34 +577,34 @@ class DuolingoManager {
         launchBtn.href = 'javascript:void(0)';
         launchBtn.target = '_self';
         launchBtn.className = 'duo-btn-launch disabled';
-        launchBtn.innerHTML = `<span>🔒 Bài tập chưa mở khóa</span>`;
+        launchBtn.innerHTML = `<span> Bài tập chưa mở khóa</span>`;
       } else if (!hasRealLink) {
         launchBtn.href = 'javascript:void(0)';
         launchBtn.target = '_self';
         launchBtn.className = 'duo-btn-launch disabled';
-        launchBtn.innerHTML = `<span>⚠️ Chưa có link (Admin chưa gán)</span>`;
-      } else if (currentItem.status === 'completed') {
+        launchBtn.innerHTML = `<span> Chưa có link (Admin chưa gán)</span>`;
+      } else if (currentItem.status === 'closed') {
         launchBtn.href = safeLink;
         launchBtn.target = '_blank';
         launchBtn.className = 'duo-btn-launch gold';
-        launchBtn.innerHTML = `<span>📖 Xem Lại Bài Tập (Mở Link Đã Gán)</span>`;
+        launchBtn.innerHTML = `<span> Xem hướng dẫn bài đã đóng</span>`;
       } else {
         launchBtn.href = safeLink;
         launchBtn.target = '_blank';
         launchBtn.className = 'duo-btn-launch green';
-        launchBtn.innerHTML = `<span>🚀 TRUY CẬP ĐƯỜNG LINK BÀI TẬP (TAB MỚI)</span>`;
+        launchBtn.innerHTML = `<span> Mở form nộp bài</span>`;
       }
 
       launchBtn.onclick = (e) => {
         if (currentItem.status === 'locked') {
           e.preventDefault();
-          if (window.showToast) window.showToast('Vui lòng hoàn thành các bài tập trước để mở khóa bài này!', 'warning');
+          if (window.showToast) window.showToast('Bài tập này chưa được Ban Tổ chức mở.', 'warning');
           return;
         }
 
         if (!hasRealLink) {
           e.preventDefault();
-          if (window.showToast) window.showToast('Giảng viên / Admin chưa gán link cho bài tập này. Vui lòng quay lại sau!', 'info');
+          if (window.showToast) window.showToast('Trainer / Admin chưa gán link cho bài tập này. Vui lòng quay lại sau!', 'info');
           return;
         }
 
@@ -625,18 +613,7 @@ class DuolingoManager {
     }
 
     // Kiểm tra quyền Admin: Chỉ hiển thị khung chỉnh sửa nếu Admin đã đăng nhập
-    const token = localStorage.getItem('uit_trainee_auth_token');
-    const authUser = localStorage.getItem('uit_trainee_auth_user');
-    let isAdmin = false;
-    try {
-      if (authUser) {
-        const u = JSON.parse(authUser);
-        if (u && (u.role === 'admin' || u.role === 'Admin')) isAdmin = true;
-      }
-      if (window.state && window.state.currentUser && (window.state.currentUser.role === 'admin' || window.state.currentUser.role === 'Admin')) {
-        isAdmin = true;
-      }
-    } catch (e) {}
+    const isAdmin = window.canManage?.('assignments:manage') || false;
 
     if (adminBox) {
       if (isAdmin) {
@@ -647,12 +624,12 @@ class DuolingoManager {
         if (deadlineInput) {
           if (currentItem.deadline) {
             try {
-              const d = new Date(currentItem.deadline);
-              const y = d.getFullYear();
-              const m = String(d.getMonth() + 1).padStart(2, '0');
-              const day = String(d.getDate()).padStart(2, '0');
-              const h = String(d.getHours()).padStart(2, '0');
-              const min = String(d.getMinutes()).padStart(2, '0');
+              const d = new Date(new Date(currentItem.deadline).getTime() + 7 * 3600000);
+              const y = d.getUTCFullYear();
+              const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+              const day = String(d.getUTCDate()).padStart(2, '0');
+              const h = String(d.getUTCHours()).padStart(2, '0');
+              const min = String(d.getUTCMinutes()).padStart(2, '0');
               deadlineInput.value = `${y}-${m}-${day}T${h}:${min}`;
             } catch (err) {
               deadlineInput.value = '';
@@ -672,6 +649,8 @@ class DuolingoManager {
   setupModalEvents() {
     const modal = document.getElementById('duoAssignmentModal');
     const closeBtn = document.getElementById('duoModalCloseBtn');
+    const editDetails = document.getElementById('duoBtnEditDetails');
+    editDetails?.addEventListener('click', () => { if (this.selectedAssignment && window.canManage?.('assignments:manage')) { modal.classList.remove('active'); window.openAdminEditAssignmentModal?.(this.selectedAssignment); } });
     const saveLinkBtn = document.getElementById('duoBtnSaveLink');
     const saveDeadlineBtn = document.getElementById('duoBtnSaveDeadline');
     const clearDeadlineBtn = document.getElementById('duoBtnClearDeadline');
@@ -719,7 +698,7 @@ class DuolingoManager {
         const itemId = this.selectedAssignment.assignmentId || this.selectedAssignment.id;
 
         saveLinkBtn.disabled = true;
-        saveLinkBtn.textContent = '⏳ Đang lưu...';
+        saveLinkBtn.textContent = ' Đang lưu...';
 
         try {
           if (window.API && typeof window.API.updateAssignment === 'function') {
@@ -746,7 +725,7 @@ class DuolingoManager {
           if (window.showToast) window.showToast('Lỗi kết nối máy chủ: ' + err.message, 'danger');
         } finally {
           saveLinkBtn.disabled = false;
-          saveLinkBtn.textContent = '💾 Lưu Link';
+          saveLinkBtn.textContent = ' Lưu Link';
         }
       });
     }
@@ -762,11 +741,11 @@ class DuolingoManager {
           return;
         }
 
-        const isoDeadline = new Date(val).toISOString();
+        const isoDeadline = new Date(val + ':00+07:00').toISOString();
         const itemId = this.selectedAssignment.assignmentId || this.selectedAssignment.id;
 
         saveDeadlineBtn.disabled = true;
-        saveDeadlineBtn.textContent = '⏳ Đang lưu...';
+        saveDeadlineBtn.textContent = ' Đang lưu...';
 
         try {
           if (window.API && typeof window.API.updateAssignment === 'function') {
@@ -793,7 +772,7 @@ class DuolingoManager {
           if (window.showToast) window.showToast('Lỗi máy chủ: ' + err.message, 'danger');
         } finally {
           saveDeadlineBtn.disabled = false;
-          saveDeadlineBtn.textContent = '💾 Lưu Hạn';
+          saveDeadlineBtn.textContent = ' Lưu Hạn';
         }
       });
     }
@@ -840,18 +819,18 @@ class DuolingoManager {
         btn.dataset.bound = 'true';
         btn.addEventListener('click', () => {
           const hours = Number(btn.getAttribute('data-hours')) || 24;
-          const targetDate = new Date(Date.now() + hours * 3600 * 1000);
-          const y = targetDate.getFullYear();
-          const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-          const day = String(targetDate.getDate()).padStart(2, '0');
-          const h = String(targetDate.getHours()).padStart(2, '0');
-          const min = String(targetDate.getMinutes()).padStart(2, '0');
+          const targetDate = new Date(Date.now() + (hours + 7) * 3600 * 1000);
+          const y = targetDate.getUTCFullYear();
+          const m = String(targetDate.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(targetDate.getUTCDate()).padStart(2, '0');
+          const h = String(targetDate.getUTCHours()).padStart(2, '0');
+          const min = String(targetDate.getUTCMinutes()).padStart(2, '0');
           const deadlineInputEl = document.getElementById('duoDeadlineInput');
           if (deadlineInputEl) {
             deadlineInputEl.value = `${y}-${m}-${day}T${h}:${min}`;
             deadlineInputEl.focus();
             if (window.showToast) {
-              window.showToast(`Đã chọn hạn chót: +${hours} giờ. Bấm "💾 Lưu Hạn" để áp dụng!`, 'info');
+              window.showToast(`Đã chọn hạn chót: +${hours} giờ. Bấm " Lưu Hạn" để áp dụng!`, 'info');
             }
           }
         });
@@ -866,63 +845,74 @@ class DuolingoManager {
       });
     }
 
-    // Practice button
-    const btnPractice = document.getElementById('duoPracticeBtn');
-    if (btnPractice) {
-      btnPractice.addEventListener('click', () => {
-        if (window.showToast) {
-          window.showToast('Chế độ Luyện tập nhanh: Ôn lại câu hỏi ngẫu nhiên để nhận thêm XP!', 'info');
-        }
-      });
-    }
   }
 
   openGuidebookModal() {
     alert(
-      "📘 HƯỚNG DẪN BÀI TẬP TRAINEE PROGRAM (GUIDEBOOK)\n\n" +
+      " HƯỚNG DẪN BÀI TẬP TRAINEE PROGRAM (GUIDEBOOK)\n\n" +
       "1. Mỗi ô tròn trên con đường tượng trưng cho một bài tập thực hành hoặc chuyên đề.\n" +
       "2. Dưới mỗi bài tập có đồng hồ đếm ngược thời gian nộp bài do Admin thiết lập.\n" +
       "3. Bấm vào bất kỳ ô nào để mở chi tiết, thời hạn và đường link bài tập.\n" +
-      "4. Hoàn thành bài tập đúng hạn để nhận XP và tích lũy điểm rèn luyện!"
+      "4. Theo dõi hạn nộp và hoàn thành bài tập theo hướng dẫn của Ban Tổ chức Trainee Program."
     );
   }
 
-  renderChart() {
-    const svg = document.getElementById('duoChartSvg');
-    if (!svg) return;
-
-    const values = [960, 240, 20, 20, 30, 110, 80];
-    const maxVal = 960;
-    const width = 300;
-    const height = 120;
-    const paddingLeft = 32;
-    const paddingBottom = 22;
-    const chartW = width - paddingLeft;
-    const chartH = height - paddingBottom;
-
-    const points = values.map((val, i) => {
-      const x = paddingLeft + (i / (values.length - 1)) * chartW;
-      const y = chartH - (val / maxVal) * (chartH - 15);
-      return { x, y, val };
-    });
-
-    const pathD = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
-    const areaD = `${pathD} L ${points[points.length - 1].x} ${chartH} L ${points[0].x} ${chartH} Z`;
-
-    const pathLine = svg.querySelector('.duo-chart-line');
-    const pathArea = svg.querySelector('.duo-chart-area-fill');
-    const pointsGroup = svg.querySelector('.duo-chart-points-group');
-
-    if (pathLine) pathLine.setAttribute('d', pathD);
-    if (pathArea) pathArea.setAttribute('d', areaD);
-
-    if (pointsGroup) {
-      pointsGroup.innerHTML = points.map(p => `
-        <circle class="duo-chart-point" cx="${p.x}" cy="${p.y}" r="4.5">
-          <title>${p.val} XP</title>
-        </circle>
-      `).join('');
+  renderSidebar() {
+    const summary = document.getElementById('duoAssignmentSummary');
+    const upcoming = document.getElementById('duoUpcomingDeadlines');
+    this.sidebarMinute = Math.floor(Date.now() / 60000);
+    if (!summary || !upcoming) return;
+    if (this.loadState === 'loading') {
+      summary.innerHTML = '<p class="duo-sidebar-note">Đang tải dữ liệu bài tập…</p>';
+      upcoming.innerHTML = '<p class="duo-sidebar-note">Đang tải hạn nộp…</p>';
+      return;
     }
+    if (this.loadState === 'error') {
+      summary.innerHTML = '<p class="duo-sidebar-note">Không tải được dữ liệu bài tập.</p><button type="button" class="btn btn-secondary btn-sm" id="duoRetryAssignments">Thử lại</button>';
+      upcoming.innerHTML = '<p class="duo-sidebar-note">Hạn nộp sẽ hiển thị khi tải được dữ liệu.</p>';
+      document.getElementById('duoRetryAssignments')?.addEventListener('click', () => this.fetchAssignmentsFromAPI());
+      return;
+    }
+
+    const total = this.assignments.length;
+    const closed = this.assignments.filter(item => item.status === 'closed').length;
+    const active = this.assignments.filter(item => item.status === 'active').length;
+    const locked = total - closed - active;
+    const now = Date.now();
+    const pending = this.assignments.filter(item => item.status === 'active' && item.deadline && Number.isFinite(new Date(item.deadline).getTime()));
+    const overdue = pending.filter(item => new Date(item.deadline).getTime() <= now).length;
+    const next = pending.filter(item => new Date(item.deadline).getTime() > now)
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline)).slice(0, 3);
+
+    summary.innerHTML = `
+      <div class="duo-summary-total"><strong>${active}<span> / ${total}</span></strong><span>bài đang mở</span></div>
+      <progress class="duo-summary-progress" value="${active}" max="${Math.max(total, 1)}" aria-label="Số bài tập đang mở">${active} / ${total}</progress>
+      <dl class="duo-summary-list">
+        <div><dt>Đang mở</dt><dd>${active}</dd></div>
+        <div><dt>Chưa mở</dt><dd>${locked}</dd></div>
+        <div><dt>Đã đóng</dt><dd>${closed}</dd></div>
+      </dl>
+      ${overdue ? `<p class="duo-overdue-note">${overdue} bài đang mở đã qua hạn nộp.</p>` : ''}
+    `;
+
+    if (!next.length) {
+      upcoming.innerHTML = '<p class="duo-sidebar-note">Chưa có hạn nộp sắp tới.</p>';
+      return;
+    }
+    upcoming.innerHTML = `<ol class="duo-deadline-list">${next.map(item => {
+      const date = new Date(item.deadline);
+      const formatted = date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+      const countdown = this.getCountdownInfo(item.deadline);
+      return `<li><button type="button" class="duo-deadline-link" data-assignment-id="${escapeHtmlDuo(item.assignmentId || item.id)}">${escapeHtmlDuo(item.title)}</button>
+        <time datetime="${date.toISOString()}">${escapeHtmlDuo(formatted)}</time>
+        <span class="duo-deadline-remaining">${escapeHtmlDuo(countdown.shortText)}</span></li>`;
+    }).join('')}</ol>`;
+    upcoming.querySelectorAll('[data-assignment-id]').forEach(button => {
+      button.addEventListener('click', () => {
+        const item = this.assignments.find(value => String(value.assignmentId || value.id) === button.dataset.assignmentId);
+        if (item) this.openAssignmentModal(item);
+      });
+    });
   }
 }
 
@@ -932,6 +922,5 @@ window.initDuolingoModule = function() {
     window.duolingoManager = new DuolingoManager();
   } else {
     window.duolingoManager.renderPath();
-    window.duolingoManager.renderChart();
   }
 };

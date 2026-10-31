@@ -4,31 +4,6 @@
  * Hỗ trợ giao diện SVG sắc nét, tooltip tương tác và dark/light mode
  */
 
-function generateStarProgression(totalStars) {
-  const n = Math.max(0, Number(totalStars) || 0);
-  if (n === 0) {
-    return [
-      { period: 'Tuần 1', periodStars: 0, cumulativeStars: 0 },
-      { period: 'Tuần 2', periodStars: 0, cumulativeStars: 0 },
-      { period: 'Tuần 3', periodStars: 0, cumulativeStars: 0 },
-      { period: 'Tuần 4', periodStars: 0, cumulativeStars: 0 }
-    ];
-  }
-
-  // Phân bổ sao qua 4 tuần sao cho tổng tích lũy tuần 4 CHÍNH XÁC bằng totalStars thực tế
-  const w1 = Math.max(1, Math.round(n * 0.22));
-  const w2 = Math.max(1, Math.round(n * 0.26));
-  const w3 = Math.max(1, Math.round(n * 0.24));
-  const w4 = Math.max(0, n - (w1 + w2 + w3));
-
-  return [
-    { period: 'Tuần 1', periodStars: w1, cumulativeStars: w1 },
-    { period: 'Tuần 2', periodStars: w2, cumulativeStars: w1 + w2 },
-    { period: 'Tuần 3', periodStars: w3, cumulativeStars: w1 + w2 + w3 },
-    { period: 'Tuần 4', periodStars: w4, cumulativeStars: n }
-  ];
-}
-
 function renderStarChart(historyData, totalAccumulatedStars) {
   const svg = document.getElementById('gpaSvgChart');
   const tooltip = document.getElementById('chartTooltip');
@@ -47,9 +22,14 @@ function renderStarChart(historyData, totalAccumulatedStars) {
       cumulativeStars: Number(item.cumulativeStars) || 0
     }));
   } else {
-    // Dùng dữ liệu thật từ totalAccumulatedStars của sinh viên
-    const targetStars = totalAccumulatedStars !== undefined ? Number(totalAccumulatedStars) : 50;
-    data = generateStarProgression(targetStars);
+    const empty = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    empty.setAttribute('x', '50%');
+    empty.setAttribute('y', '50%');
+    empty.setAttribute('text-anchor', 'middle');
+    empty.setAttribute('fill', 'var(--text-muted)');
+    empty.textContent = 'Chưa có dữ liệu sao theo buổi';
+    svg.appendChild(empty);
+    return;
   }
 
   // SVG dimensions
@@ -77,7 +57,11 @@ function renderStarChart(historyData, totalAccumulatedStars) {
     yTicks = [0, 10, 20, 30, 40];
   }
 
-  const minVal = 0;
+  const minVal = Math.min(0, Math.floor(Math.min(...data.map(item => Math.min(item.periodStars, item.cumulativeStars))) / 5) * 5);
+  if (minVal < 0) {
+    const step = (maxVal - minVal) / 4;
+    yTicks = Array.from({ length: 5 }, (_, index) => minVal + index * step);
+  }
 
   function getY(val) {
     const clamped = Math.max(minVal, Math.min(maxVal, val));
@@ -116,7 +100,7 @@ function renderStarChart(historyData, totalAccumulatedStars) {
     text.setAttribute('text-anchor', 'end');
     text.setAttribute('font-size', '10px');
     text.setAttribute('fill', '#94a3b8');
-    text.textContent = `${Math.round(tick)}⭐`;
+    text.textContent = `${Math.round(tick)}`;
     svg.appendChild(text);
   });
 
@@ -172,7 +156,7 @@ function renderStarChart(historyData, totalAccumulatedStars) {
     cumuDot.addEventListener('mouseenter', () => {
       cumuDot.setAttribute('r', '7');
       if (tooltip) {
-        tooltip.innerHTML = `<strong>${d.period}</strong><br/><span style="color:#f59e0b;">★</span> Tổng sao tích lũy: <b>${d.cumulativeStars} ⭐</b><br/><span style="color:#3b82f6;">●</span> Sao trong tuần: <b>+${d.periodStars} ⭐</b>`;
+        tooltip.innerHTML = `<strong>${d.period}</strong><br/>Tổng sao tích lũy: <b>${d.cumulativeStars} sao</b><br/>Sao trong tuần: <b>${formatStarDelta(d.periodStars)} sao</b>`;
         tooltip.style.display = 'block';
         tooltip.style.left = `${cx - 50}px`;
         tooltip.style.top = `${cyCumu - 55}px`;
@@ -197,7 +181,7 @@ function renderStarChart(historyData, totalAccumulatedStars) {
     periodDot.addEventListener('mouseenter', () => {
       periodDot.setAttribute('r', '6.5');
       if (tooltip) {
-        tooltip.innerHTML = `<strong>${d.period}</strong><br/><span style="color:#3b82f6;">●</span> Sao tuần: <b>+${d.periodStars} ⭐</b><br/><span style="color:#f59e0b;">★</span> Tích lũy: <b>${d.cumulativeStars} ⭐</b>`;
+        tooltip.innerHTML = `<strong>${d.period}</strong><br/>Sao tuần: <b>+${d.periodStars} sao</b><br/>Tích lũy: <b>${d.cumulativeStars} sao</b>`;
         tooltip.style.display = 'block';
         tooltip.style.left = `${cx - 50}px`;
         tooltip.style.top = `${cyPeriod - 55}px`;
