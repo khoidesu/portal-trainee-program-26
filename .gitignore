@@ -1,4 +1,5 @@
 node_modules/
+data/imports/
 .env
 .DS_Store
 *.log
@@ -9,4 +10,5 @@ yarn-error.log*
 .vscode/
 dist/
 build/
-
+AGENTS.md
+CLAUDE.md
