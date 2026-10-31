@@ -14,13 +14,22 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../utils/security');
+const { requirePermission, createRateLimiter } = require('../utils/security');
 const {
   getAllQuestions,
   createQuestion,
   answerQuestion,
   deleteQuestion
 } = require('../config/db');
+
+function publicQuestion(question) {
+  const { realMssv, likedBy, ...visible } = question;
+  if (visible.isAnonymous) {
+    visible.mssv = 'Ẩn danh';
+    visible.fullName = 'Sinh viên ẩn danh';
+  }
+  return visible;
+}
 
 // Lấy danh sách toàn bộ câu hỏi trên diễn đàn
 router.get('/', async (req, res) => {
@@ -29,7 +38,7 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       count: list.length,
-      data: list
+      data: list.map(publicQuestion)
     });
   } catch (err) {
     console.error('Lỗi API /api/questions:', err.message);
@@ -41,13 +50,17 @@ router.get('/', async (req, res) => {
 });
 
 // Gửi câu hỏi mới lên diễn đàn
-router.post('/', async (req, res) => {
+router.post('/', createRateLimiter(5, 60000), async (req, res) => {
+  if (['title', 'content'].some(key => typeof req.body[key] !== 'string' || req.body[key].length > (key === 'title' ? 200 : 5000)) ||
+      ['mssv', 'fullName', 'category'].some(key => req.body[key] !== undefined && (typeof req.body[key] !== 'string' || req.body[key].length > 150))) {
+    return res.status(400).json({ success: false, message: 'Thông tin câu hỏi không hợp lệ.' });
+  }
   try {
     const newQ = await createQuestion(req.body);
     res.status(201).json({
       success: true,
       message: 'Đã gửi câu hỏi lên diễn đàn thành công!',
-      data: newQ
+      data: publicQuestion(newQ)
     });
   } catch (err) {
     console.error('Lỗi API POST /api/questions:', err.message);
@@ -59,9 +72,10 @@ router.post('/', async (req, res) => {
 });
 
 // Giảng viên / Mentor trả lời câu hỏi (Chỉ Admin)
-router.put('/:id/answer', requireAdmin, async (req, res) => {
+router.put('/:id/answer', requirePermission('questions:manage'), async (req, res) => {
   try {
-    const updated = await answerQuestion(req.params.id, req.body);
+    if (typeof req.body.answer !== 'string' || req.body.answer.length > 5000) return res.status(400).json({ success: false, message: 'Câu trả lời không hợp lệ.' });
+    const updated = await answerQuestion(req.params.id, req.body.answer, req.user.fullName || req.user.username);
     if (!updated) {
       return res.status(404).json({
         success: false,
@@ -71,7 +85,7 @@ router.put('/:id/answer', requireAdmin, async (req, res) => {
     res.json({
       success: true,
       message: 'Đã gửi phản hồi thành công!',
-      data: updated
+      data: publicQuestion(updated)
     });
   } catch (err) {
     console.error('Lỗi API PUT /api/questions/:id/answer:', err.message);
@@ -83,7 +97,7 @@ router.put('/:id/answer', requireAdmin, async (req, res) => {
 });
 
 // Xóa câu hỏi (Chỉ Admin)
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', requirePermission('questions:manage'), async (req, res) => {
   try {
     const deleted = await deleteQuestion(req.params.id);
     if (!deleted) {

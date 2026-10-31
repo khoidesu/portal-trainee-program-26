@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
 const SupportRequestSchema = new mongoose.Schema({
+  publicVisible: { type: Boolean, default: false },
   type: {
     type: String,
-    enum: ['forgot_password', 'feedback', 'account_issue', 'other'],
+    enum: ['forgot_password', 'feedback', 'account_issue', 'other', 'leave'],
     default: 'forgot_password'
   },
   traineeId: {
@@ -28,8 +29,18 @@ const SupportRequestSchema = new mongoose.Schema({
   },
   message: {
     type: String,
-    default: 'Yêu cầu cấp lại mật khẩu tài khoản'
+    default: 'Yêu cầu cấp lại mật khẩu tài khoản',
+    maxlength: 3000
   },
+  scheduleCode: { type: String, maxlength: 80 },
+  scheduleTitle: { type: String, maxlength: 300 },
+  scheduleDate: { type: String, maxlength: 10 },
+  scheduleTime: { type: String, maxlength: 30 },
+  submissionKey: { type: String },
+  emailStatus: { type: String, enum: ['pending', 'sending', 'sent', 'failed', 'not_configured'] },
+  emailAttemptedAt: { type: Date },
+  emailSentAt: { type: Date },
+  emailId: { type: String },
   status: {
     type: String,
     enum: ['pending', 'resolved', 'rejected'],
@@ -53,5 +64,7 @@ const SupportRequestSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+SupportRequestSchema.index({ submissionKey: 1 }, { unique: true, partialFilterExpression: { type: 'leave' } });
 
 module.exports = mongoose.model('SupportRequest', SupportRequestSchema);

@@ -15,7 +15,8 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../utils/security');
+const Schedule = require('../models/Schedule');
+const { requirePermission } = require('../utils/security');
 const {
   getAllSchedules,
   createSchedule,
@@ -31,7 +32,8 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       count: schedules.length,
-      data: schedules
+      serverTime: new Date().toISOString(),
+      data: schedules.map(item => ({ ...item, ...Schedule.getTiming(item) }))
     });
   } catch (err) {
     console.error('Lỗi API /api/schedules:', err.message);
@@ -43,7 +45,7 @@ router.get('/', async (req, res) => {
 });
 
 // Thêm một buổi học mới vào thời khóa biểu (Chỉ Admin)
-router.post('/', requireAdmin, async (req, res) => {
+router.post('/', requirePermission('schedules:manage'), async (req, res) => {
   try {
     const newSchedule = await createSchedule(req.body);
     res.status(201).json({
@@ -61,7 +63,7 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 // Cập nhật thông tin buổi học (Chỉ Admin)
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', requirePermission('schedules:manage'), async (req, res) => {
   try {
     const updated = await updateSchedule(req.params.id, req.body);
     if (!updated) {
@@ -85,7 +87,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 });
 
 // Xóa buổi học (Chỉ Admin)
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', requirePermission('schedules:manage'), async (req, res) => {
   try {
     const deleted = await deleteSchedule(req.params.id);
     if (!deleted) {
@@ -108,9 +110,9 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 });
 
 // Reset toàn bộ lịch về mặc định ban đầu (Chỉ Admin)
-router.post('/reset', requireAdmin, async (req, res) => {
+router.post('/reset', requirePermission('schedules:manage'), async (req, res) => {
   try {
-    const result = await resetSchedules(req.body && req.body.reseed !== false);
+    const result = await resetSchedules(req.body);
     res.json({
       success: true,
       message: 'Đã khôi phục lại lịch mẫu mặc định thành công!',

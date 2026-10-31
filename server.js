@@ -17,11 +17,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 
 // Tự động assemble các HTML components vào public/index.html
 const assembleHtmlComponents = require('./scripts/assemble-components');
-assembleHtmlComponents();
+if (!process.env.VERCEL) assembleHtmlComponents();
 
 const {
   connectDB,
@@ -29,7 +28,7 @@ const {
   getAnnouncements
 } = require('./config/db');
 
-const { requireAdmin } = require('./utils/security');
+const { requireAdmin, optionalAuth, validateInput, isProduction } = require('./utils/security');
 
 // Nạp các Router Components
 const authRoutes = require('./routes/authRoutes');
@@ -42,6 +41,14 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.disable('x-powered-by');
+if (process.env.VERCEL) app.set('trust proxy', 1);
+else if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
+app.set('query parser', 'simple');
+const allowedOrigins = (process.env.APP_ORIGIN || '').split(',').map(value => value.trim()).filter(Boolean);
+if (isProduction && (!process.env.MONGODB_URI || !allowedOrigins.length || allowedOrigins.some(value => { try { return new URL(value).origin !== value || !value.startsWith('https://'); } catch { return true; } }))) {
+  throw new Error('Production cần MONGODB_URI và APP_ORIGIN là địa chỉ HTTPS chính thức.');
+}
 
 // ==========================================
 // 1. CẤU HÌNH BẢO MẬT & MIDDLEWARES
@@ -53,13 +60,17 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://api.dicebear.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com");
+  if (isProduction) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   next();
 });
 
 // Giới hạn CORS an toàn
-const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({
-  origin: corsOrigin === '*' ? '*' : corsOrigin.split(','),
+  origin(origin, callback) {
+    callback(null, !origin || allowedOrigins.includes(origin));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -67,6 +78,25 @@ app.use(cors({
 // Giới hạn kích thước payload (2MB)
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const origin = req.headers.origin;
+    const localOrigin = !isProduction && origin === `${req.protocol}://${req.get('host')}`;
+    if ((origin && !allowedOrigins.includes(origin) && !localOrigin) || req.headers['sec-fetch-site'] === 'cross-site') {
+      return res.status(403).json({ success: false, message: 'Nguồn gửi yêu cầu không được phép.' });
+    }
+    if (isProduction && !origin) return res.status(403).json({ success: false, message: 'Yêu cầu cần có Origin hợp lệ.' });
+    if (!/^application\/json(?:;|$)/i.test(req.get('content-type') || '')) return res.status(415).json({ success: false, message: 'Chỉ nhận dữ liệu JSON.' });
+  }
+  next();
+}, validateInput, optionalAuth);
+app.use('/api', async (req, res, next) => {
+  if (isProduction && !await connectDB()) {
+    return res.status(503).json({ success: false, message: 'Cơ sở dữ liệu tạm thời không khả dụng. Vui lòng thử lại sau.' });
+  }
+  next();
+});
 
 // Phục vụ tài nguyên tĩnh từ thư mục public
 app.use(express.static(path.join(__dirname, 'public')));
@@ -91,6 +121,10 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+app.get('/api/public-config', (req, res) => {
+  res.json({ success: true, data: { turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || '' } });
+});
+
 // Lấy danh sách thông báo & sự kiện
 app.get('/api/announcements', async (req, res) => {
   try {
@@ -110,54 +144,7 @@ app.get('/api/announcements', async (req, res) => {
 
 // Cấu hình URI MongoDB (Bảo mật: Chỉ Admin + Localhost)
 app.post('/api/config/mongodb', requireAdmin, async (req, res) => {
-  const clientIp = req.ip || (req.connection && req.connection.remoteAddress) || '';
-  const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('127.0.0.1') || clientIp === '::ffff:127.0.0.1';
-  if (!isLocal && process.env.NODE_ENV === 'production') {
-    return res.status(403).json({
-      success: false,
-      message: 'Tính năng này bị khóa trên môi trường Production vì lý do an toàn.'
-    });
-  }
-
-  const { uri } = req.body;
-  if (!uri || !uri.startsWith('mongodb')) {
-    return res.status(400).json({
-      success: false,
-      message: 'Chuỗi kết nối không hợp lệ! URI phải bắt đầu bằng mongodb:// hoặc mongodb+srv://'
-    });
-  }
-
-  try {
-    const envPath = path.join(__dirname, '.env');
-    let envContent = '';
-    if (fs.existsSync(envPath)) {
-      envContent = fs.readFileSync(envPath, 'utf8');
-      envContent = envContent.replace(/^MONGODB_URI=.*/m, `MONGODB_URI=${uri}`);
-    } else {
-      envContent = `MONGODB_URI=${uri}\nPORT=3000\n`;
-    }
-    fs.writeFileSync(envPath, envContent, 'utf8');
-    process.env.MONGODB_URI = uri;
-
-    const connected = await connectDB();
-    if (connected) {
-      res.json({
-        success: true,
-        message: 'Đã lưu cấu hình và kết nối thành công tới MongoDB Atlas!'
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Đã lưu cấu hình vào .env nhưng không thể kết nối tới cơ sở dữ liệu.'
-      });
-    }
-  } catch (err) {
-    console.error('Lỗi cấu hình MongoDB:', err.message);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi khi lưu cấu hình cơ sở dữ liệu'
-    });
-  }
+  res.status(410).json({ success: false, message: 'Hãy cấu hình MONGODB_URI trong biến môi trường của máy chủ rồi khởi động lại.' });
 });
 
 // ==========================================
@@ -179,7 +166,13 @@ app.get(['/login', '/login.html'], (req, res) => {
 
 // SPA Fallback: điều hướng request trang về index.html
 app.get('*', (req, res) => {
+  if (path.extname(req.path)) return res.sendStatus(404);
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use((err, req, res, next) => {
+  const status = err.type === 'entity.too.large' ? 413 : err instanceof SyntaxError ? 400 : 500;
+  res.status(status).json({ success: false, message: status === 413 ? 'Dữ liệu vượt quá kích thước cho phép.' : status === 400 ? 'JSON không hợp lệ.' : 'Không thể xử lý yêu cầu.' });
 });
 
 // Khởi động server

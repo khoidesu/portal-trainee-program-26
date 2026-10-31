@@ -14,13 +14,44 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../utils/security');
+const { requirePermission, hasPermission } = require('../utils/security');
 const {
   getAllAssignments,
+  createAssignment,
+  deleteAssignment,
+  getAssignmentSubmissions,
+  updateAssignmentSubmission,
   updateAssignment,
   batchUpdateAssignments,
   resetAssignments
 } = require('../config/db');
+
+
+function visibleAssignment(item, req) {
+  const fields = ['assignmentId', 'title', 'unit', 'type', 'icon', 'isCurrent', 'deadline', 'offset'];
+  if (item.status !== 'locked' || hasPermission(req.user, 'assignments:manage')) fields.push('desc', 'details', 'link');
+  return {
+    ...Object.fromEntries(fields.filter(field => item[field] !== undefined).map(field => [field, item[field]])),
+    status: item.status === 'completed' ? 'active' : item.status
+  };
+}
+
+router.get('/:id/submissions', requirePermission('assignments:manage'), async (req, res) => {
+  try {
+    res.json({ success: true, data: await getAssignmentSubmissions(req.params.id) });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/:id/submissions/:traineeId', requirePermission('assignments:manage'), async (req, res) => {
+  try {
+    const data = await updateAssignmentSubmission(req.params.id, req.params.traineeId, req.body, req.user.username || req.user.traineeId);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
 
 // Lấy danh sách toàn bộ 11 bài tập
 router.get('/', async (req, res) => {
@@ -29,7 +60,7 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       count: list.length,
-      data: list
+      data: list.map(item => visibleAssignment(item, req))
     });
   } catch (err) {
     console.error('Lỗi API /api/assignments:', err.message);
@@ -40,8 +71,26 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.post('/', requirePermission('assignments:manage'), async (req, res) => {
+  try {
+    const created = await createAssignment(req.body);
+    res.status(201).json({ success: true, message: 'Đã thêm bài tập.', data: visibleAssignment(created, req) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Không thêm được bài tập.' });
+  }
+});
+
+router.delete('/:id', requirePermission('assignments:manage'), async (req, res) => {
+  try {
+    if (!await deleteAssignment(req.params.id)) return res.status(404).json({ success: false, message: 'Không tìm thấy bài tập.' });
+    res.json({ success: true, message: 'Đã xóa bài tập khỏi lộ trình. Xác nhận bài nộp vẫn được lưu để đối chiếu.' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Không xóa được bài tập.' });
+  }
+});
+
 // Cập nhật thông tin / đường link / deadline của 1 bài tập (Chỉ Admin)
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', requirePermission('assignments:manage'), async (req, res) => {
   try {
     const updated = await updateAssignment(req.params.id, req.body);
     res.json({
@@ -59,7 +108,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 });
 
 // Cập nhật hàng loạt nhiều bài tập cùng lúc (Chỉ Admin)
-router.post('/batch', requireAdmin, async (req, res) => {
+router.post('/batch', requirePermission('assignments:manage'), async (req, res) => {
   try {
     const { assignments } = req.body;
     if (!Array.isArray(assignments)) {
@@ -85,7 +134,7 @@ router.post('/batch', requireAdmin, async (req, res) => {
 });
 
 // Reset toàn bộ danh sách 11 bài tập về mặc định (Chỉ Admin)
-router.post('/reset', requireAdmin, async (req, res) => {
+router.post('/reset', requirePermission('assignments:manage'), async (req, res) => {
   try {
     const list = await resetAssignments();
     res.json({
@@ -97,7 +146,7 @@ router.post('/reset', requireAdmin, async (req, res) => {
     console.error('Lỗi API POST /api/assignments/reset:', err.message);
     res.status(500).json({
       success: false,
-      message: 'Lỗi khi đặt lại danh sách bài tập'
+      message: err.message || 'Lỗi khi đặt lại danh sách bài tập'
     });
   }
 });

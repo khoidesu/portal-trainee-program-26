@@ -15,21 +15,24 @@ const express = require('express');
 const router = express.Router();
 const Trainee = require('../models/Trainee');
 const {
-  signToken,
   hashPassword,
   verifyPassword,
-  createRateLimiter
+  createRateLimiter,
+  requireAuth,
+  requirePermission,
+  setSession,
+  clearSession
 } = require('../utils/security');
-const { authenticateUser } = require('../config/db');
+const { authenticateUser, getAccounts, saveAccount, changeAccountPassword } = require('../config/db');
 
 // Giới hạn 5 lần đăng nhập sai trong 1 phút chống tấn công brute-force
-const loginLimiter = createRateLimiter(60000, 5, 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 1 phút!');
+const loginLimiter = createRateLimiter(5, 60000);
 
 // Đăng nhập hệ thống (Cấp JWT Token an toàn & Rate Limiting)
 router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
+    if (typeof username !== 'string' || typeof password !== 'string' || !username || !password || username.length > 100 || password.length > 256) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!'
@@ -41,15 +44,17 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json(authResult);
     }
 
-    const token = signToken({
+    setSession(res, {
       username: authResult.user.username,
       role: authResult.user.role,
-      fullName: authResult.user.fullName
-    }, 86400);
+      fullName: authResult.user.fullName,
+      root: authResult.user.isOwner === true,
+      accountId: authResult.user.id,
+      sessionVersion: authResult.user.sessionVersion
+    });
 
     res.json({
-      ...authResult,
-      token
+      ...authResult
     });
   } catch (err) {
     console.error('Lỗi khi xử lý đăng nhập:', err.message);
@@ -62,60 +67,43 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 // Đăng xuất hệ thống
 router.post('/logout', (req, res) => {
+  clearSession(res);
   res.json({
     success: true,
     message: 'Đăng xuất thành công!'
   });
 });
 
+router.get('/me', (req, res) => {
+  res.json({ success: true, user: req.user || null });
+});
+
 // Đổi mật khẩu tài khoản người dùng (Xác thực mật khẩu cũ & Hash scrypt)
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', requireAuth, loginLimiter, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 256) return res.status(400).json({ success: false, message: 'Mật khẩu mới cần 12–256 ký tự.' });
   try {
-    const { traineeId, currentPassword, newPassword } = req.body;
-    if (!traineeId || !currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vui lòng cung cấp mã sinh viên, mật khẩu hiện tại và mật khẩu mới!'
-      });
-    }
-
-    if (String(newPassword).trim().length < 4) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mật khẩu mới phải có tối thiểu 4 ký tự!'
-      });
-    }
-
-    const trainee = await Trainee.findOne({ traineeId: String(traineeId).trim() });
-    if (!trainee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy tài khoản người dùng trong cơ sở dữ liệu!'
-      });
-    }
-
-    const isCurrentValid = verifyPassword(currentPassword, trainee.password);
-    if (!isCurrentValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mật khẩu hiện tại không chính xác!'
-      });
-    }
-
-    trainee.password = hashPassword(String(newPassword).trim());
-    await trainee.save();
-
-    res.json({
-      success: true,
-      message: 'Đổi mật khẩu thành công! Mật khẩu mới đã được lưu an toàn vào MongoDB Atlas.'
-    });
-  } catch (err) {
-    console.error('Lỗi API /api/auth/change-password:', err.message);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi khi cập nhật mật khẩu'
-    });
+    await changeAccountPassword(req.user, currentPassword, newPassword);
+    clearSession(res);
+    res.json({ success: true, message: 'Đã đổi mật khẩu. Vui lòng đăng nhập lại.' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
+});
+
+router.get('/accounts', requirePermission('accounts:manage'), async (req, res) => {
+  try { res.json({ success: true, data: await getAccounts() }); }
+  catch { res.status(503).json({ success: false, message: 'Không tải được tài khoản.' }); }
+});
+
+router.post('/accounts', requirePermission('accounts:manage'), async (req, res) => {
+  try { res.status(201).json({ success: true, data: await saveAccount(null, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, message: error.code === 11000 ? 'Tên tài khoản đã tồn tại.' : error.message }); }
+});
+
+router.put('/accounts/:id', requirePermission('accounts:manage'), async (req, res) => {
+  try { res.json({ success: true, data: await saveAccount(req.params.id, req.body) }); }
+  catch (error) { res.status(400).json({ success: false, message: error.message }); }
 });
 
 module.exports = router;

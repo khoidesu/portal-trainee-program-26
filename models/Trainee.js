@@ -30,6 +30,13 @@ const StarHistorySchema = new mongoose.Schema({
 }, { _id: false });
 
 const SessionStarSchema = new mongoose.Schema({
+  updatedBy: { type: String, default: '' },
+  updatedAt: { type: Date },
+  attendanceStatus: { type: String, enum: ['present', 'absent_excused', 'absent_unexcused', 'not_recorded'], default: 'not_recorded' },
+  interactionCount: { type: Number, default: null },
+  cameraOn: { type: Boolean, default: null },
+  sourceSheet: { type: String, default: '' },
+  sourceRow: { type: Number, default: null },
   sessionId: { type: String, default: '' }, // link to Schedule _id or code
   sessionCode: { type: String, default: '' }, // e.g. 'TP-M10.01'
   sessionTitle: { type: String, required: true }, // e.g. 'Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống'
@@ -62,66 +69,66 @@ const TraineeSchema = new mongoose.Schema({
     }
   },
   email: { type: String, required: true },
-  batch: { type: String, default: 'KHMT2026.2' },
-  track: { type: String, default: 'Khoa Khoa học Máy tính' },
-  department: { type: String, default: 'Khoa học Máy tính' },
-  status: { type: String, default: 'Đang học' }, // Đang học, Đang đào tạo, Tốt nghiệp
+  batch: { type: String, default: '' },
+  track: { type: String, default: '' },
+  department: { type: String, default: '' },
+  status: { type: String, default: 'Đang học', enum: ['Đang học', 'Ngừng học', 'Hoàn thành'] }, // Đang học, Đang đào tạo, Tốt nghiệp
   cohortYear: { type: String, default: '2025' },
   academicYear: { type: String, default: '2026-2027' },
   
   // Legacy metrics for backward compatibility
-  cumulativeGpa: { type: Number, default: 8.67 },
-  gpaClassification: { type: String, default: 'Tốt' },
-  gpaTrend: { type: String, default: '-14.8% so với HK trước' },
+  cumulativeGpa: { type: Number, default: null },
+  gpaClassification: { type: String, default: '' },
+  gpaTrend: { type: String, default: '' },
   gpaTrendIsPositive: { type: Boolean, default: false },
   
-  completedCredits: { type: Number, default: 52 },
-  totalCredits: { type: Number, default: 126 },
-  creditsPercent: { type: Number, default: 41.3 },
-  actualCredits: { type: Number, default: 44 },
+  completedCredits: { type: Number, default: 0 },
+  totalCredits: { type: Number, default: 0 },
+  creditsPercent: { type: Number, default: 0 },
+  actualCredits: { type: Number, default: 0 },
   
-  trainingScore: { type: Number, default: 98.0 },
-  trainingClassification: { type: String, default: 'Xuất sắc' },
+  trainingScore: { type: Number, default: null },
+  trainingClassification: { type: String, default: '' },
   
-  previousSemesterGpa: { type: Number, default: 7.82 },
-  previousSemesterNote: { type: String, default: 'Chưa có dữ liệu HK trước -trước' },
+  previousSemesterGpa: { type: Number, default: null },
+  previousSemesterNote: { type: String, default: '' },
 
   // ========================================================
   // DASHBOARD 4 KPIS (DỄ DÀNG LINK SYNC VỚI ADMIN & DATABASE)
   // ========================================================
   // 1. Sao tích lũy
-  accumulatedStars: { type: Number, default: 28 },
-  starClassification: { type: String, default: 'Hạng Vàng ⭐⭐⭐' },
-  starTrend: { type: String, default: '+4 sao tuần này' },
+  accumulatedStars: { type: Number, default: null },
+  starClassification: { type: String, default: '' },
+  starTrend: { type: String, default: '' },
   starTrendIsPositive: { type: Boolean, default: true },
   
   // 2. Số buổi học đã tham gia & Chuyên cần
-  attendedSessions: { type: Number, default: 42 },
-  totalSessions: { type: Number, default: 45 },
-  absentExcused: { type: Number, default: 3 }, // Vắng có phép
-  absentUnexcused: { type: Number, default: 0 }, // Vắng không phép
-  attendanceRate: { type: Number, default: 93.3 },
-  attendanceNote: { type: String, default: 'Đã tham gia: 42 buổi · Vắng có phép: 3 · Không phép: 0' },
+  attendedSessions: { type: Number, default: null },
+  totalSessions: { type: Number, default: null },
+  absentExcused: { type: Number, default: null }, // Vắng có phép
+  absentUnexcused: { type: Number, default: null }, // Vắng không phép
+  attendanceRate: { type: Number, default: null },
+  attendanceNote: { type: String, default: '' },
   
   // 3. Điểm bài tập
-  assignmentScore: { type: Number, default: 9.6 },
-  assignmentClassification: { type: String, default: 'Xuất sắc' },
-  completedAssignments: { type: Number, default: 14 },
-  totalAssignments: { type: Number, default: 15 },
-  assignmentNote: { type: String, default: 'Đạt 14/15 bài tập · Đạt yêu cầu 100%' },
+  assignmentScore: { type: Number, default: null },
+  assignmentClassification: { type: String, default: 'Chưa xếp loại' },
+  completedAssignments: { type: Number, default: 0 },
+  totalAssignments: { type: Number, default: 0 },
+  assignmentNote: { type: String, default: '' },
   
   // 4. Thứ hạng xếp loại
-  currentRank: { type: Number, default: 1 },
-  totalStudentsInRank: { type: Number, default: 12 },
-  rankClassification: { type: String, default: '🥇 Quán quân Trainee' },
-  rankNote: { type: String, default: 'Hạng 1 / 12 sinh viên · Dẫn đầu toàn khóa' },
+  currentRank: { type: Number, default: null },
+  totalStudentsInRank: { type: Number, default: 0 },
+  rankClassification: { type: String, default: 'Chưa xếp hạng' },
+  rankNote: { type: String, default: '' },
 
   // Authentication & Access Control
-  password: { type: String, default: '1234' },
+  password: { type: String, select: false },
   role: { type: String, default: 'student' }, // 'student' | 'admin'
   
   // Sub-sections
-  mentor: { type: MentorSchema, default: () => ({}) },
+  mentor: { type: MentorSchema, default: null },
   scheduleToday: [ScheduleItemSchema],
   pendingRequests: [PendingRequestSchema],
   gpaHistory: [GpaHistorySchema],
@@ -129,9 +136,9 @@ const TraineeSchema = new mongoose.Schema({
   sessionStars: [SessionStarSchema],
   
   // Trainee Leaderboard specific fields
-  rank: { type: Number, default: 1 },
-  completedTasks: { type: Number, default: 18 },
-  totalTasks: { type: Number, default: 24 },
+  rank: { type: Number, default: null },
+  completedTasks: { type: Number, default: 0 },
+  totalTasks: { type: Number, default: 0 },
   skills: [{ type: String }],
   bio: { type: String, default: '' }
 }, {

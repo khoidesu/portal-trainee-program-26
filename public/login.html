@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đăng nhập | Cổng thông tin Sinh viên & Trainee Program UIT</title>
-  <link rel="icon" type="image/png" href="assets/logo.png">
+  <title>Trainee Program - Cổng thông tin | CS UIT</title>
+  <link rel="icon" type="image/png" href="assets/trainee_logo_org@4x.png">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Source Sans 3', 'Segoe UI', Arial, sans-serif;
     }
 
     body {
@@ -24,7 +24,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f1f5f9 url('assets/background.png') no-repeat center center fixed;
+      background: #0b0f19 url('assets/background_form.png') no-repeat center center fixed;
       background-size: cover;
       padding: 20px;
       position: relative;
@@ -65,7 +65,7 @@
       border: 1px solid rgba(255, 255, 255, 0.85);
       border-radius: 24px;
       padding: 42px 36px 36px 36px;
-      box-shadow: 
+      box-shadow:
         0 20px 45px -12px rgba(15, 23, 42, 0.16),
         0 0 25px rgba(0, 0, 0, 0.04),
         0 0 0 1px rgba(255, 255, 255, 0.6) inset;
@@ -77,19 +77,31 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      gap: clamp(12px, 4vw, 22px);
     }
 
     .login-logo {
-      width: 135px;
-      height: auto;
-      max-height: 110px;
+      width: 100px;
+      height: 76px;
+      min-width: 0;
       object-fit: contain;
-      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.06));
-      transition: transform 0.25s ease;
     }
 
-    .login-logo:hover {
-      transform: scale(1.03);
+    .login-logo--youth {
+      width: 58px;
+      height: 62px;
+    }
+
+    .login-logo--trainee {
+      width: 108px;
+      height: 62px;
+    }
+
+    @media (max-width: 380px) {
+      .logo-wrapper { gap: 12px; }
+      .login-logo { width: 76px; height: 58px; }
+      .login-logo--youth { width: 42px; height: 48px; }
+      .login-logo--trainee { width: 86px; height: 48px; }
     }
 
     .login-title {
@@ -416,8 +428,10 @@
   <div class="login-container">
     <div class="login-card">
       <!-- Logo CS -->
-      <div class="logo-wrapper">
-        <img src="assets/logo.png" alt="Logo Khoa Khoa học Máy tính - UIT" class="login-logo">
+      <div class="logo-wrapper" aria-label="Khoa Khoa học Máy tính, Đoàn Thanh niên và Trainee Program">
+        <img src="assets/logo.png" alt="Khoa Khoa học Máy tính - UIT" class="login-logo" width="100" height="76">
+        <img src="assets/logo-doan-thanh-nien2.webp" alt="Đoàn Thanh niên" class="login-logo login-logo--youth" width="58" height="62">
+        <img src="assets/logo_trainee@4x.png" alt="Trainee Program" class="login-logo login-logo--trainee" width="108" height="62">
       </div>
 
       <!-- Title & Subtitle -->
@@ -426,7 +440,7 @@
 
       <!-- Feedback Alert -->
       <div id="loginAlert" class="login-alert" style="display: none;">
-        <span>⚠️</span>
+
         <span id="alertMessage"></span>
       </div>
 
@@ -436,12 +450,12 @@
         <div class="form-group">
           <label for="username" class="form-label">Tài khoản</label>
           <div class="form-input-wrap">
-            <input 
-              type="text" 
-              id="username" 
-              name="username" 
-              class="form-control" 
-              required 
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              required
               autofocus
               autocomplete="username"
               placeholder=""
@@ -453,12 +467,12 @@
         <div class="form-group">
           <label for="password" class="form-label">Mật khẩu</label>
           <div class="form-input-wrap">
-            <input 
-              type="password" 
-              id="password" 
-              name="password" 
-              class="form-control" 
-              required 
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              required
               autocomplete="current-password"
               placeholder=""
             >
@@ -482,10 +496,7 @@
         <!-- Nút Quay lại Cổng thông tin -->
         <div style="margin-top: 20px; text-align: center;">
           <a href="/" style="display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #475569; font-size: 13.5px; font-weight: 500; text-decoration: none; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
+
             <span>Quay lại Cổng thông tin</span>
           </a>
         </div>
@@ -498,15 +509,15 @@
     <div class="login-modal-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
         <div>
-          <h2 class="login-modal-title">❓ Yêu Cầu Cấp Lại Mật Khẩu</h2>
+          <h2 class="login-modal-title"> Yêu Cầu Cấp Lại Mật Khẩu</h2>
           <p class="login-modal-subtitle">Gửi thông báo tới Quản trị viên (Admin) để được cấp lại mật khẩu</p>
         </div>
-        <button type="button" id="btnCloseForgotModal" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
+        <button type="button" id="btnCloseForgotModal" style="background:none; border:none; padding:8px; font-size:14px; cursor:pointer; color:#64748b; line-height:1;">Đóng</button>
       </div>
 
       <form id="forgotPasswordForm">
         <div class="form-group">
-          <label for="forgotUsername" class="form-label">Mã sinh viên (MSSV) hoặc Email <span style="color:#ef4444;">*</span></label>
+          <label for="forgotUsername" class="form-label">Mã Trainee (MSSV) hoặc Email <span style="color:#ef4444;">*</span></label>
           <div class="form-input-wrap">
             <input type="text" id="forgotUsername" class="form-control" required placeholder="Ví dụ: 25520918 hoặc email@uit.edu.vn">
           </div>
@@ -539,23 +550,14 @@
 
   <script>
     // Kiểm tra nếu đã đăng nhập Admin thì chuyển hướng vào Trang quản trị
-    (function checkAlreadyLoggedIn() {
-      const savedUser = localStorage.getItem('uit_trainee_auth_user');
-      if (savedUser) {
-        try {
-          const user = JSON.parse(savedUser);
-          if (user && user.role === 'admin') {
-            window.location.replace('/#admin');
-            return;
-          }
-          // Xóa session không phải admin cũ nếu có
-          localStorage.removeItem('uit_trainee_auth_user');
-          localStorage.removeItem('uit_trainee_auth_token');
-        } catch (e) {
-          localStorage.removeItem('uit_trainee_auth_user');
-          localStorage.removeItem('uit_trainee_auth_token');
-        }
-      }
+    (async function checkAlreadyLoggedIn() {
+      localStorage.removeItem('uit_trainee_auth_user');
+      localStorage.removeItem('uit_trainee_auth_token');
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        const data = await response.json();
+        if (data.user) window.location.replace(data.user.isOwner ? '/#admin' : '/#schedule');
+      } catch {}
     })();
 
     // Lấy thông tin tài khoản đã ghi nhớ nếu có
@@ -630,7 +632,7 @@
       e.preventDefault();
       const targetUser = forgotUsername.value.trim();
       if (!targetUser) {
-        alert('Vui lòng nhập Mã sinh viên hoặc Email!');
+        alert('Vui lòng nhập Mã Trainee hoặc Email!');
         return;
       }
 
@@ -650,6 +652,7 @@
         });
 
         const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Chưa gửi được yêu cầu.');
         closeForgotModal();
         showToast('Đã gửi tới admin! Quản trị viên sẽ kiểm tra và cấp lại mật khẩu cho bạn.', 'success');
         showAlert('Yêu cầu cấp lại mật khẩu của bạn đã được gửi tới Admin thành công!');
@@ -675,10 +678,6 @@
       }
 
       // Kiểm tra tài khoản: Chỉ tài khoản Admin mới đăng nhập
-      if (username.toLowerCase() !== 'admin') {
-        showAlert('Chỉ tài khoản Quản trị viên (Admin) mới cần đăng nhập! Sinh viên không cần đăng nhập, vui lòng bấm nút "Quay lại Cổng thông tin" để xem Lịch học và Bảng xếp hạng.');
-        return;
-      }
 
       // Lưu / Xóa ghi nhớ tài khoản
       if (rememberMeCheckbox.checked) {
@@ -703,28 +702,12 @@
 
         if (response.ok && data.success && data.user) {
           // Lưu JWT Token xác thực Admin an toàn
-          if (data.token) {
-            localStorage.setItem('uit_trainee_auth_token', data.token);
-          }
 
-          // Lưu thông tin người dùng vào localStorage an toàn (tránh lỗi QuotaExceededError)
-          try {
-            localStorage.setItem('uit_trainee_auth_user', JSON.stringify(data.user));
-          } catch (storageErr) {
-            console.warn('LocalStorage quota exceeded, lưu user không kèm avatar dung lượng lớn:', storageErr);
-            const userSafe = { ...data.user, avatar: '' };
-            try {
-              localStorage.setItem('uit_trainee_auth_user', JSON.stringify(userSafe));
-            } catch (e2) {
-              console.error('Không thể lưu localStorage:', e2);
-            }
-          }
-          
           showToast(`Xin chào ${data.user.fullName}! Đang chuyển hướng...`, 'success');
 
           // Chuyển hướng sau khi đăng nhập thành công
           setTimeout(() => {
-            if (data.user.role === 'admin') {
+            if (data.user.isOwner) {
               window.location.href = '/#admin';
             } else {
               window.location.href = '/';

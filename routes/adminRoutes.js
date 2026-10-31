@@ -1,108 +1,67 @@
-/**
- * ==============================================================================
- * COMPONENT: Admin Router (Điều Hướng Các Thao Tác Chấm Điểm & Quản Trị Nâng Cao)
- * CHỨC NĂNG CHÍNH: Quản lý tính năng chấm sao theo buổi học, cập nhật điểm danh
- *                  và cấp phát sao hàng loạt cho danh sách sinh viên.
- * LIÊN KẾT & PHỤ THUỘC: utils/security.js, config/db.js
- * NHIỆM VỤ CHI TIẾT:
- *   - POST /award-session-stars: Cấp sao buổi học cho 1 sinh viên (Chỉ Admin)
- *   - POST /batch-update-session-stars: Cập nhật sao hàng loạt theo danh sách buổi học (Chỉ Admin)
- *   - DELETE /session-stars/:traineeId/:sessionNumber: Xóa bản ghi sao của buổi học (Chỉ Admin)
- * ==============================================================================
- */
-
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../utils/security');
-const {
-  awardSessionStars,
-  batchUpdateSessionStars,
-  deleteSessionStars
-} = require('../config/db');
+const { requirePermission } = require('../utils/security');
+const { awardSessionStars, batchUpdateSessionStars, deleteSessionStar, saveAttendanceEntry } = require('../config/db');
 
-// Cấp hoặc cập nhật điểm sao cho sinh viên theo từng buổi học cụ thể
-router.post('/award-session-stars', requireAdmin, async (req, res) => {
+router.use(requirePermission('attendance:manage'));
+
+function validSession(body) {
+  return typeof (body.scheduleCode || body.sessionCode) === 'string' &&
+    /^[\w.-]{1,80}$/.test(body.scheduleCode || body.sessionCode) &&
+    typeof body.sessionDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.sessionDate) &&
+    ['sessionTitle', 'scheduleTitle', 'trainerName', 'stage', 'stageName', 'note'].every(key =>
+      body[key] === undefined || (typeof body[key] === 'string' && body[key].length <= 1000));
+}
+
+router.post('/award-session-stars', async (req, res) => {
+  const body = req.body;
+  if (!validSession(body) || typeof body.traineeId !== 'string' ||
+      !(body.traineeId === 'all' || /^\d{6,12}$/.test(body.traineeId)) ||
+      typeof body.starsAwarded !== 'number' || !Number.isFinite(body.starsAwarded) || body.starsAwarded <= 0 || body.starsAwarded > 100) {
+    return res.status(400).json({ success: false, message: 'Thông tin cộng sao không hợp lệ.' });
+  }
   try {
-    const { traineeId, sessionNumber, attendanceStars, quizStars, assignmentStars, bonusStars, sessionTitle, note } = req.body;
-    if (!traineeId || sessionNumber === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'Thiếu mã sinh viên (traineeId) hoặc số thứ tự buổi học (sessionNumber)!'
-      });
-    }
-
-    const updatedTrainee = await awardSessionStars(traineeId, {
-      sessionNumber: Number(sessionNumber),
-      attendanceStars: Number(attendanceStars || 0),
-      quizStars: Number(quizStars || 0),
-      assignmentStars: Number(assignmentStars || 0),
-      bonusStars: Number(bonusStars || 0),
-      sessionTitle,
-      note
-    });
-
-    res.json({
-      success: true,
-      message: `Đã cập nhật sao buổi #${sessionNumber} cho sinh viên ${traineeId}!`,
-      data: updatedTrainee
-    });
-  } catch (err) {
-    console.error('Lỗi API /api/admin/award-session-stars:', err.message);
-    res.status(400).json({
-      success: false,
-      message: err.message || 'Lỗi khi cập nhật điểm sao theo buổi học'
-    });
+    const result = await awardSessionStars({ ...body, trainerName: req.user.fullName });
+    res.json({ success: true, message: 'Đã cập nhật sao theo buổi học.', data: result });
+  } catch {
+    res.status(400).json({ success: false, message: 'Không thể cập nhật sao. Kiểm tra sinh viên và buổi học.' });
   }
 });
 
-// Cập nhật điểm sao hàng loạt cho toàn bộ sinh viên trong một buổi học
-router.post('/batch-update-session-stars', requireAdmin, async (req, res) => {
+router.post('/batch-update-session-stars', async (req, res) => {
+  const body = req.body;
+  if (!validSession(body) || !Array.isArray(body.studentRatings) || !body.studentRatings.length ||
+      body.studentRatings.some(item => !item || typeof item.traineeId !== 'string' || !/^\d{6,12}$/.test(item.traineeId) ||
+        typeof item.starsAwarded !== 'number' || !Number.isFinite(item.starsAwarded) || item.starsAwarded < -20 || item.starsAwarded > 100 ||
+        (item.note !== undefined && (typeof item.note !== 'string' || item.note.length > 1000)))) {
+    return res.status(400).json({ success: false, message: 'Danh sách điểm sao không hợp lệ.' });
+  }
   try {
-    const { sessionNumber, sessionTitle, sessionDate, records } = req.body;
-    if (!sessionNumber || !Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Thiếu số buổi học hoặc danh sách sinh viên rỗng!'
-      });
-    }
-
-    const results = await batchUpdateSessionStars({
-      sessionNumber: Number(sessionNumber),
-      sessionTitle,
-      sessionDate,
-      records
-    });
-
-    res.json({
-      success: true,
-      message: `Đã lưu thành công điểm sao buổi #${sessionNumber} cho ${results.length} sinh viên vào MongoDB Atlas!`,
-      data: results
-    });
-  } catch (err) {
-    console.error('Lỗi API /api/admin/batch-update-session-stars:', err.message);
-    res.status(400).json({
-      success: false,
-      message: err.message || 'Lỗi khi cập nhật điểm sao hàng loạt'
-    });
+    const result = await batchUpdateSessionStars({ ...body, trainerName: req.user.fullName });
+    res.json({ success: true, message: 'Đã cập nhật bảng sao theo buổi học.', data: result });
+  } catch {
+    res.status(400).json({ success: false, message: 'Không thể cập nhật bảng sao.' });
   }
 });
 
-// Xóa bản ghi điểm sao của một buổi học cụ thể cho sinh viên
-router.delete('/session-stars/:traineeId/:sessionNumber', requireAdmin, async (req, res) => {
+router.delete('/session-stars/:traineeId/:starLogId', async (req, res) => {
+  if (!/^\d{6,12}$/.test(req.params.traineeId) || !/^[\w.-]{1,100}$/.test(req.params.starLogId)) {
+    return res.status(400).json({ success: false, message: 'Mã sinh viên hoặc bản ghi sao không hợp lệ.' });
+  }
   try {
-    const { traineeId, sessionNumber } = req.params;
-    const updated = await deleteSessionStars(traineeId, Number(sessionNumber));
-    res.json({
-      success: true,
-      message: `Đã xóa sao buổi #${sessionNumber} của sinh viên ${traineeId}!`,
-      data: updated
-    });
-  } catch (err) {
-    console.error('Lỗi API DELETE session-stars:', err.message);
-    res.status(400).json({
-      success: false,
-      message: err.message || 'Lỗi khi xóa bản ghi sao buổi học'
-    });
+    const result = await deleteSessionStar(req.params.traineeId, req.params.starLogId);
+    res.json({ success: true, message: 'Đã xóa bản ghi sao.', data: result });
+  } catch {
+    res.status(400).json({ success: false, message: 'Không thể xóa bản ghi sao.' });
+  }
+});
+
+router.put('/attendance/:traineeId/:sessionCode', async (req, res) => {
+  try {
+    const data = await saveAttendanceEntry(req.params.traineeId, req.params.sessionCode, req.body, req.user.username);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(error.code === 'EDIT_CONFLICT' ? 409 : 400).json({ success: false, message: error.message });
   }
 });
 

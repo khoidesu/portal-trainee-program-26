@@ -15,7 +15,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../utils/security');
+const { requirePermission, hasPermission } = require('../utils/security');
 const {
   getAllTrainees,
   getTraineeById,
@@ -25,10 +25,20 @@ const {
   deleteTrainee
 } = require('../config/db');
 
+function visibleTrainee(trainee, req) {
+  if (hasPermission(req.user, 'trainees:manage')) return trainee;
+  const fields = ['traineeId', 'fullName', 'avatar', 'batch', 'track', 'department', 'status', 'accumulatedStars',
+    'starClassification', 'attendedSessions', 'totalSessions', 'absentExcused', 'absentUnexcused',
+    'attendanceRate',
+    'currentRank', 'rank', 'totalStudentsInRank', 'rankClassification', 'sessionStars', 'starHistory', 'skills', 'bio'];
+  return Object.fromEntries(fields.filter(field => trainee[field] !== undefined).map(field => [field, trainee[field]]));
+}
+
 // Lấy danh sách chi tiết sao từng buổi học của sinh viên
 router.get('/:id/session-stars', async (req, res) => {
   try {
     const data = await getSessionStars(req.params.id);
+    data.trainee = visibleTrainee(data.trainee, req);
     res.json({
       success: true,
       data
@@ -49,7 +59,7 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       count: trainees.length,
-      data: trainees
+      data: trainees.map(trainee => visibleTrainee(trainee, req))
     });
   } catch (err) {
     console.error('Lỗi API /api/trainees:', err.message);
@@ -72,7 +82,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json({
       success: true,
-      data: trainee
+      data: visibleTrainee(trainee, req)
     });
   } catch (err) {
     console.error('Lỗi API /api/trainees/:id:', err.message);
@@ -84,7 +94,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Thêm thực tập sinh mới (Chỉ Admin)
-router.post('/', requireAdmin, async (req, res) => {
+router.post('/', requirePermission('trainees:manage'), async (req, res) => {
   try {
     const newTrainee = await createTrainee(req.body);
     res.status(201).json({
@@ -102,7 +112,7 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 // Cập nhật thông tin thực tập sinh (Chỉ Admin)
-router.put('/:id', requireAdmin, async (req, res) => {
+router.put('/:id', requirePermission('trainees:manage'), async (req, res) => {
   try {
     const updated = await updateTrainee(req.params.id, req.body);
     if (!updated) {
@@ -126,7 +136,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 });
 
 // Xóa thực tập sinh (Chỉ Admin)
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', requirePermission('trainees:manage'), async (req, res) => {
   try {
     const deleted = await deleteTrainee(req.params.id);
     if (!deleted) {

@@ -1,11 +1,15 @@
 const mongoose = require('mongoose');
 
 const AssignmentSchema = new mongoose.Schema({
+  deletedAt: { type: Date, default: null },
+  details: { type: String, default: '', maxlength: 12000 },
   assignmentId: { 
     type: Number, 
-    required: true, 
-    unique: true 
-  }, // ID số nguyên từ 1 đến 11
+    required: true,
+    unique: true,
+    min: 1,
+    validate: Number.isSafeInteger
+  }, // Mã bài tập được giữ cố định để liên kết xác nhận bài nộp.
   title: { 
     type: String, 
     required: true 
@@ -29,7 +33,7 @@ const AssignmentSchema = new mongoose.Schema({
   status: { 
     type: String, 
     default: 'locked',
-    enum: ['completed', 'active', 'locked']
+    enum: ['completed', 'active', 'locked', 'closed']
   }, // Trạng thái: completed (xong), active (đang học), locked (khóa)
   isCurrent: { 
     type: Boolean, 

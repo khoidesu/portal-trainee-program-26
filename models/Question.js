@@ -15,7 +15,7 @@ const QuestionSchema = new mongoose.Schema({
   fullName: {
     type: String,
     trim: true,
-    default: 'Sinh viên ẩn danh'
+    default: 'Trainee ẩn danh'
   },
   isAnonymous: {
     type: Boolean,
@@ -53,7 +53,7 @@ const QuestionSchema = new mongoose.Schema({
   },
   answeredRole: {
     type: String,
-    default: 'Giảng viên / Mentor UIT',
+    default: 'Trainer UIT',
     trim: true
   },
   answeredAt: {

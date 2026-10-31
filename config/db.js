@@ -6,14 +6,16 @@ try {
 }
 
 const mongoose = require('mongoose');
-const { escapeRegex, hashPassword, verifyPassword } = require('../utils/security');
+const crypto = require('crypto');
+const { escapeRegex, hashPassword, verifyPassword, isProduction, CONTENT_PERMISSIONS } = require('../utils/security');
 const Trainee = require('../models/Trainee');
+const Account = require('../models/Account');
 const Announcement = require('../models/Announcement');
 const Schedule = require('../models/Schedule');
 const SupportRequest = require('../models/SupportRequest');
 const Question = require('../models/Question');
 const Assignment = require('../models/Assignment');
-const { mockTrainees, mockAnnouncements } = require('../data/mockData');
+const { mockTrainees, mockAnnouncements, schedules: importedSchedules = [] } = require('../data/mockData');
 
 let isMongoDBConnected = false;
 let connectionError = null;
@@ -32,6 +34,7 @@ let inMemorySupportRequests = [];
  * - < 5.0: Yếu
  */
 function computeAssignmentClassification(score) {
+  if (score === null || score === undefined || score === '') return 'Chưa xếp loại';
   const s = Number(score);
   if (isNaN(s)) return 'Chưa xếp loại';
   if (s >= 9.0) return 'Xuất sắc';
@@ -42,15 +45,16 @@ function computeAssignmentClassification(score) {
 }
 
 /**
- * Tạo URL avatar Dicebear độc nhất cho mỗi tài khoản dựa trên Mã sinh viên (traineeId)
+ * Tạo URL avatar Dicebear độc nhất cho mỗi tài khoản dựa trên Mã Trainee (traineeId)
  */
 function getDicebearAvatarUrl(traineeId, fullName = '') {
-  const seed = encodeURIComponent(String(traineeId || fullName || 'student').trim());
-  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+  const seed = String(traineeId || fullName || 'student').trim();
+  const hash = Array.from(seed).reduce((value, character) => (value * 31 + character.charCodeAt(0)) >>> 0, 0);
+  return `/assets/whale_${hash % 4 + 1}.png`;
 }
 
 /**
- * Tự động cập nhật lại thứ hạng (Rank) cho toàn bộ học viên theo số sao tích lũy (accumulatedStars giảm dần)
+ * Tự động cập nhật lại thứ hạng (Rank) cho toàn bộ Trainee theo số sao tích lũy (accumulatedStars giảm dần)
  */
 async function syncRanksByStars() {
   if (!isMongoDBConnected) return;
@@ -73,7 +77,7 @@ async function syncRanksByStars() {
               currentRank: rank,
               rank: rank,
               rankClassification: rankClass,
-              rankNote: `Hạng ${rank} / ${trainees.length} sinh viên (Dựa trên số sao tích lũy)`,
+              rankNote: `Hạng ${rank} / ${trainees.length} Trainee (Dựa trên số sao tích lũy)`,
               totalStudentsInRank: trainees.length,
               assignmentClassification: computeAssignmentClassification(t.assignmentScore)
             }
@@ -89,12 +93,26 @@ async function syncRanksByStars() {
 }
 
 let lastConnectAttempt = 0;
+let connectionPromise;
+mongoose.set('bufferCommands', false);
+mongoose.connection.on('disconnected', () => { isMongoDBConnected = false; });
 const CONNECT_COOLDOWN_MS = 60000; // Cooldown 60s để tránh làm nghẽn server và request khi DB offline
 
 /**
  * Kết nối tới MongoDB Atlas
  */
 async function connectDB(force = false) {
+  if (mongoose.connection.readyState === 1 && isMongoDBConnected) return true;
+  if (connectionPromise) return connectionPromise;
+  connectionPromise = openDatabase(force);
+  try {
+    return await connectionPromise;
+  } finally {
+    connectionPromise = null;
+  }
+}
+
+async function openDatabase(force = false) {
   const uri = process.env.MONGODB_URI;
 
   if (!uri || uri.trim() === '') {
@@ -102,20 +120,22 @@ async function connectDB(force = false) {
     isMongoDBConnected = false;
     activeDatabaseType = 'in-memory-fallback';
     console.error('❌ [Database Error] MONGODB_URI chưa được cấu hình.');
-    return;
+    return false;
   }
 
   // Nếu vừa mới thử kết nối thất bại và chưa hết cooldown thì không chặn tiếp
   const now = Date.now();
   if (!force && lastConnectAttempt > 0 && now - lastConnectAttempt < CONNECT_COOLDOWN_MS) {
-    return;
+    return false;
   }
   lastConnectAttempt = now;
 
   try {
-    console.log('🔗 [MongoDB] Đang kết nối tới:', uri.replace(/:([^:@]{4,})@/, ':****@'));
+    console.log('🔗 [MongoDB] Đang kết nối cơ sở dữ liệu...');
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000
+      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 5,
+      minPoolSize: 0
     });
 
     isMongoDBConnected = true;
@@ -123,13 +143,14 @@ async function connectDB(force = false) {
     connectionError = null;
     console.log('✅ [MongoDB] Kết nối cơ sở dữ liệu MongoDB Atlas THÀNH CÔNG!');
 
-    // Đồng bộ lại rank theo số sao cho toàn bộ sinh viên trong DB
-    await syncRanksByStars();
+    // Đồng bộ lại rank theo số sao cho toàn bộ Trainee trong DB
+    return true;
   } catch (err) {
     connectionError = err.message;
     isMongoDBConnected = false;
     activeDatabaseType = 'in-memory-fallback';
-    console.warn('⚠️ [MongoDB Atlas] Không thể kết nối trực tiếp (' + err.message + '). Đang kích hoạt chế độ Fallback In-Memory để hệ thống tiếp tục vận hành trơn tru!');
+    console.warn('[MongoDB] Kết nối thất bại.');
+    return false;
   }
 }
 
@@ -138,6 +159,7 @@ async function connectDB(force = false) {
  * Bảng xếp hạng sắp xếp mặc định thuần túy dựa trên SỐ SAO TÍCH LŨY (accumulatedStars)
  */
 async function getAllTrainees({ search = '', track = '', sort = 'stars_desc' } = {}) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
     try {
       const andClauses = [];
@@ -176,16 +198,15 @@ async function getAllTrainees({ search = '', track = '', sort = 'stars_desc' } =
       return trainees.map((t, idx) => {
         delete t.password;
         t.assignmentClassification = computeAssignmentClassification(t.assignmentScore);
-        if (sort === 'stars_desc' || !sort) {
+        if ((sort === 'stars_desc' || !sort) && Number.isFinite(t.accumulatedStars)) {
           t.currentRank = idx + 1;
           t.rank = idx + 1;
         }
-        if (!t.avatar || !t.avatar.startsWith('data:image')) {
-          t.avatar = getDicebearAvatarUrl(t.traineeId, t.fullName);
-        }
+        t.avatar = getDicebearAvatarUrl(t.traineeId, t.fullName);
         return attachRealStarHistory(t);
       });
     } catch (err) {
+      if (isProduction) throw err;
       console.warn('Lỗi đọc Trainees từ MongoDB, chuyển sang Fallback InMemory:', err.message);
     }
   }
@@ -218,103 +239,24 @@ async function getAllTrainees({ search = '', track = '', sort = 'stars_desc' } =
   return list.map((t, idx) => {
     delete t.password;
     t.assignmentClassification = computeAssignmentClassification(t.assignmentScore);
-    if (sort === 'stars_desc' || !sort) {
+    if ((sort === 'stars_desc' || !sort) && Number.isFinite(t.accumulatedStars)) {
       t.currentRank = idx + 1;
       t.rank = idx + 1;
     }
-    if (!t.avatar || !t.avatar.startsWith('data:image')) {
-      t.avatar = getDicebearAvatarUrl(t.traineeId, t.fullName);
-    }
+    t.avatar = getDicebearAvatarUrl(t.traineeId, t.fullName);
     return attachRealStarHistory(t);
   });
 }
 
 function attachRealStarHistory(trainee) {
   if (!trainee) return trainee;
-  const n = Number(trainee.accumulatedStars) || 0;
-
-  // Khởi tạo chi tiết sao từng buổi (sessionStars) nếu chưa có
-  if (!trainee.sessionStars || trainee.sessionStars.length === 0) {
-    const w1 = Math.max(1, Math.round(n * 0.22));
-    const w2 = Math.max(1, Math.round(n * 0.26));
-    const w3 = Math.max(1, Math.round(n * 0.24));
-    const w4 = Math.max(0, n - (w1 + w2 + w3));
-
-    trainee.sessionStars = [
-      {
-        sessionCode: 'TP-M10.01',
-        sessionTitle: 'Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống',
-        sessionDate: '2026-10-06',
-        stage: 'Giai đoạn 1',
-        stageName: 'Training',
-        starsAwarded: w1,
-        cumulativeStars: w1,
-        note: 'Điểm danh đúng giờ, làm quen hệ thống và đạt điểm test đầu vào xuất sắc',
-        trainerName: 'Võ Thị Xuân Quỳnh',
-        createdAt: new Date('2026-10-06T21:30:00Z')
-      },
-      {
-        sessionCode: 'TP-M10.02',
-        sessionTitle: 'Buổi 2: Thiết kế Cơ sở dữ liệu MongoDB Atlas & Mongoose Modeling',
-        sessionDate: '2026-10-13',
-        stage: 'Giai đoạn 1',
-        stageName: 'Training',
-        starsAwarded: w2,
-        cumulativeStars: w1 + w2,
-        note: 'Hoàn thành mô hình hóa Schema MongoDB Atlas và tối ưu quan hệ dữ liệu',
-        trainerName: 'Võ Thị Xuân Quỳnh',
-        createdAt: new Date('2026-10-13T21:30:00Z')
-      },
-      {
-        sessionCode: 'TP-M10.03',
-        sessionTitle: 'Buổi 3: Xây dựng RESTful API, Middleware & Cơ chế Phân quyền',
-        sessionDate: '2026-10-20',
-        stage: 'Giai đoạn 1',
-        stageName: 'Training',
-        starsAwarded: w3,
-        cumulativeStars: w1 + w2 + w3,
-        note: 'Thực hành API Middleware, xử lý xác thực bảo mật & phân quyền Role chuẩn UIT',
-        trainerName: 'Võ Thị Xuân Quỳnh',
-        createdAt: new Date('2026-10-20T21:30:00Z')
-      },
-      {
-        sessionCode: 'TP-M10.04',
-        sessionTitle: 'Buổi 4: Hoàn thiện Giao diện Portal, Tích hợp Thời khóa biểu Trực tuyến',
-        sessionDate: '2026-10-27',
-        stage: 'Giai đoạn 1',
-        stageName: 'Training',
-        starsAwarded: w4,
-        cumulativeStars: n,
-        note: 'Hoàn thiện giao diện Portal, đáp ứng chuẩn Responsive Mobile & Dark Mode',
-        trainerName: 'Võ Thị Xuân Quỳnh',
-        createdAt: new Date('2026-10-27T21:30:00Z')
-      }
-    ];
-  }
-
-  // Tự động đồng bộ biểu đồ Diễn biến sao từ danh sách chi tiết các buổi học
-  if (trainee.sessionStars && trainee.sessionStars.length > 0) {
-    trainee.starHistory = trainee.sessionStars.map((s, idx) => ({
-      period: `Buổi ${idx + 1}`,
-      periodStars: Number(s.starsAwarded) || 0,
-      cumulativeStars: Number(s.cumulativeStars) || 0
-    }));
-  }
-
-  if (!trainee.mentor) {
-    trainee.mentor = {
-      name: 'Võ Thị Xuân Quỳnh',
-      role: 'Trainer Trainee Program',
-      email: 'quynhvtx@uit.edu.vn',
-      phone: '0904607220',
-      avatarInitial: 'VQ'
-    };
-  } else {
-    trainee.mentor.name = 'Võ Thị Xuân Quỳnh';
-    trainee.mentor.role = 'Trainer Trainee Program';
-    trainee.mentor.avatarInitial = 'VQ';
-    trainee.mentor.email = 'quynhvtx@uit.edu.vn';
-  }
+  const sessions = Array.isArray(trainee.sessionStars) ? trainee.sessionStars : [];
+  let running = 0;
+  trainee.starHistory = sessions.map((session, index) => {
+    running += Number(session.starsAwarded) || 0;
+    return { period: `Buổi ${index + 1}`, periodStars: Number(session.starsAwarded) || 0, cumulativeStars: running };
+  });
+  trainee.sessionStars = sessions;
   return trainee;
 }
 
@@ -322,6 +264,7 @@ function attachRealStarHistory(trainee) {
  * Lấy chi tiết 1 Trainee theo traineeId hoặc _id từ MongoDB Atlas (hoặc Fallback InMemory)
  */
 async function getTraineeById(id) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const cleanId = String(id || '').trim();
   if (!cleanId) return null;
 
@@ -334,13 +277,13 @@ async function getTraineeById(id) {
 
       if (trainee) {
         delete trainee.password;
-        if (!trainee.avatar || !trainee.avatar.startsWith('data:image')) {
-          trainee.avatar = getDicebearAvatarUrl(trainee.traineeId, trainee.fullName);
-        }
+        trainee.avatar = getDicebearAvatarUrl(trainee.traineeId, trainee.fullName);
         trainee.assignmentClassification = computeAssignmentClassification(trainee.assignmentScore);
         return attachRealStarHistory(trainee);
       }
+      return null;
     } catch (err) {
+      if (isProduction) throw err;
       console.warn('Lỗi getTraineeById từ MongoDB, chuyển sang InMemory:', err.message);
     }
   }
@@ -350,9 +293,7 @@ async function getTraineeById(id) {
   if (trainee) {
     const copy = { ...trainee };
     delete copy.password;
-    if (!copy.avatar || !copy.avatar.startsWith('data:image')) {
-      copy.avatar = getDicebearAvatarUrl(copy.traineeId, copy.fullName);
-    }
+    copy.avatar = getDicebearAvatarUrl(copy.traineeId, copy.fullName);
     copy.assignmentClassification = computeAssignmentClassification(copy.assignmentScore);
     return attachRealStarHistory(copy);
   }
@@ -364,11 +305,13 @@ async function getTraineeById(id) {
  * Lấy danh sách thông báo từ MongoDB Atlas (hoặc Fallback)
  */
 async function getAnnouncements() {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
     try {
       const list = await Announcement.find().sort({ createdAt: -1 }).lean();
-      if (list && list.length > 0) return list;
+      if (list && (list.length > 0 || isProduction)) return list;
     } catch (e) {
+      if (isProduction) throw e;
       console.warn('Lỗi getAnnouncements từ MongoDB, dùng mock:', e.message);
     }
   }
@@ -379,8 +322,12 @@ async function getAnnouncements() {
  * Tạo mới 1 Trainee trong database MongoDB Atlas (Chỉ Admin)
  */
 async function createTrainee(data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  if (typeof data.traineeId !== 'string' || !/^\d{6,12}$/.test(data.traineeId) || typeof data.fullName !== 'string' || data.fullName.length > 150) {
+    throw new Error('MSSV cần 6–12 chữ số và họ tên tối đa 150 ký tự.');
+  }
   if (!data.traineeId || !data.fullName) {
-    throw new Error('Vui lòng nhập đầy đủ Mã sinh viên (MSSV) và Họ tên!');
+    throw new Error('Vui lòng nhập đầy đủ Mã Trainee (MSSV) và Họ tên!');
   }
 
   const cleanTraineeId = String(data.traineeId).trim();
@@ -389,40 +336,40 @@ async function createTrainee(data) {
   if (isMongoDBConnected) {
     const existing = await Trainee.findOne({ traineeId: cleanTraineeId });
     if (existing) {
-      throw new Error(`Mã sinh viên ${cleanTraineeId} đã tồn tại trong database!`);
+      throw new Error(`Mã Trainee ${cleanTraineeId} đã tồn tại trong database!`);
     }
   } else {
     const existingMem = inMemoryTrainees.find(t => t.traineeId === cleanTraineeId);
     if (existingMem) {
-      throw new Error(`Mã sinh viên ${cleanTraineeId} đã tồn tại trong danh sách!`);
+      throw new Error(`Mã Trainee ${cleanTraineeId} đã tồn tại trong danh sách!`);
     }
   }
 
   const stars = Number(data.accumulatedStars) || 0;
   const attended = Number(data.attendedSessions) || 0;
-  const total = Number(data.totalSessions) || 45;
+  const total = Number(data.totalSessions) || 0;
   const excused = Number(data.absentExcused) || 0;
   const unexcused = Number(data.absentUnexcused) || 0;
-  const rate = total > 0 ? Math.round((attended / total) * 1000) / 10 : 100;
-  const assignScore = Number(data.assignmentScore) !== undefined && !isNaN(Number(data.assignmentScore)) ? Number(data.assignmentScore) : 8.0;
+  const rate = total > 0 ? Math.round((attended / total) * 1000) / 10 : null;
+  const assignScore = data.assignmentScore === null || data.assignmentScore === undefined || data.assignmentScore === '' ? null : Number(data.assignmentScore);
 
   // Hash password bằng scrypt an toàn
-  const rawPass = String(data.password || '1234').trim();
+  const rawPass = String(data.password || crypto.randomBytes(24).toString('base64url')).trim();
   const hashedPassword = hashPassword(rawPass);
 
   const newDoc = {
     traineeId: cleanTraineeId,
     fullName: String(data.fullName).trim(),
-    email: String(data.email || `${cleanTraineeId}@trainee.uit.edu.vn`).trim(),
-    department: String(data.department || 'Khoa Khoa học Máy tính').trim(),
-    track: String(data.track || 'Khoa học Máy tính').trim(),
+    email: String(data.email || '').trim(),
+    department: String(data.department || '').trim(),
+    track: String(data.track || '').trim(),
     batch: String(data.batch || 'Trainee 2026').trim(),
-    status: data.status === 'completed' || data.status === 'paused' ? data.status : 'active',
+    status: ['Đang học', 'Ngừng học', 'Hoàn thành'].includes(data.status) ? data.status : 'Đang học',
     bio: String(data.bio || '').trim(),
-    skills: Array.isArray(data.skills) ? data.skills.map(s => String(s).trim()) : ['Node.js', 'React', 'MongoDB'],
+    skills: Array.isArray(data.skills) ? data.skills.map(s => String(s).trim()) : [],
     accumulatedStars: stars,
     starClassification: stars >= 40 ? 'Hạng Kim Cương ⭐⭐⭐⭐' : stars >= 30 ? 'Hạng Vàng ⭐⭐⭐' : 'Hạng Bạc ⭐⭐',
-    starTrend: '+2 sao tuần này',
+    starTrend: '',
     starTrendIsPositive: true,
     attendedSessions: attended,
     totalSessions: total,
@@ -432,10 +379,10 @@ async function createTrainee(data) {
     attendanceNote: `Đã tham gia: <span>${attended}</span> buổi · Vắng có phép: <span>${excused}</span> · Không phép: <span>${unexcused}</span>`,
     assignmentScore: assignScore,
     assignmentClassification: computeAssignmentClassification(assignScore),
-    completedAssignments: Number(data.completedAssignments) || 12,
-    totalAssignments: Number(data.totalAssignments) || 15,
+    completedAssignments: Number.isFinite(Number(data.completedAssignments)) ? Number(data.completedAssignments) : 0,
+    totalAssignments: Number(data.totalAssignments) || 11,
     assignmentNote: `Đạt tiêu chuẩn yêu cầu Trainee Program`,
-    avatar: data.avatar && data.avatar.startsWith('data:image') ? data.avatar : getDicebearAvatarUrl(cleanTraineeId, data.fullName),
+    avatar: getDicebearAvatarUrl(cleanTraineeId, data.fullName),
     password: hashedPassword,
     role: 'student'
   };
@@ -458,7 +405,9 @@ async function createTrainee(data) {
 /**
  * Cập nhật thông tin Trainee trong MongoDB Atlas (Chỉ Admin)
  */
-async function updateTrainee(id, updateData) {
+async function updateTrainee(id, updateData, expectedVersion) {
+  const conflict = () => Object.assign(new Error('Dữ liệu vừa được thay đổi. Hãy tải lại bảng và thử lưu lại.'), { code: 'EDIT_CONFLICT' });
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const allowedFields = [
     'fullName', 'email', 'department', 'track', 'batch', 'status',
     'bio', 'skills', 'avatar', 'accumulatedStars', 'attendedSessions',
@@ -467,6 +416,14 @@ async function updateTrainee(id, updateData) {
   ];
 
   const safeData = {};
+  const numericFields = ['accumulatedStars', 'attendedSessions', 'totalSessions', 'absentExcused', 'absentUnexcused', 'assignmentScore', 'completedAssignments', 'totalAssignments'];
+  for (const field of numericFields) {
+    if (updateData[field] !== undefined && updateData[field] !== null && (typeof updateData[field] !== 'number' || !Number.isFinite(updateData[field]) || updateData[field] < (field === 'accumulatedStars' ? -10000 : 0) || updateData[field] > (field === 'assignmentScore' ? 10 : 100000))) throw new Error('Chỉ số Trainee không hợp lệ.');
+  }
+  for (const field of ['fullName', 'email', 'department', 'track', 'batch', 'status', 'bio']) {
+    if (updateData[field] !== undefined && (typeof updateData[field] !== 'string' || updateData[field].length > 2000)) throw new Error('Thông tin Trainee không hợp lệ.');
+  }
+  if (updateData.avatar !== undefined && (typeof updateData.avatar !== 'string' || (updateData.avatar && !/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(updateData.avatar) && !/^https:\/\/api\.dicebear\.com\/[a-z0-9/?=&%.,_-]+$/i.test(updateData.avatar)))) throw new Error('Ảnh đại diện không hợp lệ.');
   for (const field of allowedFields) {
     if (updateData[field] !== undefined) {
       safeData[field] = updateData[field];
@@ -475,10 +432,10 @@ async function updateTrainee(id, updateData) {
 
   if (safeData.attendedSessions !== undefined || safeData.totalSessions !== undefined || safeData.absentExcused !== undefined || safeData.absentUnexcused !== undefined) {
     const attended = Number(safeData.attendedSessions) || 0;
-    const total = Number(safeData.totalSessions) || 45;
+    const total = Number(safeData.totalSessions) || 0;
     const excused = Number(safeData.absentExcused) || 0;
     const unexcused = Number(safeData.absentUnexcused) || 0;
-    safeData.attendanceRate = total > 0 ? Math.round((attended / total) * 1000) / 10 : 100;
+    safeData.attendanceRate = total > 0 ? Math.round((attended / total) * 1000) / 10 : null;
     safeData.attendanceNote = `Đã tham gia: <span>${attended}</span> buổi · Vắng có phép: <span>${excused}</span> · Không phép: <span>${unexcused}</span>`;
   }
 
@@ -507,8 +464,7 @@ async function updateTrainee(id, updateData) {
   }
 
   if (safeData.assignmentScore !== undefined) {
-    const score = Number(safeData.assignmentScore);
-    safeData.assignmentClassification = computeAssignmentClassification(score);
+    safeData.assignmentClassification = computeAssignmentClassification(safeData.assignmentScore);
   }
 
   if (updateData.password !== undefined) {
@@ -520,11 +476,12 @@ async function updateTrainee(id, updateData) {
 
   if (isMongoDBConnected) {
     let updated = await Trainee.findOneAndUpdate(
-      { traineeId: id },
-      { $set: safeData },
-      { new: true }
+      { traineeId: id, ...(expectedVersion !== undefined ? { __v: expectedVersion } : {}) },
+      { $set: safeData, $inc: { __v: 1 } },
+      { new: true, runValidators: true }
     ).select('-password').lean();
 
+    if (!updated && expectedVersion !== undefined) throw conflict();
     if (!updated && mongoose.Types.ObjectId.isValid(id)) {
       updated = await Trainee.findByIdAndUpdate(
         id,
@@ -534,7 +491,7 @@ async function updateTrainee(id, updateData) {
     }
 
     if (!updated) {
-      throw new Error(`Không tìm thấy sinh viên với mã ${id} để cập nhật!`);
+      throw new Error(`Không tìm thấy Trainee với mã ${id} để cập nhật!`);
     }
 
     await syncRanksByStars();
@@ -545,9 +502,10 @@ async function updateTrainee(id, updateData) {
   // Fallback InMemory
   let idx = inMemoryTrainees.findIndex(t => t.traineeId === id);
   if (idx === -1) {
-    throw new Error(`Không tìm thấy sinh viên với mã ${id} để cập nhật!`);
+    throw new Error(`Không tìm thấy Trainee với mã ${id} để cập nhật!`);
   }
-  Object.assign(inMemoryTrainees[idx], safeData);
+  if (expectedVersion !== undefined && (inMemoryTrainees[idx].__v || 0) !== expectedVersion) throw conflict();
+  Object.assign(inMemoryTrainees[idx], safeData, { __v: (inMemoryTrainees[idx].__v || 0) + 1 });
   return getTraineeById(id);
 }
 
@@ -555,6 +513,7 @@ async function updateTrainee(id, updateData) {
  * Xóa Trainee khỏi MongoDB Atlas (Chỉ Admin)
  */
 async function deleteTrainee(id) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const cleanId = String(id || '').trim();
   const safeRegex = escapeRegex(cleanId);
 
@@ -568,7 +527,7 @@ async function deleteTrainee(id) {
     }
 
     if (!deleted) {
-      throw new Error(`Không tìm thấy sinh viên với mã ${cleanId} để xóa!`);
+      throw new Error(`Không tìm thấy Trainee với mã ${cleanId} để xóa!`);
     }
 
     try {
@@ -584,7 +543,7 @@ async function deleteTrainee(id) {
   // Fallback InMemory
   let idx = inMemoryTrainees.findIndex(t => t.traineeId === cleanId);
   if (idx === -1) {
-    throw new Error(`Không tìm thấy sinh viên với mã ${cleanId} để xóa!`);
+    throw new Error(`Không tìm thấy Trainee với mã ${cleanId} để xóa!`);
   }
   const removed = inMemoryTrainees.splice(idx, 1)[0];
   delete removed.password;
@@ -593,138 +552,101 @@ async function deleteTrainee(id) {
 
 /**
  * Xác thực đăng nhập: CHỈ CHO PHÉP DUY NHẤT TÀI KHOẢN ADMIN ĐĂNG NHẬP
- * Sinh viên không cần đăng nhập, có thể trực tiếp vào xem lịch học và thứ hạng của các MSSV.
+ * Trainee không cần đăng nhập, có thể trực tiếp vào xem lịch học và thứ hạng của các MSSV.
  */
-async function authenticateUser(username, password) {
-  const u = (username || '').trim();
-  const p = (password || '').trim();
-  const uLower = u.toLowerCase();
+const inMemoryAccounts = new Map();
 
-  const adminUser = (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase();
-  const adminPass = (process.env.ADMIN_PASSWORD || '1234').trim();
-
-  // 1. Chỉ tài khoản Admin mới có quyền đăng nhập vào hệ thống
-  if (uLower === adminUser) {
-    if (verifyPassword(p, adminPass)) {
-      return {
-        success: true,
-        user: {
-          username: 'admin',
-          fullName: 'Quản Trị Viên (Admin)',
-          role: 'admin',
-          avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=uit-admin&backgroundColor=d1d4f9',
-          email: 'admin@uit.edu.vn'
-        }
-      };
-    }
-    return {
-      success: false,
-      message: 'Mật khẩu Quản trị viên (Admin) không chính xác!'
-    };
-  }
-
-  // 2. Nếu đăng nhập bằng MSSV hoặc tài khoản khác, thông báo rõ sinh viên không cần đăng nhập
+function ownerAccount() {
   return {
-    success: false,
-    message: 'Chỉ tài khoản Quản trị viên (Admin) mới cần đăng nhập vào hệ thống! Sinh viên không cần đăng nhập, có thể trực tiếp tra cứu lịch học và thứ hạng các MSSV.'
+    username: (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase(),
+    fullName: 'Quản trị hệ thống', role: 'admin', isOwner: true, active: true,
+    permissions: ['accounts:manage', ...CONTENT_PERMISSIONS]
   };
+}
+
+function visibleAccount(account) {
+  return {
+    id: String(account._id), username: account.username, fullName: account.fullName,
+    role: account.role, permissions: account.permissions || [], active: account.active,
+    sessionVersion: account.sessionVersion || 0, createdAt: account.createdAt
+  };
+}
+
+async function getAccounts() {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const list = isMongoDBConnected ? await Account.find().sort({ username: 1 }).lean() : [...inMemoryAccounts.values()];
+  return [ownerAccount(), ...list.map(visibleAccount)];
+}
+
+async function saveAccount(id, data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  if (typeof data.fullName !== 'string' || !data.fullName.trim() || data.fullName.length > 150 ||
+      !['admin', 'trainer'].includes(data.role) || typeof data.active !== 'boolean' ||
+      !Array.isArray(data.permissions) || data.permissions.some(permission => !CONTENT_PERMISSIONS.includes(permission))) throw new Error('Thông tin hoặc quyền tài khoản không hợp lệ.');
+  const password = typeof data.password === 'string' ? data.password.trim() : data.password;
+  if ((!id || password) && (typeof password !== 'string' || password.length < 12 || password.length > 256)) throw new Error('Mật khẩu cần 12–256 ký tự.');
+  let current;
+  if (id) {
+    current = isMongoDBConnected
+      ? (mongoose.isValidObjectId(id) ? await Account.findById(id).select('+password').lean() : null)
+      : inMemoryAccounts.get(id);
+    if (!current) throw new Error('Không tìm thấy tài khoản.');
+  }
+  const username = current?.username || (typeof data.username === 'string' ? data.username.trim().toLowerCase() : '');
+  if (!/^[a-z0-9][a-z0-9_.-]{2,79}$/.test(username) || username === ownerAccount().username) throw new Error('Tên tài khoản không hợp lệ hoặc đã dành cho quản trị gốc.');
+  const changes = {
+    fullName: data.fullName.trim(), role: data.role, active: data.active,
+    permissions: data.role === 'admin' ? [...CONTENT_PERMISSIONS] : [...new Set(data.permissions)],
+    ...(password ? { password: hashPassword(password) } : {})
+  };
+  if (isMongoDBConnected) {
+    if (id) {
+      const account = await Account.findByIdAndUpdate(id, { $set: changes, $inc: { sessionVersion: 1 } }, { new: true, runValidators: true }).lean();
+      return visibleAccount(account);
+    }
+    await Account.init();
+    return visibleAccount((await Account.create({ username, ...changes })).toObject());
+  }
+  if (!id && [...inMemoryAccounts.values()].some(account => account.username === username)) throw new Error('Tên tài khoản đã tồn tại.');
+  const account = { ...current, _id: id || crypto.randomUUID(), username, ...changes, sessionVersion: id ? current.sessionVersion + 1 : 0, createdAt: current?.createdAt || new Date() };
+  inMemoryAccounts.set(account._id, account);
+  return visibleAccount(account);
+}
+
+async function resolveAccountSession(payload) {
+  if (payload.root === true && payload.username === ownerAccount().username) return ownerAccount();
+  if (!payload.accountId) return null;
+  if (!isMongoDBConnected) await connectDB();
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const account = isMongoDBConnected
+    ? (mongoose.isValidObjectId(payload.accountId) ? await Account.findById(payload.accountId).lean() : null)
+    : inMemoryAccounts.get(payload.accountId);
+  if (!account || !account.active || account.sessionVersion !== payload.sessionVersion) return null;
+  return visibleAccount(account);
+}
+
+async function authenticateUser(username, password) {
+  const clean = String(username).trim().toLowerCase();
+  const owner = ownerAccount();
+  if (clean === owner.username) {
+    if (verifyPassword(password, process.env.ADMIN_PASSWORD || '')) return { success: true, user: owner };
+  } else {
+    if (!isMongoDBConnected) await connectDB();
+    if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+    const account = isMongoDBConnected
+      ? await Account.findOne({ username: clean }).select('+password').lean()
+      : [...inMemoryAccounts.values()].find(item => item.username === clean);
+    if (account?.active && verifyPassword(password, account.password)) return { success: true, user: visibleAccount(account) };
+  }
+  return { success: false, message: 'Tài khoản hoặc mật khẩu không chính xác.' };
 }
 
 /**
  * Dữ liệu mặc định Lịch học Tháng 10 dành cho Trainee Program (Học Online, MS Teams link gán sau)
  */
-const DEFAULT_OCTOBER_SCHEDULES = [
-  {
-    title: 'Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống',
-    code: 'TP-M10.01',
-    month: 10,
-    year: 2026,
-    date: '2026-10-06',
-    dayOfWeekText: 'Thứ 3',
-    startTime: '19:30',
-    endTime: '21:30',
-    periods: 'Tiết 1 - 4 (Tối)',
-    type: 'Online',
-    instructor: 'TS. Dương Việt Hằng',
-    room: 'MS Teams Trực Tuyến',
-    teamsUrl: '',
-    note: 'Cài đặt môi trường Node.js & Git. Giới thiệu tổng quan cấu trúc chương trình đào tạo.',
-    status: 'completed',
-    credits: 3
-  },
-  {
-    title: 'Buổi 2: Thiết kế Cơ sở dữ liệu MongoDB Atlas & Mongoose Modeling',
-    code: 'TP-M10.02',
-    month: 10,
-    year: 2026,
-    date: '2026-10-13',
-    dayOfWeekText: 'Thứ 3',
-    startTime: '19:30',
-    endTime: '21:30',
-    periods: 'Tiết 1 - 4 (Tối)',
-    type: 'Online',
-    instructor: 'ThS. Dương Phi Long',
-    room: 'MS Teams Trực Tuyến',
-    teamsUrl: '',
-    note: 'Kết nối MongoDB cluster, schema validation và tối ưu chỉ mục index.',
-    status: 'completed',
-    credits: 3
-  },
-  {
-    title: 'Buổi 3: Xây dựng RESTful API, Middleware & Cơ chế Phân quyền',
-    code: 'TP-M10.03',
-    month: 10,
-    year: 2026,
-    date: '2026-10-20',
-    dayOfWeekText: 'Thứ 3',
-    startTime: '19:30',
-    endTime: '21:30',
-    periods: 'Tiết 1 - 4 (Tối)',
-    type: 'Online',
-    instructor: 'ThS. Phạm Minh Quân',
-    room: 'MS Teams Trực Tuyến',
-    teamsUrl: '',
-    note: 'Thực hành viết API xác thực, phân quyền Admin & Student.',
-    status: 'completed',
-    credits: 3
-  },
-  {
-    title: 'Buổi 4: Hoàn thiện Giao diện Portal, Tích hợp Thời khóa biểu Trực tuyến',
-    code: 'TP-M10.04',
-    month: 10,
-    year: 2026,
-    date: '2026-10-27',
-    dayOfWeekText: 'Thứ 3',
-    startTime: '19:30',
-    endTime: '21:30',
-    periods: 'Tiết 1 - 4 (Tối)',
-    type: 'Online',
-    instructor: 'ThS. Trần Thị Dung',
-    room: 'MS Teams Trực Tuyến',
-    teamsUrl: '',
-    note: 'Đánh giá tiến độ giữa kỳ và kiểm tra tích hợp link MS Teams vào học trực tuyến.',
-    status: 'live',
-    credits: 3
-  },
-  {
-    title: 'Buổi 5: Tối ưu Trải nghiệm, Tải dữ liệu Báo cáo & Đồ án Khóa học',
-    code: 'TP-M10.05',
-    month: 10,
-    year: 2026,
-    date: '2026-10-29',
-    dayOfWeekText: 'Thứ 5',
-    startTime: '19:30',
-    endTime: '21:30',
-    periods: 'Tiết 1 - 4 (Tối)',
-    type: 'Online',
-    instructor: 'TS. Dương Việt Hằng',
-    room: 'MS Teams Trực Tuyến',
-    teamsUrl: '',
-    note: 'Hướng dẫn xuất báo cáo Excel, PDF, lịch iCal và nộp đồ án Trainee.',
-    status: 'upcoming',
-    credits: 3
-  }
-];
+const DEFAULT_OCTOBER_SCHEDULES = JSON.parse(JSON.stringify(importedSchedules));
+
+const DEFAULT_OCTOBER_SCHEDULE_SEED = JSON.parse(JSON.stringify(DEFAULT_OCTOBER_SCHEDULES));
 
 function computeDayOfWeekText(dateStr) {
   if (!dateStr) return 'Thứ 2';
@@ -740,7 +662,12 @@ function computeDayOfWeekText(dateStr) {
 /**
  * Lấy danh sách lịch học chung theo tháng (Mặc định tháng 10/2026)
  */
-async function getAllSchedules({ month = 10, year = 2026 } = {}) {
+async function getAllSchedules({ month, year } = {}) {
+  const today = new Date(Date.now() + 7 * 3600000);
+  month = month === undefined ? today.getUTCMonth() + 1 : Number(month);
+  year = year === undefined ? today.getUTCFullYear() : Number(year);
+  if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year) || year < 2000 || year > 2100) throw new Error('Tháng hoặc năm không hợp lệ.');
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (!isMongoDBConnected) {
     await connectDB();
   }
@@ -751,11 +678,6 @@ async function getAllSchedules({ month = 10, year = 2026 } = {}) {
 
     let items = await Schedule.find({ month: m, year: y }).sort({ date: 1, startTime: 1 }).lean();
 
-    // Nếu chưa có lịch nào trong DB cho tháng 10, tự động khởi tạo lịch tháng 10 mẫu
-    if (items.length === 0 && m === 10) {
-      const inserted = await Schedule.insertMany(DEFAULT_OCTOBER_SCHEDULES);
-      items = inserted.map(doc => doc.toObject());
-    }
 
     return items;
   }
@@ -767,16 +689,28 @@ async function getAllSchedules({ month = 10, year = 2026 } = {}) {
 /**
  * Tạo một buổi học mới vào lịch tháng (Chỉ Admin)
  */
+function scheduleDocumentUrl(value) {
+  if (value === undefined || value === '') return '';
+  if (typeof value !== 'string' || value.length > 2048) throw new Error('Link tài liệu không hợp lệ.');
+  const text = value.trim();
+  if (!text) return '';
+  let url;
+  try { url = new URL(text); } catch { throw new Error('Link tài liệu phải là URL http hoặc https hợp lệ.'); }
+  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Link tài liệu phải là URL http hoặc https hợp lệ.');
+  return text;
+}
+
 async function createSchedule(data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (!data.title) {
     throw new Error('Vui lòng nhập tên buổi học / chuyên đề!');
   }
 
-  const dateStr = data.date || '2026-10-27';
-  const parsedDate = new Date(dateStr + 'T00:00:00');
-  const month = data.month ? Number(data.month) : (parsedDate.getMonth() + 1);
-  const year = data.year ? Number(data.year) : parsedDate.getFullYear();
-  const dayText = data.dayOfWeekText || computeDayOfWeekText(dateStr);
+  const dateStr = String(data.date || '');
+  Schedule.validateTiming({ date: dateStr, startTime: data.startTime || '19:30', endTime: data.endTime || '21:30' });
+  const month = Number(dateStr.slice(5, 7));
+  const year = Number(dateStr.slice(0, 4));
+  const dayText = computeDayOfWeekText(dateStr);
 
   const doc = {
     title: String(data.title).trim(),
@@ -789,11 +723,13 @@ async function createSchedule(data) {
     endTime: data.endTime || '21:30',
     periods: data.periods || 'Tiết 1 - 4 (Tối)',
     type: data.type || 'Online',
-    instructor: data.instructor || 'Mentor UIT',
+    instructor: data.instructor || 'Trainer',
     room: data.room || 'MS Teams Trực Tuyến',
     teamsUrl: data.teamsUrl ? String(data.teamsUrl).trim() : '',
+    documentUrl: scheduleDocumentUrl(data.documentUrl),
     note: data.note ? String(data.note).trim() : '',
     status: data.status || 'upcoming',
+    isTentative: data.isTentative === true,
     credits: Number(data.credits) || 3
   };
 
@@ -812,12 +748,24 @@ async function createSchedule(data) {
  * Cập nhật buổi học trong lịch tháng (Chỉ Admin - có thể gán link MS Teams)
  */
 async function updateSchedule(id, data) {
-  if (data.date && !data.dayOfWeekText) {
-    data.dayOfWeekText = computeDayOfWeekText(data.date);
-    const parsedDate = new Date(data.date + 'T00:00:00');
-    data.month = parsedDate.getMonth() + 1;
-    data.year = parsedDate.getFullYear();
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const existing = isMongoDBConnected
+    ? (mongoose.Types.ObjectId.isValid(id) ? await Schedule.findById(id).lean() : null)
+    : DEFAULT_OCTOBER_SCHEDULES.find(item => item._id === id || item.code === id);
+  if (!existing) throw new Error('Không tìm thấy buổi học.');
+  const requestedIsTentative = data.isTentative;
+  const requestedDocumentUrl = data.documentUrl;
+  const fields = ['title', 'code', 'date', 'startTime', 'endTime', 'periods', 'type', 'instructor', 'room', 'teamsUrl', 'note'];
+  data = Object.fromEntries(fields.filter(field => data[field] !== undefined).map(field => [field, String(data[field]).trim()]));
+  if (requestedDocumentUrl !== undefined) data.documentUrl = scheduleDocumentUrl(requestedDocumentUrl);
+  if (requestedIsTentative !== undefined) {
+    if (typeof requestedIsTentative !== 'boolean') throw new Error('Trạng thái lịch dự kiến không hợp lệ.');
+    data.isTentative = requestedIsTentative;
   }
+  const merged = Schedule.validateTiming({ ...existing, ...data });
+  data.month = Number(merged.date.slice(5, 7));
+  data.year = Number(merged.date.slice(0, 4));
+  data.dayOfWeekText = computeDayOfWeekText(merged.date);
 
   if (isMongoDBConnected) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -845,6 +793,7 @@ async function updateSchedule(id, data) {
  * Xóa một buổi học khỏi lịch tháng (Chỉ Admin)
  */
 async function deleteSchedule(id) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error(`ID buổi học "${id}" không hợp lệ!`);
@@ -870,42 +819,40 @@ async function deleteSchedule(id) {
  * Xóa toàn bộ lịch hoặc khởi tạo lại lịch tháng (Chỉ Admin)
  */
 async function resetSchedules({ month = 10, year = 2026, reseed = true } = {}) {
-  const m = Number(month) || 10;
-  const y = Number(year) || 2026;
-
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const m = Number(month);
+  const y = Number(year);
+  if (!Number.isInteger(m) || m < 1 || m > 12 || !Number.isInteger(y) || y < 2000 || y > 2100) throw new Error('Tháng hoặc năm không hợp lệ.');
+  const sourceItems = DEFAULT_OCTOBER_SCHEDULE_SEED.filter(item => item.month === m && item.year === y);
+  if (reseed && !sourceItems.length) throw new Error('Tháng đang chọn chưa có lịch mẫu từ dữ liệu nguồn.');
+  let items = reseed ? JSON.parse(JSON.stringify(sourceItems)) : [];
   if (isMongoDBConnected) {
     await Schedule.deleteMany({ month: m, year: y });
-    let items = [];
-    if (reseed && m === 10) {
-      items = await Schedule.insertMany(DEFAULT_OCTOBER_SCHEDULES);
+    if (items.length) items = await Schedule.insertMany(items);
+  } else {
+    for (let index = DEFAULT_OCTOBER_SCHEDULES.length - 1; index >= 0; index--) {
+      const item = DEFAULT_OCTOBER_SCHEDULES[index];
+      if (item.month === m && item.year === y) DEFAULT_OCTOBER_SCHEDULES.splice(index, 1);
     }
-    return {
-      success: true,
-      message: reseed ? `Đã làm mới lại toàn bộ lịch học Tháng ${m}/${y}!` : `Đã xóa sạch toàn bộ lịch học Tháng ${m}/${y}!`,
-      count: items.length
-    };
+    DEFAULT_OCTOBER_SCHEDULES.push(...items);
   }
-
-  return {
-    success: true,
-    message: reseed ? `Đã làm mới lại toàn bộ lịch học Tháng ${m}/${y}!` : `Đã xóa sạch toàn bộ lịch học Tháng ${m}/${y}!`,
-    count: DEFAULT_OCTOBER_SCHEDULES.length
-  };
+  return { success: true, message: `Đã cập nhật lịch học Tháng ${m}/${y}.`, count: items.length };
 }
 
 /**
  * Tạo mới yêu cầu hỗ trợ (Quên mật khẩu, feedback, v.v.)
  */
 async function createSupportRequest(data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   let traineeId = String(data.traineeId || data.username || '').trim();
   if (!traineeId) {
-    throw new Error('Vui lòng nhập Mã sinh viên (MSSV) hoặc tên tài khoản!');
+    throw new Error('Vui lòng nhập Mã Trainee (MSSV) hoặc tên tài khoản!');
   }
 
   let fullName = String(data.fullName || '').trim();
   let email = String(data.email || '').trim();
 
-  // Tìm kiếm thông tin sinh viên từ database để bổ sung nếu thiếu
+  // Tìm kiếm thông tin Trainee từ database để bổ sung nếu thiếu
   if (isMongoDBConnected) {
     try {
       const trainee = await Trainee.findOne({
@@ -921,7 +868,7 @@ async function createSupportRequest(data) {
         if (trainee.traineeId) traineeId = trainee.traineeId;
       }
     } catch (e) {
-      console.warn('Lỗi tìm kiếm học viên khi tạo yêu cầu:', e.message);
+      console.warn('Lỗi tìm kiếm Trainee khi tạo yêu cầu:', e.message);
     }
   } else {
     const memTrainee = inMemoryTrainees.find(t => t.traineeId === traineeId || t.email === traineeId);
@@ -933,7 +880,6 @@ async function createSupportRequest(data) {
   }
 
   const doc = {
-    _id: 'req_' + Date.now(),
     type: data.type || 'forgot_password',
     traineeId,
     fullName: fullName || traineeId,
@@ -949,6 +895,7 @@ async function createSupportRequest(data) {
     return created.toObject();
   }
 
+  doc._id = 'req_' + crypto.randomUUID();
   inMemorySupportRequests.unshift(doc);
   return doc;
 }
@@ -957,10 +904,11 @@ async function createSupportRequest(data) {
  * Lấy danh sách yêu cầu hỗ trợ (Chỉ Admin)
  */
 async function getSupportRequests({ type, status } = {}) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
     const query = {};
-    if (type) query.type = type;
-    if (status) query.status = status;
+    if (typeof type === 'string' && type) query.type = type;
+    if (typeof status === 'string' && status) query.status = status;
     return await SupportRequest.find(query).sort({ createdAt: -1 }).lean();
   }
 
@@ -970,10 +918,87 @@ async function getSupportRequests({ type, status } = {}) {
   return list;
 }
 
+async function createLeaveRequest(data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  if (typeof data.traineeId !== 'string' || !/^\d{6,12}$/.test(data.traineeId) || typeof data.fullName !== 'string' || data.fullName.length > 150 ||
+      typeof data.scheduleCode !== 'string' || !/^[\w.-]{1,80}$/.test(data.scheduleCode) ||
+      typeof data.scheduleDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.scheduleDate) ||
+      typeof data.reason !== 'string' || data.reason.trim().length < 10 || data.reason.length > 3000 || data.commit !== true) {
+    throw new Error('Vui lòng kiểm tra MSSV, họ tên, buổi học, lý do (10–3000 ký tự) và cam kết.');
+  }
+  const trainee = await getTraineeById(data.traineeId);
+  const normalizeName = value => value.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi-VN');
+  if (!trainee || normalizeName(trainee.fullName) !== normalizeName(data.fullName)) throw new Error('MSSV và họ tên không khớp danh sách Trainee.');
+  const [year, month] = data.scheduleDate.split('-').map(Number);
+  const schedules = await getAllSchedules({ month, year });
+  const schedule = schedules.find(item => item.code === data.scheduleCode && item.date === data.scheduleDate);
+  if (!schedule) throw new Error('Buổi học không tồn tại hoặc đã thay đổi. Vui lòng tải lại lịch.');
+  const submissionKey = crypto.createHash('sha256').update(`${trainee.traineeId}:${schedule.code}:${schedule.date}`).digest('hex');
+  const doc = {
+    type: 'leave', traineeId: trainee.traineeId, fullName: trainee.fullName,
+    email: trainee.email, message: data.reason.trim(), status: 'pending',
+    scheduleCode: schedule.code, scheduleTitle: schedule.title, scheduleDate: schedule.date,
+    scheduleTime: `${schedule.startTime} - ${schedule.endTime}`, submissionKey,
+    publicVisible: true, createdAt: new Date()
+  };
+  if (isMongoDBConnected) {
+    await SupportRequest.init();
+    try {
+      return await SupportRequest.findOneAndUpdate({ type: 'leave', submissionKey }, { $setOnInsert: doc }, { upsert: true, new: true, runValidators: true }).lean();
+    } catch (err) {
+      if (err.code === 11000) return await SupportRequest.findOne({ type: 'leave', submissionKey }).lean();
+      throw err;
+    }
+  }
+  const existing = inMemorySupportRequests.find(item => item.submissionKey === submissionKey);
+  if (existing) return existing;
+  if (inMemorySupportRequests.length >= 500) throw new Error('Bộ nhớ thử nghiệm đã đầy. Vui lòng cấu hình MongoDB.');
+  doc._id = 'req_' + crypto.randomUUID();
+  inMemorySupportRequests.unshift(doc);
+  return doc;
+}
+
+
+async function getPublicLeaveRequests() {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const list = isMongoDBConnected
+    ? await SupportRequest.find({ type: 'leave', publicVisible: true }).sort({ createdAt: -1 }).limit(100).lean()
+    : inMemorySupportRequests.filter(item => item.type === 'leave' && item.publicVisible).slice(0, 100);
+  return list.map(item => ({
+    id: String(item._id), traineeId: item.traineeId, fullName: item.fullName,
+    reason: item.message, scheduleCode: item.scheduleCode, scheduleTitle: item.scheduleTitle,
+    scheduleDate: item.scheduleDate, scheduleTime: item.scheduleTime,
+    submittedAt: item.createdAt, status: item.status, resolvedAt: item.resolvedAt || null
+  }));
+}
+
+async function getSupportRequest(id) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  if (isMongoDBConnected) return mongoose.isValidObjectId(id) ? SupportRequest.findById(id).lean() : null;
+  return inMemorySupportRequests.find(item => item._id === id) || null;
+}
+
+async function updateLeaveRequest(id, update, claimEmail = false) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const available = { $or: [
+    { emailStatus: { $in: ['pending', 'failed', 'not_configured'] } },
+    { emailStatus: 'sending', emailAttemptedAt: { $lt: new Date(Date.now() - 120000) } }
+  ] };
+  if (isMongoDBConnected) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    return SupportRequest.findOneAndUpdate({ _id: id, type: 'leave', ...(claimEmail ? available : {}) }, { $set: update }, { new: true, runValidators: true }).lean();
+  }
+  const item = inMemorySupportRequests.find(value => value._id === id && value.type === 'leave');
+  if (!item || (claimEmail && (item.emailStatus === 'sent' || (item.emailStatus === 'sending' && new Date(item.emailAttemptedAt).getTime() >= Date.now() - 120000)))) return null;
+  Object.assign(item, update);
+  return item;
+}
+
 /**
  * Xử lý yêu cầu quên mật khẩu: Reset mật khẩu của Trainee về mật khẩu mới (Mặc định 1234)
  */
 async function resolveSupportRequest(requestId, newPassword = '1234', adminUser = 'Admin') {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const passToSet = String(newPassword || '1234').trim();
   const hashedPassword = hashPassword(passToSet);
 
@@ -1026,7 +1051,7 @@ async function resolveSupportRequest(requestId, newPassword = '1234', adminUser 
 
   return {
     request: reqItem,
-    trainee: trainee || null
+    trainee: trainee ? Object.fromEntries(Object.entries(trainee).filter(([key]) => key !== 'password')) : null
   };
 }
 
@@ -1034,6 +1059,7 @@ async function resolveSupportRequest(requestId, newPassword = '1234', adminUser 
  * Xóa yêu cầu hỗ trợ
  */
 async function deleteSupportRequest(requestId) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
     return await SupportRequest.findByIdAndDelete(requestId).lean();
   }
@@ -1051,15 +1077,15 @@ function getDatabaseStatus() {
   return {
     isMongoDBConnected,
     activeDatabaseType,
-    connectionError,
-    uri: process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/:([^:@]{4,})@/, ':****@') : ''
+    connectionError: connectionError ? 'Không kết nối được cơ sở dữ liệu.' : null
   };
 }
 
 /**
- * Admin tổng hợp và cộng sao theo buổi học cho sinh viên (ràng buộc chặt chẽ theo từng buổi học)
+ * Admin tổng hợp và cộng sao theo buổi học cho Trainee (ràng buộc chặt chẽ theo từng buổi học)
  */
 async function awardSessionStars({ traineeId = 'all', scheduleCode = '', scheduleTitle = '', sessionDate = '', stage = 'Giai đoạn 1', stageName = 'Training', starsAwarded = 0, note = '', trainerName = 'Võ Thị Xuân Quỳnh' } = {}) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const addStars = Number(starsAwarded) || 0;
   const targetDate = sessionDate || new Date().toISOString().split('T')[0];
   const targetTrainer = trainerName || 'Võ Thị Xuân Quỳnh';
@@ -1074,7 +1100,7 @@ async function awardSessionStars({ traineeId = 'all', scheduleCode = '', schedul
       : inMemoryTrainees.filter(t => t.traineeId === traineeId);
 
     if (targetTrainees.length === 0) {
-      throw new Error(`Không tìm thấy sinh viên có mã: ${traineeId}`);
+      throw new Error(`Không tìm thấy Trainee có mã: ${traineeId}`);
     }
 
     for (const t of targetTrainees) {
@@ -1128,19 +1154,19 @@ async function awardSessionStars({ traineeId = 'all', scheduleCode = '', schedul
       return {
         success: true,
         count: targetTrainees.length,
-        message: `Đã cập nhật/cộng ${addStars} ⭐ thành công cho ${targetTrainees.length} sinh viên tại ${targetTitle} (In-Memory)!`
+        message: `Đã cập nhật/cộng ${addStars} ⭐ thành công cho ${targetTrainees.length} Trainee tại ${targetTitle} (In-Memory)!`
       };
     } else {
       const refreshed = await getTraineeById(traineeId);
       return {
         success: true,
         trainee: refreshed,
-        message: `Đã cập nhật ${addStars} ⭐ thành công cho sinh viên ${targetTrainees[0].fullName} tại ${targetTitle}!`
+        message: `Đã cập nhật ${addStars} ⭐ thành công cho Trainee ${targetTrainees[0].fullName} tại ${targetTitle}!`
       };
     }
   }
 
-  // Nếu cộng cho TẤT CẢ sinh viên trên MongoDB
+  // Nếu cộng cho TẤT CẢ Trainee trên MongoDB
   if (traineeId === 'all' || !traineeId) {
     const trainees = await Trainee.find();
     const updatedList = [];
@@ -1205,18 +1231,18 @@ async function awardSessionStars({ traineeId = 'all', scheduleCode = '', schedul
     return {
       success: true,
       count: updatedList.length,
-      message: `Đã cập nhật/cộng ${addStars} ⭐ thành công cho ${updatedList.length} sinh viên tại ${targetTitle}!`
+      message: `Đã cập nhật/cộng ${addStars} ⭐ thành công cho ${updatedList.length} Trainee tại ${targetTitle}!`
     };
   }
 
-  // Nếu cộng cho 1 sinh viên cụ thể
+  // Nếu cộng cho 1 Trainee cụ thể
   let trainee = await Trainee.findOne({ traineeId });
   if (!trainee && mongoose.Types.ObjectId.isValid(traineeId)) {
     trainee = await Trainee.findById(traineeId);
   }
 
   if (!trainee) {
-    throw new Error(`Không tìm thấy sinh viên có mã: ${traineeId}`);
+    throw new Error(`Không tìm thấy Trainee có mã: ${traineeId}`);
   }
 
   if (!trainee.sessionStars || trainee.sessionStars.length === 0) {
@@ -1273,12 +1299,12 @@ async function awardSessionStars({ traineeId = 'all', scheduleCode = '', schedul
   return {
     success: true,
     trainee: refreshed,
-    message: `Đã cập nhật ${addStars} ⭐ thành công cho sinh viên ${trainee.fullName} tại ${targetTitle}!`
+    message: `Đã cập nhật ${addStars} ⭐ thành công cho Trainee ${trainee.fullName} tại ${targetTitle}!`
   };
 }
 
 /**
- * Admin cập nhật danh sách sao theo từng buổi học cho tất cả sinh viên (Ràng buộc chặt chẽ theo buổi)
+ * Admin cập nhật danh sách sao theo từng buổi học cho tất cả Trainee (Ràng buộc chặt chẽ theo buổi)
  */
 async function batchUpdateSessionStars({
   sessionCode = '',
@@ -1289,6 +1315,7 @@ async function batchUpdateSessionStars({
   stageName = 'Training',
   studentRatings = [] // array of { traineeId, starsAwarded, note }
 } = {}) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (!sessionCode) {
     throw new Error('Vui lòng chọn hoặc nhập mã buổi học!');
   }
@@ -1425,7 +1452,7 @@ async function batchUpdateSessionStars({
     updatedTrainees.push(t);
   }
 
-  // Tự động sắp xếp lại thứ hạng cho toàn bộ học viên theo số sao mới
+  // Tự động sắp xếp lại thứ hạng cho toàn bộ Trainee theo số sao mới
   await syncRanksByStars();
 
   return {
@@ -1439,10 +1466,11 @@ async function batchUpdateSessionStars({
  * Xóa 1 bản ghi cộng sao buổi học (nếu Admin nhập nhầm)
  */
 async function deleteSessionStar(traineeId, starLogId) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (!isMongoDBConnected) {
     let trainee = inMemoryTrainees.find(t => t.traineeId === traineeId);
     if (!trainee) {
-      throw new Error(`Không tìm thấy sinh viên có mã: ${traineeId}`);
+      throw new Error(`Không tìm thấy Trainee có mã: ${traineeId}`);
     }
     const targetStar = (trainee.sessionStars || []).find(s => String(s._id) === String(starLogId));
     if (!targetStar) {
@@ -1456,7 +1484,7 @@ async function deleteSessionStar(traineeId, starLogId) {
       s.cumulativeStars = runningStars;
     });
 
-    trainee.accumulatedStars = Math.max(0, runningStars);
+    trainee.accumulatedStars = runningStars;
     trainee.starClassification = trainee.accumulatedStars >= 40 ? 'Hạng Kim Cương ⭐⭐⭐⭐' : trainee.accumulatedStars >= 30 ? 'Hạng Vàng ⭐⭐⭐' : 'Hạng Bạc ⭐⭐';
     trainee.starHistory = trainee.sessionStars.map((s, idx) => ({
       period: `Buổi ${idx + 1}`,
@@ -1472,7 +1500,7 @@ async function deleteSessionStar(traineeId, starLogId) {
     trainee = await Trainee.findById(traineeId);
   }
   if (!trainee) {
-    throw new Error(`Không tìm thấy sinh viên có mã: ${traineeId}`);
+    throw new Error(`Không tìm thấy Trainee có mã: ${traineeId}`);
   }
 
   const targetStar = trainee.sessionStars.id(starLogId) || trainee.sessionStars.find(s => String(s._id) === String(starLogId));
@@ -1510,68 +1538,29 @@ async function deleteSessionStar(traineeId, starLogId) {
 async function getSessionStars(traineeId) {
   const trainee = await getTraineeById(traineeId);
   if (!trainee) {
-    throw new Error(`Không tìm thấy sinh viên ${traineeId}`);
+    throw new Error(`Không tìm thấy Trainee ${traineeId}`);
   }
 
   const sessionStars = trainee.sessionStars || [];
 
-  // Tổng hợp dữ liệu theo 3 giai đoạn tiêu chuẩn Trainee Program
-  const stage1Stars = sessionStars
-    .filter(s => s.stage === 'Giai đoạn 1' || !s.stage)
-    .reduce((sum, s) => sum + (Number(s.starsAwarded) || 0), 0);
-
-  const stage2Stars = sessionStars
-    .filter(s => s.stage === 'Giai đoạn 2')
-    .reduce((sum, s) => sum + (Number(s.starsAwarded) || 0), 0);
-
-  const stage3Stars = sessionStars
-    .filter(s => s.stage === 'Giai đoạn 3')
-    .reduce((sum, s) => sum + (Number(s.starsAwarded) || 0), 0);
-
-  const stagesSummary = [
-    {
-      stageId: 'stage-1',
-      stageCode: 'Giai đoạn 1',
-      stageName: 'Training',
-      title: 'Training kiến thức nền tảng & Hệ thống',
-      totalSessions: 15,
-      completedSessions: sessionStars.filter(s => s.stage === 'Giai đoạn 1' || !s.stage).length,
-      starsEarned: stage1Stars,
-      cumulativeStars: stage1Stars,
-      classification: stage1Stars >= 40 ? 'Hạng Kim Cương ⭐⭐⭐⭐' : stage1Stars >= 30 ? 'Hạng Vàng ⭐⭐⭐' : 'Hạng Bạc ⭐⭐',
-      status: 'active',
-      statusText: 'Đang diễn ra',
-      progress: Math.min(100, Math.round((sessionStars.filter(s => s.stage === 'Giai đoạn 1' || !s.stage).length / 15) * 100))
-    },
-    {
-      stageId: 'stage-2',
-      stageCode: 'Giai đoạn 2',
-      stageName: 'Capstone Project',
-      title: 'Thực chiến Dự án & Phát triển Tính năng',
-      totalSessions: 20,
-      completedSessions: sessionStars.filter(s => s.stage === 'Giai đoạn 2').length,
-      starsEarned: stage2Stars,
-      cumulativeStars: stage1Stars + stage2Stars,
-      classification: stage2Stars > 0 ? (stage2Stars >= 40 ? 'Hạng Kim Cương ⭐⭐⭐⭐' : 'Hạng Vàng ⭐⭐⭐') : 'Chưa bắt đầu',
-      status: stage2Stars > 0 ? 'active' : 'upcoming',
-      statusText: stage2Stars > 0 ? 'Đang diễn ra' : 'Sắp tới',
-      progress: Math.min(100, Math.round((sessionStars.filter(s => s.stage === 'Giai đoạn 2').length / 20) * 100))
-    },
-    {
-      stageId: 'stage-3',
-      stageCode: 'Giai đoạn 3',
-      stageName: 'Đánh giá & Tốt nghiệp',
-      title: 'Bảo vệ Đồ án & Đánh giá Tốt nghiệp',
-      totalSessions: 10,
-      completedSessions: sessionStars.filter(s => s.stage === 'Giai đoạn 3').length,
-      starsEarned: stage3Stars,
-      cumulativeStars: stage1Stars + stage2Stars + stage3Stars,
-      classification: stage3Stars > 0 ? 'Xuất sắc' : 'Chưa bắt đầu',
-      status: stage3Stars > 0 ? 'active' : 'upcoming',
-      statusText: stage3Stars > 0 ? 'Đang diễn ra' : 'Sắp tới',
-      progress: Math.min(100, Math.round((sessionStars.filter(s => s.stage === 'Giai đoạn 3').length / 10) * 100))
-    }
-  ];
+  const groups = new Map();
+  for (const log of sessionStars) {
+    const code = log.stage || 'Giai đoạn 1';
+    if (!groups.has(code)) groups.set(code, []);
+    groups.get(code).push(log);
+  }
+  const plannedSessions = isMongoDBConnected ? await Schedule.countDocuments() : importedSchedules.length;
+  let cumulative = 0;
+  const stagesSummary = [...groups].map(([code, logs], index) => {
+    const starsEarned = logs.reduce((sum, log) => sum + (Number(log.starsAwarded) || 0), 0);
+    cumulative += starsEarned;
+    return {
+      stageId: 'stage-' + (index + 1), stageCode: code, stageName: logs[0].stageName || code,
+      title: logs[0].stageName || code, totalSessions: plannedSessions || null, completedSessions: logs.length,
+      starsEarned, cumulativeStars: cumulative, classification: 'Đã ghi nhận',
+      status: 'active', statusText: 'Đã ghi nhận ' + logs.length + ' buổi', progress: plannedSessions ? Math.min(100, Math.round(logs.length / plannedSessions * 100)) : null
+    };
+  });
 
   return {
     trainee,
@@ -1598,92 +1587,35 @@ let inMemoryQuestions = [
     status: 'answered',
     answer: 'Chào em, lỗi này thường do IP mạng Wifi em đang dùng chưa được thêm vào whitelist của MongoDB Atlas. Em đăng nhập vào trang chủ MongoDB Cloud -> vào mục Security -> Network Access -> bấm Add IP Address -> chọn "Allow Access From Anywhere (0.0.0.0/0)" hoặc IP hiện tại rồi đợi 1 phút và thử lại nhé!',
     answeredBy: 'TS. Dương Việt Hằng',
-    answeredRole: 'Giảng viên Hướng dẫn UIT',
+    answeredRole: 'Trainer',
     answeredAt: new Date(Date.now() - 3600000 * 24),
     likesCount: 15,
     likedBy: [],
     createdAt: new Date(Date.now() - 3600000 * 26)
-  },
-  {
-    _id: 'q_mock_02',
-    code: 'Q-2026-002',
-    mssv: 'Ẩn danh',
-    fullName: 'Sinh viên ẩn danh',
-    isAnonymous: true,
-    category: 'Bài tập & Đồ án',
-    title: 'Hạn chót nộp bài tập Tuần 2 và cách gắn link GitHub',
-    content: 'Thầy cô cho em hỏi hạn nộp bài tập Tuần 2 môn Phát triển ứng dụng Web là ngày nào ạ? Khi nộp có cần deploy lên Vercel không hay chỉ cần nộp link GitHub?',
-    status: 'answered',
-    answer: 'Chào bạn, deadline nộp bài tập Tuần 2 là 23h59 Chủ nhật tuần này. Về yêu cầu nộp: bạn chỉ cần commit code lên Github repository (chế độ Public) và gửi link repo. Khuyến khích (được cộng thêm sao) nếu bạn deploy bản demo qua Render hoặc Vercel nhé!',
-    answeredBy: 'ThS. Nguyễn Văn A',
-    answeredRole: 'Mentor Trainee Program',
-    answeredAt: new Date(Date.now() - 3600000 * 12),
-    likesCount: 8,
-    likedBy: [],
-    createdAt: new Date(Date.now() - 3600000 * 15)
-  },
-  {
-    _id: 'q_mock_03',
-    code: 'Q-2026-003',
-    mssv: '25520112',
-    fullName: 'Nguyễn Minh Tuấn',
-    isAnonymous: false,
-    category: 'Lịch học & Điểm danh',
-    title: 'Em có thể xem lại video ghi hình buổi học trực tuyến ở đâu?',
-    content: 'Buổi học thứ 3 vừa rồi em có việc bận gia đình nên xin nghỉ có phép. Thầy cô cho em hỏi đường link video Recording của buổi đó được đăng tải ở đâu để em ôn lại bài ạ?',
-    status: 'answered',
-    answer: 'Chào Tuấn, tất cả video ghi hình buổi học được tự động lưu trong kênh Microsoft Teams của lớp -> Tab "Files" -> thư mục "Recordings". Ngoài ra Ban Điều phối cũng cập nhật link trực tiếp tại mục Lịch đào tạo trên Cổng thông tin này nhé.',
-    answeredBy: 'Ban Điều phối UIT',
-    answeredRole: 'Quản trị viên Đào tạo',
-    answeredAt: new Date(Date.now() - 3600000 * 4),
-    likesCount: 11,
-    likedBy: [],
-    createdAt: new Date(Date.now() - 3600000 * 8)
-  },
-  {
-    _id: 'q_mock_04',
-    code: 'Q-2026-004',
-    mssv: 'Ẩn danh',
-    fullName: 'Sinh viên ẩn danh',
-    isAnonymous: true,
-    category: 'Chương trình Trainee',
-    title: 'Quy chế xét tặng sao thưởng ⭐ trên Bảng xếp hạng Trainee',
-    content: 'Cho em hỏi cơ chế cộng sao rèn luyện trên Bảng xếp hạng: nếu phát biểu xây dựng bài trong buổi học online hoặc hoàn thành bài tập sớm thì được cộng bao nhiêu sao ạ?',
-    status: 'pending',
-    answer: '',
-    answeredBy: '',
-    answeredRole: '',
-    answeredAt: null,
-    likesCount: 5,
-    likedBy: [],
-    createdAt: new Date(Date.now() - 3600000 * 2)
   }
 ];
 
 async function getAllQuestions({ category = '', status = '', isAnonymous = '', search = '' } = {}) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
-    try {
-      const query = {};
-      if (category && category !== 'all') query.category = category;
-      if (status && status !== 'all') query.status = status;
-      if (isAnonymous === 'true') query.isAnonymous = true;
-      else if (isAnonymous === 'false') query.isAnonymous = false;
+    const query = {};
+    if (category && category !== 'all') query.category = category;
+    if (status && status !== 'all') query.status = status;
+    if (isAnonymous === 'true') query.isAnonymous = true;
+    else if (isAnonymous === 'false') query.isAnonymous = false;
 
-      if (search && search.trim()) {
-        const safeSearch = escapeRegex(search.trim());
-        query.$or = [
-          { title: { $regex: safeSearch, $options: 'i' } },
-          { content: { $regex: safeSearch, $options: 'i' } },
-          { mssv: { $regex: safeSearch, $options: 'i' } },
-          { code: { $regex: safeSearch, $options: 'i' } }
-        ];
-      }
-
-      const list = await Question.find(query).sort({ createdAt: -1 }).lean();
-      if (list && list.length > 0) return list;
-    } catch (err) {
-      console.warn('Lỗi truy vấn Question từ MongoDB, chuyển sang inMemory:', err.message);
+    if (search && search.trim()) {
+      const safeSearch = escapeRegex(search.trim());
+      query.$or = [
+        { title: { $regex: safeSearch, $options: 'i' } },
+        { content: { $regex: safeSearch, $options: 'i' } },
+        { mssv: { $regex: safeSearch, $options: 'i' } },
+        { code: { $regex: safeSearch, $options: 'i' } }
+      ];
     }
+
+    const list = await Question.find(query).sort({ createdAt: -1 }).lean();
+    return list;
   }
 
   // Fallback to inMemoryQuestions
@@ -1712,25 +1644,26 @@ async function getAllQuestions({ category = '', status = '', isAnonymous = '', s
 }
 
 async function createQuestion(data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const isAnonymous = data.isAnonymous === true || data.isAnonymous === 'true';
   let mssv = String(data.mssv || '').trim();
   let fullName = String(data.fullName || '').trim();
 
   if (isAnonymous) {
     if (!mssv) mssv = 'Ẩn danh';
-    fullName = 'Sinh viên ẩn danh';
+    fullName = 'Trainee ẩn danh';
   } else {
     if (!mssv) {
-      throw new Error('Vui lòng nhập Mã số sinh viên (MSSV) hoặc chọn chế độ Ẩn danh!');
+      throw new Error('Vui lòng nhập Mã số Trainee (MSSV) hoặc chọn chế độ Ẩn danh!');
     }
-    // Tra cứu tên sinh viên nếu có
+    // Tra cứu tên Trainee nếu có
     if (!fullName && isMongoDBConnected) {
       try {
         const trainee = await Trainee.findOne({ traineeId: mssv }).lean();
         if (trainee) fullName = trainee.fullName;
       } catch (e) {}
     }
-    if (!fullName) fullName = `Sinh viên ${mssv}`;
+    if (!fullName) fullName = `Trainee ${mssv}`;
   }
 
   const title = String(data.title || '').trim();
@@ -1746,7 +1679,7 @@ async function createQuestion(data) {
     code,
     mssv: isAnonymous ? 'Ẩn danh' : mssv,
     realMssv: isAnonymous ? mssv : mssv,
-    fullName: isAnonymous ? 'Sinh viên ẩn danh' : fullName,
+    fullName: isAnonymous ? 'Trainee ẩn danh' : fullName,
     isAnonymous,
     category: data.category || 'Kỹ thuật & Code',
     title,
@@ -1763,12 +1696,8 @@ async function createQuestion(data) {
   };
 
   if (isMongoDBConnected) {
-    try {
-      const created = await Question.create(newDoc);
-      return created.toObject();
-    } catch (err) {
-      console.warn('Lỗi lưu Question vào MongoDB, lưu tạm vào inMemory:', err.message);
-    }
+    const created = await Question.create(newDoc);
+    return created.toObject();
   }
 
   newDoc._id = `q_${Date.now()}`;
@@ -1776,41 +1705,27 @@ async function createQuestion(data) {
   return newDoc;
 }
 
-async function answerQuestion(questionId, answer, answeredBy = 'Giảng viên UIT', answeredRole = 'Ban Cố vấn & Đào tạo') {
-  if (!answer || !answer.trim()) {
-    throw new Error('Vui lòng nhập nội dung câu trả lời!');
-  }
-
+async function answerQuestion(questionId, answer, answeredBy = 'Trainer', answeredRole = 'Ban Tổ chức Trainee Program') {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  if (typeof answer !== 'string' || !answer.trim() || answer.length > 5000) throw new Error('Vui lòng nhập câu trả lời từ 1 đến 5000 ký tự.');
+  const changes = {
+    status: 'answered', answer: answer.trim(),
+    answeredBy: String(answeredBy || 'Trainer').trim(),
+    answeredRole: String(answeredRole || 'Trainer').trim(), answeredAt: new Date()
+  };
   if (isMongoDBConnected) {
-    try {
-      const updated = await Question.findByIdAndUpdate(
-        questionId,
-        {
-          status: 'answered',
-          answer: answer.trim(),
-          answeredBy: answeredBy.trim(),
-          answeredRole: answeredRole.trim(),
-          answeredAt: new Date()
-        },
-        { new: true }
-      );
-      if (updated) return updated.toObject();
-    } catch (err) {
-      console.warn('Lỗi cập nhật câu trả lời MongoDB:', err.message);
-    }
+    const filter = mongoose.Types.ObjectId.isValid(questionId) ? { _id: questionId } : { code: String(questionId) };
+    const updated = await Question.findOneAndUpdate(filter, { $set: changes }, { new: true, runValidators: true });
+    return updated ? updated.toObject() : null;
   }
-
   const item = inMemoryQuestions.find(q => q._id === questionId || q.code === questionId);
-  if (!item) throw new Error('Không tìm thấy câu hỏi để trả lời!');
-  item.status = 'answered';
-  item.answer = answer.trim();
-  item.answeredBy = answeredBy.trim();
-  item.answeredRole = answeredRole.trim();
-  item.answeredAt = new Date();
+  if (!item) return null;
+  Object.assign(item, changes);
   return item;
 }
 
 async function toggleLikeQuestion(questionId, userId = 'anonymous_user') {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
     try {
       const q = await Question.findById(questionId);
@@ -1828,6 +1743,7 @@ async function toggleLikeQuestion(questionId, userId = 'anonymous_user') {
         return q.toObject();
       }
     } catch (err) {
+      if (isProduction) throw err;
       console.warn('Lỗi like question MongoDB:', err.message);
     }
   }
@@ -1847,21 +1763,14 @@ async function toggleLikeQuestion(questionId, userId = 'anonymous_user') {
 }
 
 async function deleteQuestion(questionId) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
-    try {
-      const deleted = await Question.findByIdAndDelete(questionId);
-      if (deleted) return deleted.toObject();
-    } catch (err) {
-      console.warn('Lỗi xóa Question MongoDB:', err.message);
-    }
+    const filter = mongoose.Types.ObjectId.isValid(questionId) ? { _id: questionId } : { code: String(questionId) };
+    const deleted = await Question.findOneAndDelete(filter);
+    return deleted ? deleted.toObject() : null;
   }
-
   const idx = inMemoryQuestions.findIndex(q => q._id === questionId || q.code === questionId);
-  if (idx !== -1) {
-    const deleted = inMemoryQuestions.splice(idx, 1)[0];
-    return deleted;
-  }
-  throw new Error('Không tìm thấy câu hỏi cần xóa!');
+  return idx === -1 ? null : inMemoryQuestions.splice(idx, 1)[0];
 }
 
 // ==========================================
@@ -2041,39 +1950,39 @@ const DEFAULT_11_ASSIGNMENTS = [
 let inMemoryAssignments = JSON.parse(JSON.stringify(DEFAULT_11_ASSIGNMENTS));
 
 /**
- * Lấy danh sách 11 bài tập (tự động khởi tạo seed vào MongoDB nếu chưa có)
+ * Lấy danh mục bài tập đang hiển thị.
  */
 async function getAllAssignments() {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   if (isMongoDBConnected) {
-    try {
-      const count = await Assignment.countDocuments();
-      if (count === 0) {
-        console.log('🌱 [MongoDB] Khởi tạo dữ liệu mẫu 11 bài tập Trainee Program...');
-        await Assignment.insertMany(DEFAULT_11_ASSIGNMENTS);
-      }
-      const list = await Assignment.find().sort({ assignmentId: 1 });
-      return list.map(item => item.toObject());
-    } catch (err) {
-      console.warn('Lỗi lấy Assignments từ MongoDB:', err.message);
-    }
+    const list = await Assignment.find({ deletedAt: null }).sort({ assignmentId: 1 });
+    return list.map(item => item.toObject());
   }
-  return inMemoryAssignments;
+  return inMemoryAssignments.filter(item => !item.deletedAt).sort((a, b) => a.assignmentId - b.assignmentId);
 }
 
-/**
- * Cập nhật thông tin hoặc đường link của 1 bài tập cụ thể
- */
-async function updateAssignment(assignmentId, updateData) {
-  const idNum = Number(assignmentId);
-  if (isNaN(idNum) || idNum < 1 || idNum > 11) {
-    throw new Error('Mã bài tập không hợp lệ (Phải từ 1 đến 11)!');
-  }
-
+function assignmentFields(updateData) {
   const safeFields = {};
-  if (updateData.title !== undefined) safeFields.title = String(updateData.title).trim();
-  if (updateData.desc !== undefined) safeFields.desc = String(updateData.desc).trim();
-  if (updateData.link !== undefined) safeFields.link = String(updateData.link).trim();
-  if (updateData.status !== undefined) safeFields.status = updateData.status;
+  for (const [field, maxLength] of [['title', 240], ['desc', 3000], ['link', 2048]]) {
+    if (updateData[field] === undefined) continue;
+    if (typeof updateData[field] !== 'string' || updateData[field].length > maxLength) throw new Error('Thông tin bài tập không hợp lệ.');
+    safeFields[field] = updateData[field].trim();
+  }
+  if (safeFields.title !== undefined && !safeFields.title) throw new Error('Vui lòng nhập tên bài tập.');
+  if (safeFields.link === '#') safeFields.link = '';
+  if (safeFields.link) {
+    let url;
+    try { url = new URL(safeFields.link); } catch { throw new Error('Link nộp bài phải là URL http hoặc https hợp lệ.'); }
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Link nộp bài phải là URL http hoặc https hợp lệ.');
+  }
+  if (updateData.details !== undefined) {
+    if (typeof updateData.details !== 'string' || updateData.details.length > 12000) throw new Error('Chi tiết bài tập tối đa 12000 ký tự.');
+    safeFields.details = updateData.details.trim();
+  }
+  if (updateData.status !== undefined) {
+    if (!['active', 'locked', 'closed', 'completed'].includes(updateData.status)) throw new Error('Trạng thái bài tập không hợp lệ.');
+    safeFields.status = updateData.status === 'completed' ? 'active' : updateData.status;
+  }
   if (updateData.isCurrent !== undefined) safeFields.isCurrent = Boolean(updateData.isCurrent);
   if (updateData.score !== undefined) safeFields.score = Number(updateData.score) || 0;
   if (updateData.xp !== undefined) safeFields.xp = Number(updateData.xp) || 0;
@@ -2083,35 +1992,76 @@ async function updateAssignment(assignmentId, updateData) {
       safeFields.deadline = null;
     } else {
       const d = new Date(updateData.deadline);
-      safeFields.deadline = isNaN(d.getTime()) ? null : d;
+      if (isNaN(d.getTime())) throw new Error('Thời hạn nộp bài không hợp lệ.');
+      safeFields.deadline = d;
     }
   }
 
+  return safeFields;
+}
+
+async function createAssignment(data) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const safeFields = assignmentFields(data);
+  if (!safeFields.title) throw new Error('Vui lòng nhập tên bài tập.');
+  const offsets = ['offset-center', 'offset-right-1', 'offset-right-2', 'offset-right-1', 'offset-center', 'offset-left-1', 'offset-left-2', 'offset-left-1'];
   if (isMongoDBConnected) {
-    try {
-      let doc = await Assignment.findOne({ assignmentId: idNum });
-      if (!doc) {
-        // Nếu chưa có, tạo mới dựa trên mặc định
-        const def = DEFAULT_11_ASSIGNMENTS.find(a => a.assignmentId === idNum) || { assignmentId: idNum, title: `Bài ${idNum}` };
-        doc = new Assignment({ ...def, ...safeFields });
-      } else {
-        Object.assign(doc, safeFields);
+    await Assignment.init();
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const last = await Assignment.findOne().sort({ assignmentId: -1 }).select('assignmentId').lean();
+      const id = (last?.assignmentId || 0) + 1;
+      if (!Number.isSafeInteger(id)) throw new Error('Không thể cấp thêm mã bài tập.');
+      try {
+        const doc = await Assignment.create({ status: 'locked', ...safeFields, assignmentId: id, offset: offsets[(id - 1) % offsets.length] });
+        return doc.toObject();
+      } catch (error) {
+        if (error.code !== 11000) throw error;
       }
-      await doc.save();
-      return doc.toObject();
-    } catch (err) {
-      console.warn('Lỗi cập nhật Assignment trên MongoDB:', err.message);
     }
+    throw new Error('Có người khác đang thêm bài tập. Vui lòng thử lại.');
+  }
+  const id = Math.max(0, ...inMemoryAssignments.map(item => item.assignmentId)) + 1;
+  if (!Number.isSafeInteger(id)) throw new Error('Không thể cấp thêm mã bài tập.');
+  const doc = { status: 'locked', ...safeFields, assignmentId: id, offset: offsets[(id - 1) % offsets.length] };
+  inMemoryAssignments.push(doc);
+  return doc;
+}
+
+/**
+ * Cập nhật thông tin hoặc đường link của 1 bài tập cụ thể
+ */
+async function updateAssignment(assignmentId, updateData) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const idNum = Number(assignmentId);
+  if (!Number.isSafeInteger(idNum) || idNum < 1) throw new Error('Mã bài tập không hợp lệ.');
+  const safeFields = assignmentFields(updateData);
+  if (isMongoDBConnected) {
+    const doc = await Assignment.findOneAndUpdate({ assignmentId: idNum, deletedAt: null }, { $set: safeFields }, { new: true, runValidators: true });
+    if (!doc) throw new Error('Không tìm thấy bài tập cần cập nhật.');
+    return doc.toObject();
   }
 
   // Cập nhật in-memory
-  const idx = inMemoryAssignments.findIndex(a => a.assignmentId === idNum);
+  const idx = inMemoryAssignments.findIndex(a => a.assignmentId === idNum && !a.deletedAt);
   if (idx !== -1) {
     inMemoryAssignments[idx] = { ...inMemoryAssignments[idx], ...safeFields };
     return inMemoryAssignments[idx];
   }
 
   throw new Error('Không tìm thấy bài tập cần cập nhật!');
+}
+
+async function deleteAssignment(assignmentId) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const id = Number(assignmentId);
+  if (!Number.isSafeInteger(id) || id < 1) throw new Error('Mã bài tập không hợp lệ.');
+  if (isMongoDBConnected) {
+    return Boolean(await Assignment.findOneAndUpdate({ assignmentId: id, deletedAt: null }, { $set: { deletedAt: new Date() } }, { new: true, runValidators: true }));
+  }
+  const item = inMemoryAssignments.find(assignment => assignment.assignmentId === id && !assignment.deletedAt);
+  if (!item) return false;
+  item.deletedAt = new Date();
+  return true;
 }
 
 /**
@@ -2138,6 +2088,9 @@ async function batchUpdateAssignments(assignmentsList) {
  * Khôi phục 11 bài tập về mặc định ban đầu
  */
 async function resetAssignments() {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const hasSubmissions = isMongoDBConnected ? await AssignmentSubmission.exists({}) : inMemoryAssignmentSubmissions.size > 0;
+  if (hasSubmissions) throw new Error('Đã có xác nhận bài nộp; không thể khôi phục danh mục mẫu vì có thể làm sai liên kết bài tập.');
   if (isMongoDBConnected) {
     try {
       await Assignment.deleteMany({});
@@ -2145,6 +2098,7 @@ async function resetAssignments() {
       const list = await Assignment.find().sort({ assignmentId: 1 });
       return list.map(item => item.toObject());
     } catch (err) {
+      if (isProduction) throw err;
       console.warn('Lỗi reset Assignments trên MongoDB:', err.message);
     }
   }
@@ -2153,7 +2107,101 @@ async function resetAssignments() {
   return inMemoryAssignments;
 }
 
+
+const AssignmentSubmission = require('../models/AssignmentSubmission');
+const inMemoryAssignmentSubmissions = new Map();
+
+async function getAssignmentSubmissions(assignmentId) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const id = Number(assignmentId);
+  if (!(await getAllAssignments()).some(item => item.assignmentId === id)) throw new Error('Không tìm thấy bài tập.');
+  const trainees = await getAllTrainees();
+  const records = isMongoDBConnected
+    ? await AssignmentSubmission.find({ assignmentId: id }).lean()
+    : [...inMemoryAssignmentSubmissions.values()].filter(item => item.assignmentId === id);
+  return trainees.map(trainee => ({
+    traineeId: trainee.traineeId,
+    fullName: trainee.fullName,
+    ...(records.find(item => item.traineeId === trainee.traineeId) || { status: 'not_submitted', responseId: '', submittedAt: null, note: '' })
+  }));
+}
+
+async function updateAssignmentSubmission(assignmentId, traineeId, data, reviewer) {
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const id = Number(assignmentId);
+  if (!(await getAllAssignments()).some(item => item.assignmentId === id)) throw new Error('Không tìm thấy bài tập.');
+  if (!(await getTraineeById(traineeId))) throw new Error('Không tìm thấy Trainee.');
+  if (!['not_submitted', 'submitted', 'needs_revision', 'completed'].includes(data.status)) throw new Error('Trạng thái ghi nhận không hợp lệ.');
+  if (typeof data.responseId !== 'string' || data.responseId.length > 120 || typeof data.note !== 'string' || data.note.length > 2000) throw new Error('Mã phản hồi hoặc ghi chú không hợp lệ.');
+  const submittedAt = data.submittedAt ? new Date(data.submittedAt) : null;
+  if (submittedAt && !Number.isFinite(submittedAt.getTime())) throw new Error('Thời điểm nộp không hợp lệ.');
+  const record = {
+    assignmentId: id, traineeId, status: data.status,
+    responseId: data.responseId.trim(), note: data.note.trim(), submittedAt,
+    reviewedBy: String(reviewer || 'admin'), reviewedAt: new Date()
+  };
+  if (isMongoDBConnected) {
+    return AssignmentSubmission.findOneAndUpdate({ assignmentId: id, traineeId }, { $set: record },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }).lean();
+  }
+  inMemoryAssignmentSubmissions.set(id + ':' + traineeId, record);
+  return record;
+}
+
+
+async function changeAccountPassword(user, currentPassword, newPassword) {
+  if (user.isOwner) throw new Error('Tài khoản gốc đổi mật khẩu qua ADMIN_PASSWORD trên máy chủ.');
+  if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const account = isMongoDBConnected
+    ? await Account.findById(user.id).select('+password')
+    : inMemoryAccounts.get(user.id);
+  if (!account || !verifyPassword(currentPassword, account.password)) throw new Error('Mật khẩu hiện tại không chính xác.');
+  if (typeof newPassword !== 'string' || newPassword.trim().length < 12 || newPassword.length > 256) throw new Error('Mật khẩu mới cần 12–256 ký tự.');
+  account.password = hashPassword(newPassword.trim());
+  account.sessionVersion += 1;
+  if (isMongoDBConnected) await account.save();
+}
+
+async function saveAttendanceEntry(traineeId, sessionCode, data, actor) {
+  if (!/^[\w.-]{1,80}$/.test(sessionCode) || !/^\d{6,12}$/.test(traineeId) ||
+      !['present', 'absent_excused', 'absent_unexcused', 'not_recorded'].includes(data.attendanceStatus) ||
+      typeof data.starsAwarded !== 'number' || !Number.isFinite(data.starsAwarded) || data.starsAwarded < -20 || data.starsAwarded > 100 ||
+      typeof data.note !== 'string' || data.note.length > 1000 || !/^\d{4}-\d{2}-\d{2}$/.test(data.sessionDate || '')) throw new Error('Thông tin điểm danh hoặc điểm sao không hợp lệ.');
+  const trainee = await getTraineeById(traineeId);
+  if (!trainee) throw new Error('Không tìm thấy Trainee.');
+  const [year, month] = data.sessionDate.split('-').map(Number);
+  const schedule = (await getAllSchedules({ month, year })).find(item => item.code === sessionCode && item.date === data.sessionDate);
+  if (!schedule) throw new Error('Không tìm thấy buổi học.');
+  const logs = JSON.parse(JSON.stringify(trainee.sessionStars || []));
+  const previous = logs.find(log => log.sessionCode === sessionCode);
+  const log = {
+    ...previous, _id: previous?._id || new mongoose.Types.ObjectId().toString(),
+    sessionId: String(schedule._id || schedule.code), sessionCode,
+    sessionDate: schedule.date, sessionTitle: schedule.title, trainerName: schedule.instructor || '',
+    stage: previous?.stage || 'Giai đoạn 1', stageName: previous?.stageName || 'Vòng 1',
+    attendanceStatus: data.attendanceStatus, starsAwarded: data.starsAwarded,
+    note: data.note.trim(), updatedBy: actor, updatedAt: new Date()
+  };
+  if (previous) logs[logs.indexOf(previous)] = log;
+  else logs.push(log);
+  const count = status => logs.filter(item => item.attendanceStatus === status).length;
+  const updated = await updateTrainee(traineeId, {
+    sessionStars: logs, attendedSessions: count('present'),
+    totalSessions: count('present') + count('absent_excused') + count('absent_unexcused'),
+    absentExcused: count('absent_excused'), absentUnexcused: count('absent_unexcused')
+  }, trainee.__v || 0);
+  return Object.fromEntries(['traineeId', 'sessionStars', 'accumulatedStars', 'attendedSessions', 'totalSessions', 'absentExcused', 'absentUnexcused', 'attendanceRate'].map(key => [key, updated[key]]));
+}
+
 module.exports = {
+  changeAccountPassword,
+  saveAttendanceEntry,
+  resolveAccountSession,
+  getAccounts,
+  saveAccount,
+  getPublicLeaveRequests,
+  getAssignmentSubmissions,
+  updateAssignmentSubmission,
   connectDB,
   getAllTrainees,
   getTraineeById,
@@ -2171,6 +2219,9 @@ module.exports = {
   getDatabaseStatus,
   computeAssignmentClassification,
   createSupportRequest,
+  createLeaveRequest,
+  getSupportRequest,
+  updateLeaveRequest,
   getSupportRequests,
   resolveSupportRequest,
   deleteSupportRequest,
@@ -2186,6 +2237,8 @@ module.exports = {
   deleteQuestion,
   // 11 Assignments
   getAllAssignments,
+  createAssignment,
+  deleteAssignment,
   updateAssignment,
   batchUpdateAssignments,
   resetAssignments,
