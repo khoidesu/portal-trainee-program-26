@@ -16,37 +16,116 @@
 // AUTHENTICATION & ACCESS CONTROL
 // ==========================================
 
+let authSessionSyncPromise = null;
+let authSessionListenersBound = false;
+let lastAuthSessionSyncAt = 0;
+
+function getAuthLandingTab(user) {
+  if (!user) return 'schedule';
+  if (user.isOwner || user.permissions?.includes('accounts:manage')) return 'admin';
+  if (user.role === 'trainee') return 'profile';
+  return 'schedule';
+}
+
+async function refreshAuthSession(redirectOnLogin = false) {
+  if (authSessionSyncPromise) return authSessionSyncPromise;
+  authSessionSyncPromise = (async () => {
+    const previousUser = state.currentUser;
+    let nextUser = previousUser || null;
+    try {
+      const token = sessionStorage.getItem('uit_trainee_auth_token') || localStorage.getItem('uit_trainee_auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch('/api/auth/me', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        if (result.user) {
+          nextUser = result.user;
+          try {
+            sessionStorage.setItem('uit_auth_user_cache', JSON.stringify(nextUser));
+            localStorage.setItem('uit_auth_user_cache', JSON.stringify(nextUser));
+          } catch {}
+        } else if (!token) {
+          nextUser = null;
+          try {
+            sessionStorage.removeItem('uit_auth_user_cache');
+            localStorage.removeItem('uit_auth_user_cache');
+            sessionStorage.removeItem('uit_trainee_auth_token');
+            localStorage.removeItem('uit_trainee_auth_token');
+          } catch {}
+        }
+      }
+    } catch {}
+
+    state.currentUser = nextUser;
+    renderAuthState();
+
+    const identityChanged = nextUser && (!previousUser || previousUser.username !== nextUser.username || previousUser.role !== nextUser.role);
+    if (redirectOnLogin && identityChanged && typeof switchTab === 'function') {
+      switchTab(getAuthLandingTab(nextUser));
+    }
+    return Boolean(nextUser);
+  })().finally(() => {
+    authSessionSyncPromise = null;
+  });
+  return authSessionSyncPromise;
+}
+
 async function initAuth() {
   try {
-    localStorage.removeItem('uit_trainee_auth_token');
-    localStorage.removeItem('uit_trainee_auth_user');
-    const response = await fetch('/api/auth/me', { cache: 'no-store' });
-    const result = await response.json();
-    state.currentUser = response.ok ? result.user : null;
-  } catch {
-    state.currentUser = null;
-  }
-  // Khách & Trainee truy cập trực tiếp, KHÔNG chuyển hướng sang /login
-  renderAuthState();
-  return true;
+    const cached = sessionStorage.getItem('uit_auth_user_cache') || localStorage.getItem('uit_auth_user_cache');
+    if (cached && !state.currentUser) {
+      state.currentUser = JSON.parse(cached);
+      renderAuthState();
+    }
+  } catch {}
+  await refreshAuthSession(false);
+  state.authInitialized = true;
+  return Boolean(state.currentUser);
+}
+
+function setupAuthSessionSync() {
+  if (authSessionListenersBound) return;
+  authSessionListenersBound = true;
+  const sync = () => {
+    if (document.visibilityState === 'hidden' || Date.now() - lastAuthSessionSyncAt < 500) return;
+    lastAuthSessionSyncAt = Date.now();
+    refreshAuthSession(true).catch(() => {});
+  };
+  window.addEventListener('pageshow', sync);
+  window.addEventListener('focus', sync);
+  document.addEventListener('visibilitychange', sync);
 }
 
 function renderAuthState() {
   const u = state.currentUser;
-  const isAdmin = Boolean(u);
+  const isTrainee = Boolean(u && u.role === 'trainee');
+  const isAdmin = Boolean(u && u.role !== 'trainee');
+  const canAccessAdmin = Boolean(u && (u.isOwner || u.role === 'admin' || canManage('accounts:manage')));
+  const isLoggedIn = Boolean(u);
 
   // 1. Sidebar Sections: Luôn hiển thị Học vụ cho Trainee, Quản trị Admin chỉ hiển thị khi đã đăng nhập Admin
   if (elements.studentOnlyNavSections) {
     elements.studentOnlyNavSections.style.display = 'block';
   }
+  // Nhóm Hồ sơ cá nhân chỉ hiển thị khi đã đăng nhập (không xuất hiện ở chế độ web khách)
+  if (elements.profileNavGroupLabel) {
+    elements.profileNavGroupLabel.style.display = isTrainee ? 'block' : 'none';
+  }
+  if (elements.profileNavList) {
+    elements.profileNavList.style.display = isTrainee ? 'block' : 'none';
+  }
   if (elements.adminNavGroupLabel) {
-    elements.adminNavGroupLabel.style.display = canManage('accounts:manage') ? 'block' : 'none';
+    elements.adminNavGroupLabel.style.display = canAccessAdmin ? 'block' : 'none';
   }
   if (elements.adminNavList) {
-    elements.adminNavList.style.display = isAdmin ? 'block' : 'none';
+    elements.adminNavList.style.display = canAccessAdmin ? 'block' : 'none';
   }
   if (elements.menuBtnGoAdmin) {
-    elements.menuBtnGoAdmin.style.display = canManage('accounts:manage') ? 'flex' : 'none';
+    elements.menuBtnGoAdmin.style.display = canAccessAdmin ? 'flex' : 'none';
   }
   if (elements.menuBtnOpenChangePassword) {
     elements.menuBtnOpenChangePassword.style.display = u && !u.isOwner ? 'flex' : 'none';
@@ -54,18 +133,34 @@ function renderAuthState() {
 
   // 2. Sidebar Login vs Logout items
   if (elements.sidebarLoginItem) {
-    elements.sidebarLoginItem.style.display = isAdmin ? 'none' : 'block';
+    elements.sidebarLoginItem.style.display = isLoggedIn ? 'none' : 'block';
   }
   if (elements.sidebarLogoutItem) {
-    elements.sidebarLogoutItem.style.display = isAdmin ? 'block' : 'none';
+    elements.sidebarLogoutItem.style.display = isLoggedIn ? 'block' : 'none';
   }
 
-  // 3. Header Buttons: Login Admin vs Logout Admin
+  // 3. Header Buttons: Login vs Status & Logout
   if (elements.openLoginModalBtn) {
-    elements.openLoginModalBtn.style.display = isAdmin ? 'none' : 'inline-flex';
+    elements.openLoginModalBtn.style.display = isLoggedIn ? 'none' : 'inline-flex';
+  }
+  const headerUserStatus = document.getElementById('headerUserStatus');
+  if (headerUserStatus) {
+    headerUserStatus.style.display = isLoggedIn ? 'inline-flex' : 'none';
+  }
+  const headerAdminBadge = document.getElementById('headerAdminStatus');
+  if (headerAdminBadge) {
+    headerAdminBadge.style.display = isAdmin && canAccessAdmin ? 'inline-flex' : 'none';
+  }
+  const headerTraineeBadge = document.getElementById('headerTraineeBadge');
+  const headerTraineeBadgeName = document.getElementById('headerTraineeBadgeName');
+  if (headerTraineeBadge) {
+    headerTraineeBadge.style.display = isTrainee ? 'inline-flex' : 'none';
+    if (headerTraineeBadgeName && isTrainee) {
+      headerTraineeBadgeName.textContent = u.fullName ? `${u.fullName}` : 'Hồ sơ Trainee';
+    }
   }
   if (elements.headerLogoutBtn) {
-    elements.headerLogoutBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    elements.headerLogoutBtn.style.display = isLoggedIn ? 'inline-flex' : 'none';
   }
 
   // 4. Header User Profile Pill
@@ -84,8 +179,31 @@ function renderAuthState() {
       if (elements.menuBtnGoProfile) elements.menuBtnGoProfile.style.display = 'none';
       if (elements.menuBtnLogout) elements.menuBtnLogout.style.display = 'flex';
       if (elements.menuBtnGoAdmin) elements.menuBtnGoAdmin.style.display = canManage('accounts:manage') ? 'flex' : 'none';
+    } else if (isTrainee) {
+      elements.headerAccountPill.classList.remove('is-admin');
+      const avatarUrl = u.avatar || getTraineeDicebearAvatar(u);
+      if (elements.headerAccountAvatar) {
+        elements.headerAccountAvatar.style.background = 'transparent';
+        elements.headerAccountAvatar.innerHTML = `<img src="${avatarUrl}" alt="${escapeHtml(u.fullName || 'Trainee')}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+      }
+      if (elements.headerAccountName) {
+        elements.headerAccountName.textContent = u.fullName || u.username;
+      }
+      if (elements.headerAccountId) {
+        elements.headerAccountId.textContent = `MSSV: ${u.traineeId || u.username}`;
+      }
+      if (elements.menuAccountName) {
+        elements.menuAccountName.textContent = u.fullName || u.username;
+      }
+      if (elements.menuAccountRole) {
+        elements.menuAccountRole.textContent = `Trainee UIT (MSSV: ${u.traineeId || u.username})`;
+      }
+      if (elements.menuBtnOpenLogin) elements.menuBtnOpenLogin.style.display = 'none';
+      if (elements.menuBtnGoProfile) elements.menuBtnGoProfile.style.display = 'flex';
+      if (elements.menuBtnLogout) elements.menuBtnLogout.style.display = 'flex';
+      if (elements.menuBtnGoAdmin) elements.menuBtnGoAdmin.style.display = 'none';
     } else {
-      // Chế độ xem dành cho Trainee & Khách (Không cần đăng nhập)
+      // Chế độ xem dành cho Khách (Chưa đăng nhập)
       elements.headerAccountPill.classList.remove('is-admin');
       const activeTrainee = state.currentTrainee;
       const avatarUrl = activeTrainee
@@ -99,18 +217,19 @@ function renderAuthState() {
       if (elements.headerAccountName) {
         elements.headerAccountName.textContent = activeTrainee ? activeTrainee.fullName : 'Trainee';
       }
+      const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
       if (elements.headerAccountId) {
-        elements.headerAccountId.textContent = activeTrainee ? `MSSV: ${activeTrainee.traineeId}` : 'Xem lịch & thứ hạng';
+        elements.headerAccountId.textContent = activeTrainee ? (showMssv ? `MSSV: ${activeTrainee.traineeId}` : (activeTrainee.track || 'Cổng thông tin Trainee')) : 'Xem lịch & thứ hạng';
       }
       if (elements.menuAccountName) {
         elements.menuAccountName.textContent = activeTrainee ? activeTrainee.fullName : 'Khách / Trainee UIT';
       }
       if (elements.menuAccountRole) {
-        elements.menuAccountRole.textContent = activeTrainee ? `Trainee (MSSV: ${activeTrainee.traineeId})` : 'Chế độ xem mở - Không cần đăng nhập';
+        elements.menuAccountRole.textContent = activeTrainee ? (showMssv ? `Trainee (MSSV: ${activeTrainee.traineeId})` : 'Trainee UIT') : 'Chế độ xem mở - Không cần đăng nhập';
       }
       if (elements.menuBtnOpenLogin) elements.menuBtnOpenLogin.style.display = 'flex';
       if (elements.menuBtnOpenLoginText) elements.menuBtnOpenLoginText.textContent = 'Đăng nhập';
-      if (elements.menuBtnGoProfile) elements.menuBtnGoProfile.style.display = 'flex';
+      if (elements.menuBtnGoProfile) elements.menuBtnGoProfile.style.display = 'none';
       if (elements.menuBtnLogout) elements.menuBtnLogout.style.display = 'none';
       if (elements.menuBtnGoAdmin) elements.menuBtnGoAdmin.style.display = 'none';
     }
@@ -123,12 +242,16 @@ function renderAuthState() {
 
   // 6. Cập nhật quyền hiển thị các phần tử chỉ dành cho Admin (admin-only-element)
   document.querySelectorAll('.admin-only-element').forEach(el => {
+    if (el === headerAdminBadge || el === elements.adminNavGroupLabel || el === elements.adminNavList) return;
     const page = el.closest?.('[id^="view"]')?.id;
     const permission = el.dataset.permission || ({ viewSchedule: 'schedules:manage', viewQuestions: 'questions:manage', viewAssignments: 'assignments:manage', viewGrades: 'attendance:manage', viewLeaderboard: 'trainees:manage' })[page];
     el.style.display = permission ? (canManage(permission) ? '' : 'none') : (isAdmin ? '' : 'none');
   });
 
-  document.querySelectorAll('[data-permission]').forEach(element => { element.style.display = canManage(element.dataset.permission) ? '' : 'none'; });
+  document.querySelectorAll('[data-permission]').forEach(element => {
+    if (element === headerAdminBadge || element === elements.adminNavGroupLabel || element === elements.adminNavList) return;
+    element.style.display = canManage(element.dataset.permission) ? '' : 'none';
+  });
   const manager = window.duolingoManager;
   if (manager) {
     manager.renderPath();
@@ -142,6 +265,15 @@ function renderAuthState() {
   if (!canManage('accounts:manage') && state.activeTab === 'admin') {
     switchTab('schedule');
   }
+  if (!isTrainee && state.activeTab === 'profile' && !(canManage('trainees:manage') && state.profileTargetId)) switchTab('schedule');
+  if (!state.currentUser && state.activeTab === 'assignments') switchTab('schedule');
+
+  if (typeof renderScheduleView === 'function') renderScheduleView(false);
+  if (typeof renderGradesView === 'function') renderGradesView(false);
+  if (typeof renderLeaderboardTable === 'function') renderLeaderboardTable();
+  if (typeof renderLeaveHistoryTable === 'function') renderLeaveHistoryTable();
+  if (typeof renderQuestionsList === 'function') renderQuestionsList();
+  if (window.syncNotificationBell) window.syncNotificationBell();
 }
 
 function getInitials(name) {
@@ -161,7 +293,7 @@ function closeLoginModal() {
 
 async function handleLogout() {
   try {
-    const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: '{}' });
     if (!response.ok) throw new Error();
   } catch {
     window.showToast?.('Chưa đăng xuất được. Vui lòng thử lại.', 'danger');
@@ -170,17 +302,25 @@ async function handleLogout() {
   state.currentUser = null;
   localStorage.removeItem('uit_trainee_auth_user');
   localStorage.removeItem('uit_trainee_auth_token');
+  sessionStorage.removeItem('uit_trainee_auth_token');
+  try {
+    sessionStorage.removeItem('uit_auth_user_cache');
+    localStorage.removeItem('uit_auth_user_cache');
+    sessionStorage.removeItem('uit_portal_active_tab');
+    history.replaceState(null, '', '#schedule');
+  } catch (e) {}
   await loadTrainees();
   renderAuthState();
   switchTab('schedule');
   if (window.showToast) {
-    window.showToast('Đã đăng xuất khỏi tài khoản Quản trị viên!', 'info');
+    window.showToast('Đã đăng xuất khỏi tài khoản.', 'info');
   }
 }
 
 
 function checkAdminAuth() {
-  return canManage('accounts:manage');
+  const u = state.currentUser;
+  return Boolean(u && (u.isOwner || u.role === 'admin' || canManage('accounts:manage')));
 }
 
 function updateAuthUI() {
@@ -189,6 +329,8 @@ function updateAuthUI() {
 
 // Expose to global window
 window.initAuth = initAuth;
+window.refreshAuthSession = refreshAuthSession;
+window.setupAuthSessionSync = setupAuthSessionSync;
 window.checkAdminAuth = checkAdminAuth;
 window.logout = handleLogout;
 window.handleLogout = handleLogout;

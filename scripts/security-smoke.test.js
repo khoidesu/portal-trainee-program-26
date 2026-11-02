@@ -724,6 +724,20 @@ test('account scopes are enforced server-side and permission changes or locking 
   assert.ok(accounts.data.every(item => item.password === undefined));
 });
 
+test('trainee accounts use MSSV, keep their session and can change their own password', async () => {
+  const traineeId = '29990001';
+  const created = await database.createTrainee({ traineeId, fullName: 'Trainee Account Fixture', email: 'trainee.account@example.invalid' });
+  assert.ok(created.accountRef);
+  const authenticated = await database.authenticateUser(traineeId, 'traineeprogram');
+  assert.equal(authenticated.success, true);
+  assert.equal(authenticated.user.role, 'trainee');
+  const session = await database.resolveAccountSession({ accountId: authenticated.user.id, username: traineeId, sessionVersion: authenticated.user.sessionVersion });
+  assert.equal(session.traineeId, traineeId);
+  await database.changeAccountPassword(authenticated.user, 'traineeprogram', 'Trainee fixture password 2026');
+  assert.equal((await database.authenticateUser(traineeId, 'traineeprogram')).success, false);
+  assert.equal((await database.authenticateUser(traineeId, 'Trainee fixture password 2026')).success, true);
+});
+
 test('concurrent attendance edits reject stale writes instead of losing another session change', async () => {
   const results = await Promise.allSettled([
     database.saveAttendanceEntry('25520918', 'TP-M10.01', { sessionDate: '2026-10-06', attendanceStatus: 'present', starsAwarded: 3, note: 'First edit' }, 'trainer-one'),
@@ -789,6 +803,9 @@ test('MongoDB account revocation, attendance totals and public leave projection 
     const authenticated = await database.authenticateUser(data.username, data.password);
     const payload = { accountId: saved.id, sessionVersion: authenticated.user.sessionVersion };
     assert.equal((await database.resolveAccountSession(payload)).username, data.username);
+    delete account.sessionVersion;
+    assert.equal((await database.resolveAccountSession({ accountId: saved.id, sessionVersion: 0 })).username, data.username);
+    account.sessionVersion = 0;
     await database.saveAccount(saved.id, { ...data, password: '', active: false });
     assert.equal(await database.resolveAccountSession(payload), null);
     Trainee.findOne = () => ({ select: () => ({ lean: async () => clone(trainee) }) });
@@ -1063,7 +1080,8 @@ test('optional schedule documents are validated, saved, published and cleared in
 test('MongoDB schedules preserve optional document links on unrelated edits and allow clearing them (mocked driver)', async () => {
   const mongoose = require('mongoose');
   const Schedule = require('../models/Schedule');
-  const original = { connect: mongoose.connect, create: Schedule.create, find: Schedule.findById, update: Schedule.findByIdAndUpdate };
+  const Trainee = require('../models/Trainee');
+  const original = { connect: mongoose.connect, create: Schedule.create, find: Schedule.findById, update: Schedule.findByIdAndUpdate, traineeFind: Trainee.find };
   let stored;
   try {
     process.env.MONGODB_URI = 'mongodb://mock.invalid/unit-tests';
@@ -1077,6 +1095,7 @@ test('MongoDB schedules preserve optional document links on unrelated edits and 
     };
     Schedule.findById = () => ({ lean: async () => ({ ...stored }) });
     Schedule.findByIdAndUpdate = (id, update) => ({ lean: async () => { Object.assign(stored, update.$set); return { ...stored }; } });
+    Trainee.find = () => ({ select: () => ({ lean: async () => [] }) });
     const item = await database.createSchedule({ title: 'Document Mongo fixture', date: '2027-02-10', startTime: '20:00', endTime: '22:30', documentUrl: 'https://example.invalid/document' });
     assert.equal(item.documentUrl, 'https://example.invalid/document');
     const updated = await database.updateSchedule(String(item._id), { title: 'Updated' });
@@ -1084,7 +1103,7 @@ test('MongoDB schedules preserve optional document links on unrelated edits and 
     assert.equal((await database.updateSchedule(String(item._id), { documentUrl: '' })).documentUrl, '');
     await assert.rejects(database.updateSchedule(String(item._id), { documentUrl: 'javascript:test' }), /Link tài liệu/);
   } finally {
-    mongoose.connect = original.connect; Schedule.create = original.create; Schedule.findById = original.find; Schedule.findByIdAndUpdate = original.update;
+    mongoose.connect = original.connect; Schedule.create = original.create; Schedule.findById = original.find; Schedule.findByIdAndUpdate = original.update; Trainee.find = original.traineeFind;
     process.env.MONGODB_URI = '';
     mongoose.connection.emit('disconnected');
   }
@@ -1362,4 +1381,184 @@ test('MongoDB persistence branch uses atomic upsert, schema validation and atomi
     process.env.MONGODB_URI = '';
     mongoose.connection.emit('disconnected');
   }
+});
+
+test('notifications: schedule, Q&A and assignment events reach only opted-in trainees in fallback mode', async () => {
+  const mint = user => 'trainee_session=' + security.signToken({ accountId: user.id, username: user.username, sessionVersion: user.sessionVersion });
+  const login = async traineeId => {
+    const auth = await database.authenticateUser(traineeId, 'traineeprogram');
+    assert.equal(auth.success, true);
+    return mint(auth.user);
+  };
+  const list = async session => (await (await request('/api/notifications', { session })).json()).data;
+  const asker = '29990101', muted = '29990102', other = '29990103';
+  for (const traineeId of [asker, muted, other]) await database.createTrainee({ traineeId, fullName: 'Notify ' + traineeId, email: `notify${traineeId}@example.invalid` });
+  await database.updateTraineeProfile(muted, { notificationPreferences: { scheduleNotify: false, assignmentNotify: false, questionNotify: false } });
+  const profile = await database.getTraineeProfile(muted);
+  assert.deepEqual(profile.notificationPreferences, { assignmentNotify: false, scheduleNotify: false, questionNotify: false });
+  const [askerSession, mutedSession, otherSession] = [await login(asker), await login(muted), await login(other)];
+
+  assert.equal((await request('/api/notifications')).status, 401);
+  const editorAccount = await database.saveAccount(null, { username: 'notify_editor_fixture', fullName: 'Notify Editor', password: 'Long fixture password for notifications', role: 'trainer', permissions: ['schedules:manage', 'questions:manage'], active: true });
+  const editor = mint(editorAccount);
+  assert.equal((await request('/api/notifications', { session: editor })).status, 403);
+  assert.equal((await list(askerSession)).items.some(item => item.type !== 'assignment'), false);
+
+  const created = await (await request('/api/schedules', { method: 'POST', session: editor, body: { title: 'Notify session', date: '2030-03-12', startTime: '19:30', endTime: '21:30' } })).json();
+  assert.equal(created.success, true);
+  let own = await list(askerSession);
+  assert.equal(own.items.filter(item => item.type === 'schedule').length, 1);
+  assert.match(own.items.find(item => item.type === 'schedule').title, /^Lịch học mới: Notify session/);
+  assert.equal(own.items.find(item => item.type === 'schedule').link, 'schedule');
+  assert.equal((await list(mutedSession)).items.some(item => item.type === 'schedule'), false);
+
+  const sessionPath = '/api/schedules/' + created.data._id;
+  await request(sessionPath, { method: 'PUT', session: editor, body: { title: 'Renamed only' } });
+  assert.equal((await list(askerSession)).items.filter(item => item.type === 'schedule').length, 1);
+  await request(sessionPath, { method: 'PUT', session: editor, body: { startTime: '20:00' } });
+  own = await list(askerSession);
+  assert.equal(own.items.filter(item => item.type === 'schedule').length, 2);
+  assert.match(own.items[0].title, /^Lịch học thay đổi: Renamed only/);
+  assert.match(own.items[0].body, /20:00 - 21:30/);
+  const pastSession = await database.createSchedule({ title: 'Past session', date: '2020-01-07', startTime: '19:30', endTime: '21:30' });
+  assert.ok(pastSession._id);
+  assert.equal((await list(askerSession)).items.filter(item => item.type === 'schedule').length, 2);
+
+  const question = await (await request('/api/questions', { method: 'POST', session: askerSession, body: { title: 'Notify question', content: 'Question content for notifications.', isAnonymous: true, mssv: other, traineeId: other } })).json();
+  assert.equal(question.success, true);
+  assert.equal(question.data.traineeId, undefined);
+  const guestQuestion = await database.createQuestion({ title: 'Guest question', content: 'Guest content for notifications.', isAnonymous: true });
+  const mutedQuestion = await database.createQuestion({ title: 'Muted question', content: 'Muted content for notifications.', isAnonymous: true, traineeId: muted });
+  for (const code of [question.data.code, guestQuestion.code, mutedQuestion.code]) {
+    assert.equal((await request(`/api/questions/${code}/answer`, { method: 'PUT', session: editor, body: { answer: 'Notification answer' } })).status, 200);
+  }
+  own = await list(askerSession);
+  assert.equal(own.items.filter(item => item.type === 'question').length, 1);
+  assert.equal(own.items[0].type, 'question');
+  assert.equal(own.items[0].title, 'Câu hỏi của bạn đã được phản hồi');
+  assert.equal(own.items[0].body, 'Notify question');
+  assert.equal(own.items[0].link, 'questions');
+  assert.equal((await list(otherSession)).items.some(item => item.type === 'question'), false);
+  assert.equal((await list(mutedSession)).items.some(item => item.type === 'question'), false);
+  for (const item of (await (await request('/api/questions')).json()).data) assert.equal(item.traineeId, undefined);
+
+  const soon = new Date(Date.now() + 5 * 3600000).toISOString();
+  const dueSoon = await database.createAssignment({ title: 'Due soon fixture', status: 'active', deadline: soon });
+  await database.createAssignment({ title: 'Due later fixture', status: 'active', deadline: new Date(Date.now() + 48 * 3600000).toISOString() });
+  await database.createAssignment({ title: 'Due closed fixture', status: 'closed', deadline: soon });
+  await database.createAssignment({ title: 'Already expired fixture', status: 'active', deadline: new Date(Date.now() - 3600000).toISOString() });
+  await database.updateAssignmentSubmission(dueSoon.assignmentId, other, { status: 'submitted', responseId: '', note: '' }, 'tester');
+  own = await list(askerSession);
+  const reminders = own.items.filter(item => item.title.includes('fixture'));
+  assert.deepEqual(reminders.map(item => item.title), ['Sắp đến hạn nộp: Due soon fixture']);
+  assert.equal(new Date(reminders[0].dueAt).toISOString(), soon);
+  assert.equal(reminders[0].link, 'assignments');
+  assert.equal((await list(askerSession)).items.filter(item => item.title.includes('Due soon fixture')).length, 1);
+  assert.equal((await list(otherSession)).items.some(item => item.title.includes('Due soon fixture')), false);
+  assert.equal((await list(mutedSession)).items.some(item => item.type === 'assignment'), false);
+
+  const before = await list(askerSession);
+  const target = before.items.find(item => !item.read);
+  assert.equal((await request(`/api/notifications/${target.id}/read`, { method: 'PUT', session: otherSession, body: {} })).status, 200);
+  assert.equal((await list(askerSession)).unread, before.unread);
+  const read = await (await request(`/api/notifications/${target.id}/read`, { method: 'PUT', session: askerSession, body: {} })).json();
+  assert.equal(read.data.unread, before.unread - 1);
+  assert.equal(read.data.items.find(item => item.id === target.id).read, true);
+  assert.equal((await (await request('/api/notifications/read-all', { method: 'PUT', session: askerSession, body: {} })).json()).data.unread, 0);
+});
+
+test('notifications: Mongo branch filters recipients by preference, upserts once per event and scopes reads to the owner (mocked driver)', async () => {
+  const mongoose = require('mongoose');
+  const Notification = require('../models/Notification');
+  const Trainee = require('../models/Trainee');
+  const Schedule = require('../models/Schedule');
+  const Assignment = require('../models/Assignment');
+  const original = { connect: mongoose.connect, create: Schedule.create, traineeFind: Trainee.find, assignmentFind: Assignment.find, bulkWrite: Notification.bulkWrite, find: Notification.find, count: Notification.countDocuments, updateMany: Notification.updateMany };
+  const calls = { traineeQueries: [], writes: [], filters: [], updates: [] };
+  try {
+    process.env.MONGODB_URI = 'mongodb://mock.invalid/unit-tests';
+    mongoose.connect = async () => {};
+    await database.connectDB(true);
+    Schedule.create = async data => new Schedule(data);
+    Trainee.find = query => { calls.traineeQueries.push(query); return { select: () => ({ lean: async () => [{ traineeId: 'T1' }, { traineeId: 'T2' }] }) }; };
+    Assignment.find = () => ({ sort: async () => [] });
+    Notification.bulkWrite = async (operations, options) => { calls.writes.push({ operations, options }); };
+    Notification.find = filter => { calls.filters.push(filter); return { sort: () => ({ limit: () => ({ lean: async () => [{ _id: 'n1', traineeId: 'T1', type: 'schedule', title: 'Stored', readAt: null, createdAt: new Date() }] }) }) }; };
+    Notification.countDocuments = async () => 1;
+    Notification.updateMany = async (filter, update) => { calls.updates.push({ filter, update }); return { modifiedCount: 1 }; };
+
+    await database.createSchedule({ title: 'Mongo notify fixture', date: '2030-05-08', startTime: '19:30', endTime: '21:30' });
+    assert.deepEqual(calls.traineeQueries[0], { status: { $in: ['Đang học', 'Active'] }, 'notificationPreferences.scheduleNotify': { $ne: false } });
+    const [{ operations, options }] = calls.writes;
+    assert.equal(options.ordered, false);
+    assert.deepEqual(operations.map(item => item.updateOne.filter.traineeId), ['T1', 'T2']);
+    assert.equal(new Set(operations.map(item => item.updateOne.filter.refKey)).size, 1);
+    for (const { updateOne } of operations) {
+      assert.equal(updateOne.upsert, true);
+      assert.equal(updateOne.update.$setOnInsert.type, 'schedule');
+      assert.equal(updateOne.update.$setOnInsert.readAt, null);
+    }
+
+    const listed = await database.getNotifications('T1');
+    assert.equal(calls.filters.at(-1).traineeId, 'T1');
+    assert.deepEqual(listed, { items: [{ id: 'n1', type: 'schedule', title: 'Stored', body: '', link: '', dueAt: null, read: false, createdAt: listed.items[0].createdAt }], unread: 1 });
+    assert.equal(await database.markNotificationsRead('T1', '507f1f77bcf86cd799439011'), 1);
+    assert.deepEqual(calls.updates[0].filter, { traineeId: 'T1', readAt: null, _id: '507f1f77bcf86cd799439011' });
+    assert.equal(await database.markNotificationsRead('T1', 'not-an-id'), 0);
+    assert.equal(calls.updates.length, 1);
+  } finally {
+    mongoose.connect = original.connect; Schedule.create = original.create; Trainee.find = original.traineeFind; Assignment.find = original.assignmentFind;
+    Notification.bulkWrite = original.bulkWrite; Notification.find = original.find; Notification.countDocuments = original.count; Notification.updateMany = original.updateMany;
+    process.env.MONGODB_URI = '';
+    mongoose.connection.emit('disconnected');
+  }
+});
+
+test('notification bell renders server text safely, shows the assignment countdown rule and marks items read', async () => {
+  const vm = require('node:vm');
+  const fs = require('node:fs');
+  const nodes = new Map();
+  const makeNode = () => ({
+    children: [], style: {}, dataset: {}, listeners: {}, className: '', textContent: '', hidden: false,
+    classList: { values: new Set(), toggle(name, on) { on ? this.values.add(name) : this.values.delete(name); }, contains(name) { return this.values.has(name); } },
+    addEventListener(type, callback) { this.listeners[type] = callback; }, setAttribute() {}, contains: () => false,
+    append(...items) { this.children.push(...items); }, replaceChildren() { this.children = []; }
+  });
+  for (const id of ['notificationWrapper', 'notificationBtn', 'notificationBadge', 'notificationDropdown', 'notificationList', 'notificationReadAll']) nodes.set(id, makeNode());
+  const payload = {
+    items: [
+      { id: 'a', type: 'assignment', title: '<img src=x onerror=alert(1)>', body: 'Hạn nộp: 10:00', link: 'assignments', dueAt: new Date(Date.now() + 5 * 3600000 + 1800000).toISOString(), read: false, createdAt: new Date().toISOString() },
+      { id: 'b', type: 'question', title: 'Q&A', body: '', link: 'questions', dueAt: null, read: true, createdAt: new Date().toISOString() }
+    ], unread: 1
+  };
+  const switched = [];
+  const marked = [];
+  const context = vm.createContext({
+    window: {}, console, state: { currentUser: { role: 'trainee', traineeId: '29990101' } },
+    document: { getElementById: id => nodes.get(id), addEventListener() {}, createElement: () => makeNode(), visibilityState: 'visible' },
+    setInterval: () => 1, clearInterval() {}, switchTab: tab => switched.push(tab),
+    API: { getNotifications: async () => payload, markNotificationRead: async id => { marked.push(id); return { items: payload.items.map(item => ({ ...item, read: true })), unread: 0 }; }, markAllNotificationsRead: async () => payload }
+  });
+  vm.runInContext(fs.readFileSync(require('node:path').join(__dirname, '../public/js/modules/notifications.js'), 'utf8'), context);
+  context.window.syncNotificationBell();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.get('notificationWrapper').style.display, 'inline-flex');
+  assert.equal(nodes.get('notificationBadge').hidden, false);
+  assert.equal(nodes.get('notificationBadge').textContent, '1');
+  const rows = nodes.get('notificationList').children;
+  assert.equal(rows.length, 2);
+  const titles = rows[0].children.filter(child => child.className === 'notification-title');
+  assert.equal(titles[0].textContent, '<img src=x onerror=alert(1)>');
+  assert.equal(rows.some(row => row.innerHTML !== undefined), false);
+  const countdown = rows[0].children.find(child => child.className === 'notification-countdown');
+  assert.match(countdown.textContent, /^5 h \d+ phút còn lại$/);
+  assert.match(rows[0].className, /unread/);
+  await rows[0].listeners.click();
+  assert.deepEqual(switched, ['assignments']);
+  assert.deepEqual(marked, ['a']);
+  assert.equal(nodes.get('notificationBadge').hidden, true);
+  context.state.currentUser = null;
+  context.window.syncNotificationBell();
+  assert.equal(nodes.get('notificationWrapper').style.display, 'none');
+  assert.equal(nodes.get('notificationList').children[0].textContent, 'Đang tải thông báo...');
 });

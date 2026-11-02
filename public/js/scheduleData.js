@@ -42,6 +42,20 @@ function getScheduleTiming(item, now = Date.now()) {
   return { ...item, startsAt, endsAt, status: item.isTentative ? 'tentative' : now < startsAt ? 'upcoming' : now < endsAt ? 'live' : 'completed' };
 }
 
+function getScheduleDisplayTitle(item, index, isGuest) {
+  if (!isGuest) return item.title || '';
+  const match = (item.title || '').match(/^(buổi\s*\d+)/i);
+  if (match) return match[1].charAt(0).toUpperCase() + match[1].slice(1);
+  const codeMatch = (item.code || '').match(/\.(\d+)/);
+  if (codeMatch) return `Buổi ${parseInt(codeMatch[1], 10)}`;
+  return `Buổi ${index + 1}`;
+}
+
+function getScheduleDisplayTrainer(item, isGuest) {
+  if (!isGuest) return item.instructor || 'Trainer';
+  return 'Đăng nhập để xem';
+}
+
 const ScheduleManager = {
   storageKey: 'uit_portal_monthly_schedules_v2',
   selectedMonth: getVietnamDateParts().month,
@@ -86,24 +100,40 @@ const ScheduleManager = {
     }
   },
 
+  inFlightKey: '',
+  inFlightPromise: null,
+
   // Đồng bộ lịch từ Backend API (MongoDB Atlas)
   async fetchSchedules(month = this.selectedMonth, year = this.selectedYear) {
+    const key = `${month}-${year}`;
+    if (this.inFlightPromise && this.inFlightKey === key) {
+      return this.inFlightPromise;
+    }
     const requestId = ++this.requestId;
     this.loadState = 'loading';
-    try {
-      const response = await fetch(`/api/schedules?month=${month}&year=${year}`);
-      const result = await response.json();
-      if (requestId !== this.requestId) return null;
-      if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error('Không tải được lịch học.');
-      if (result.serverTime && Number.isFinite(Date.parse(result.serverTime))) this.clockOffset = Date.parse(result.serverTime) - Date.now();
-      this.cachedSchedules = result.data.map(item => getScheduleTiming(item, Date.now() + this.clockOffset));
-      this.loadState = 'ready';
-      return this.cachedSchedules;
-    } catch (err) {
-      if (requestId !== this.requestId) return null;
-      this.loadState = 'error';
-      throw err;
-    }
+    this.inFlightKey = key;
+    this.inFlightPromise = (async () => {
+      try {
+        const response = await fetch(`/api/schedules?month=${month}&year=${year}`, { credentials: 'same-origin' });
+        const result = await response.json();
+        if (requestId !== this.requestId) return null;
+        if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error('Không tải được lịch học.');
+        if (result.serverTime && Number.isFinite(Date.parse(result.serverTime))) this.clockOffset = Date.parse(result.serverTime) - Date.now();
+        this.cachedSchedules = result.data.map(item => getScheduleTiming(item, Date.now() + this.clockOffset));
+        this.loadState = 'ready';
+        return this.cachedSchedules;
+      } catch (err) {
+        if (requestId !== this.requestId) return null;
+        this.loadState = 'error';
+        throw err;
+      } finally {
+        if (this.inFlightKey === key) {
+          this.inFlightPromise = null;
+          this.inFlightKey = '';
+        }
+      }
+    })();
+    return this.inFlightPromise;
   },
 
   getAuthHeaders() {
@@ -120,6 +150,7 @@ const ScheduleManager = {
         // Cập nhật lên MongoDB
         const res = await fetch(`/api/schedules/${encodeURIComponent(id)}`, {
           method: 'PUT',
+          credentials: 'same-origin',
           headers: this.getAuthHeaders(),
           body: JSON.stringify(itemData)
         });
@@ -131,6 +162,7 @@ const ScheduleManager = {
         // Tạo mới lên MongoDB
         const res = await fetch('/api/schedules', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: this.getAuthHeaders(),
           body: JSON.stringify(itemData)
         });
@@ -166,6 +198,7 @@ const ScheduleManager = {
     try {
       const response = await fetch(`/api/schedules/${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       const result = await response.json();
@@ -189,6 +222,7 @@ const ScheduleManager = {
     try {
       const res = await fetch('/api/schedules/reset', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ month, year, reseed })
       });
@@ -221,12 +255,36 @@ const ScheduleManager = {
   // XỬ LÝ NÚT "VÀO HỌC" (MICROSOFT TEAMS)
   // ==========================================
   handleJoinClass(session, isAdmin = false, onEditCallback = null) {
+    if (!session) return;
+    if (!window.state || !window.state.currentUser) {
+      if (window.showToast) {
+        window.showToast('Vui lòng đăng nhập tài khoản để vào phòng học trực tuyến!', 'info');
+      }
+      if (typeof window.openLoginModal === 'function') {
+        window.openLoginModal();
+      }
+      return;
+    }
+    if (session.status === 'completed') {
+      if (session.type === 'Offline') {
+        const room = session.room && session.room !== 'MS Teams Trực Tuyến' ? session.room : 'Phòng học trực tiếp';
+        window.showToast?.(`Buổi học này đã kết thúc (Đã học trực tiếp tại: ${room}).`, 'info');
+      } else {
+        window.showToast?.('Buổi học trực tuyến này đã kết thúc!', 'info');
+      }
+      return;
+    }
     if (session.isTentative) {
       window.showToast?.('Buổi này đang dự kiến; Ban Tổ chức sẽ chốt ngày, giờ và địa điểm sau.', 'info');
       return;
     }
     if (session.type === 'Offline') {
-      window.showToast?.(session.room || 'Ban Tổ chức chưa cập nhật địa điểm.', 'info');
+      const room = session.room && session.room !== 'MS Teams Trực Tuyến' ? session.room : 'Phòng học trực tiếp (Ban Tổ chức sẽ thông báo)';
+      if (window.showToast) {
+        window.showToast(`Địa điểm học trực tiếp: ${room}`, 'info');
+      } else {
+        alert(`Địa điểm học trực tiếp [${session.title}]:\n${room}`);
+      }
       return;
     }
     const teamsUrl = (session.teamsUrl || '').trim();
@@ -272,16 +330,17 @@ const ScheduleManager = {
 
     // Tiêu đề cột
     const headers = ['STT', 'Mã Buổi Học', 'Tên Buổi Học / Chuyên Đề', 'Ngày Học', 'Thứ', 'Giờ Học', 'Hình Thức', 'Trainer', 'Link MS Teams', 'Trạng Thái', 'Ghi Chú'];
+    const isGuest = Boolean(window.state ? !window.state.currentUser : false);
 
     const rows = items.map((item, idx) => [
       idx + 1,
       `"${item.code || ''}"`,
-      `"${(item.title || '').replace(/"/g, '""')}"`,
+      `"${(getScheduleDisplayTitle(item, idx, isGuest) || '').replace(/"/g, '""')}"`,
       `"${this.formatDateStr(item.date)}"`,
       `"${item.dayOfWeekText || ''}"`,
       `"${item.startTime} - ${item.endTime}"`,
       `"${item.type || 'Online'}"`,
-      `"${(item.instructor || '').replace(/"/g, '""')}"`,
+      `"${(getScheduleDisplayTrainer(item, isGuest) || '').replace(/"/g, '""')}"`,
       `"${(item.teamsUrl || 'Chưa gán link').replace(/"/g, '""')}"`,
       `"${item.status === 'live' ? 'Đang diễn ra' : item.status === 'completed' ? 'Đã diễn ra' : 'Sắp diễn ra'}"`,
       `"${(item.note || '').replace(/"/g, '""')}"`
@@ -321,6 +380,8 @@ const ScheduleManager = {
       'X-WR-CALNAME:Lịch Học Trainee Program UIT'
     ];
 
+    const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+
     items.forEach((item, idx) => {
       if (item.status === 'unknown') return;
       const cleanDate = (item.date || '').replace(/-/g, '');
@@ -334,9 +395,9 @@ const ScheduleManager = {
       icsData.push(`DTSTAMP:${cleanDate}T000000Z`);
       icsData.push(`DTSTART:${dtStart}`);
       icsData.push(`DTEND:${dtEnd}`);
-      icsData.push(`SUMMARY:${item.title}`);
+      icsData.push(`SUMMARY:${getScheduleDisplayTitle(item, idx, isGuest)}`);
       icsData.push(`LOCATION:${item.teamsUrl ? item.teamsUrl : item.room || 'Chưa có địa điểm'}`);
-      icsData.push(`DESCRIPTION:Trainer: ${item.instructor}\\nLink MS Teams: ${item.teamsUrl || 'Chưa gán link'}\\nGhi chú: ${item.note || ''}`);
+      icsData.push(`DESCRIPTION:Trainer: ${getScheduleDisplayTrainer(item, isGuest)}\\nLink MS Teams: ${item.teamsUrl || 'Chưa gán link'}\\nGhi chú: ${item.note || ''}`);
       icsData.push(item.isTentative ? 'STATUS:TENTATIVE' : 'STATUS:CONFIRMED');
       icsData.push('END:VEVENT');
     });
@@ -415,12 +476,6 @@ const ScheduleManager = {
       <div class="toolbar-left">
         <div class="month-pill-badge">
            <strong>Tháng ${this.selectedMonth}/${this.selectedYear}</strong> · ${items.length} buổi học
-        </div>
-        <div class="schedule-user-permission-note">
-          ${isAdmin
-            ? '<span class="badge-role-admin"> Quản trị viên: Có toàn quyền thêm, sửa và gán link MS Teams</span>'
-            : '<span class="badge-role-user"> Được xem lịch và tải xuống dữ liệu</span>'
-          }
         </div>
       </div>
 
@@ -502,7 +557,91 @@ const ScheduleManager = {
       const monthNum = parts[1] || '10';
 
       const hasTeamsLink = Boolean(item.teamsUrl && item.teamsUrl.trim());
-      const documentUrl = /^https?:\/\//i.test(item.documentUrl || '') ? sanitizeUrlSchedule(item.documentUrl) : '';
+      
+      // Xử lý danh sách tài liệu buổi học
+      let docs = Array.isArray(item.documents) && item.documents.length > 0
+        ? item.documents
+        : (/^https?:\/\//i.test(item.documentUrl || '') ? [{ title: 'Tài liệu buổi học', url: item.documentUrl }] : []);
+      docs = docs.filter(d => d && d.url && /^https?:\/\//i.test(String(d.url).trim()));
+
+      let docsHtml = '';
+      if (docs.length > 0) {
+        docsHtml = `
+          <div class="session-documents-group">
+            ${docs.map(doc => `
+              <a class="session-document-link" href="${escapeHtmlSchedule(sanitizeUrlSchedule(doc.url))}" target="_blank" rel="noopener noreferrer" title="Mở tài liệu: ${escapeHtmlSchedule(doc.title || 'Tài liệu')}">
+                <i class="fas fa-file-lines"></i>
+                <span>${escapeHtmlSchedule(doc.title || 'Tài liệu')}</span>
+              </a>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Xác định Ban tổ chức buổi học (ưu tiên trường department, fallback theo title / note)
+      let dept = (item.department || '').trim();
+      if (!dept) {
+        const combined = `${item.title || ''} ${item.note || ''}`;
+        if (/hệ\s*thống/i.test(combined)) dept = 'Hệ thống';
+        else if (/truyền\s*thông|sự\s*kiện|canva/i.test(combined)) dept = 'Truyền thông - Sự kiện';
+      }
+
+      // Làm sạch ghi chú: chỉ giữ lại nội dung nhắc nhở cần chuẩn bị, bỏ tiền tố Ban
+      let cleanedNote = (item.note || '')
+        .replace(/^(\s*\[?\s*BAN\s*HỆ\s*THỐNG\s*\]?\s*[:\-–—]?\s*)/i, '')
+        .replace(/^(\s*\[?\s*HỆ\s*THỐNG\s*\]?\s*[:\-–—]?\s*)/i, '')
+        .replace(/^(\s*\[?\s*BAN\s*TRUYỀN\s*THÔNG\s*(-|–|—)?\s*(SỰ\s*KIỆN)?\s*\]?\s*[:\-–—]?\s*)/i, '')
+        .replace(/^(\s*\[?\s*TRUYỀN\s*THÔNG\s*(-|–|—)?\s*(SỰ\s*KIỆN)?\s*\]?\s*[:\-–—]?\s*)/i, '')
+        .trim();
+
+      // Tag Ban phụ trách
+      let deptTagHtml = '';
+      if (dept === 'Hệ thống') {
+        deptTagHtml = '<span class="badge-tag badge-ban-hethong"><i class="fas fa-server"></i> Ban Hệ thống</span>';
+      } else if (dept === 'Truyền thông - Sự kiện') {
+        deptTagHtml = '<span class="badge-tag badge-ban-ttsk"><i class="fas fa-bullhorn"></i> Ban TT - Sự kiện</span>';
+      } else if (dept) {
+        deptTagHtml = `<span class="badge-tag badge-ban-hethong">${escapeHtmlSchedule(dept)}</span>`;
+      }
+
+      // Tag hình thức học
+      const isOffline = item.type === 'Offline';
+      const modeTagHtml = `<span class="badge-tag ${isOffline ? 'chip-offline' : 'chip-online'}">${isOffline ? 'Học trực tiếp' : 'Học trực tuyến'}</span>`;
+
+      // Tag link MS Teams (chỉ hiển thị khi đã có link)
+      const teamsTagHtml = hasTeamsLink
+        ? '<span class="badge-tag chip-teams-link"><i class="fas fa-video"></i> Đã có link Teams</span>'
+        : '';
+
+      // Tag trạng thái buổi học (khớp 100% chú thích)
+      const isCompleted = item.status === 'completed';
+      const statusTagHtml = item.status === 'tentative'
+        ? '<span class="badge-tag chip-upcoming">Lịch dự kiến</span>'
+        : item.status === 'live'
+        ? '<span class="badge-tag chip-live live-pulsing-badge"><i class="fas fa-circle-dot"></i> ĐANG DIỄN RA</span>'
+        : isCompleted
+        ? '<span class="badge-tag chip-completed">Đã diễn ra</span>'
+        : '<span class="badge-tag chip-upcoming">Sắp diễn ra</span>';
+
+      // Trạng thái nút Vào học (Vô hiệu hóa khi buổi học đã diễn ra)
+      let joinBtnText = 'Vào học';
+      let joinBtnClass = hasTeamsLink ? 'btn-teams-ready' : 'btn-teams-waiting';
+      let joinBtnDisabled = '';
+
+      if (isCompleted) {
+        joinBtnText = 'Đã kết thúc';
+        joinBtnClass = 'btn-teams-completed';
+        joinBtnDisabled = 'disabled aria-disabled="true"';
+      } else if (item.isTentative) {
+        joinBtnText = 'Chờ chốt lịch';
+        joinBtnClass = 'btn-teams-waiting';
+      } else if (item.type === 'Offline') {
+        joinBtnText = 'Xem địa điểm';
+        joinBtnClass = 'btn-teams-ready';
+      }
+
+      const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+      const sessionTitle = getScheduleDisplayTitle(item, index, isGuest);
 
       card.innerHTML = `
         <div class="session-card-left">
@@ -516,78 +655,67 @@ const ScheduleManager = {
         <div class="session-card-body">
           <div class="session-badges-row">
             <span class="session-code-tag">${escapeHtmlSchedule(item.code || `TP-M10.${String(index + 1).padStart(2, '0')}`)}</span>
-            <span class="badge-tag session-online-badge">
-
-              ${escapeHtmlSchedule(item.type || 'Học Trực Tuyến')}
-            </span>
-            ${item.status === 'tentative'
-              ? '<span class="badge-tag upcoming-badge">Lịch dự kiến</span>'
-              : item.status === 'live'
-              ? '<span class="badge-tag live-pulsing-badge"> ĐANG DIỄN RA</span>'
-              : item.status === 'completed'
-              ? '<span class="badge-tag completed-badge"> Đã diễn ra</span>'
-              : '<span class="badge-tag upcoming-badge"> Sắp diễn ra</span>'
-            }
+            ${deptTagHtml}
+            ${modeTagHtml}
+            ${teamsTagHtml}
+            ${statusTagHtml}
           </div>
 
-          <h4 class="session-title">${escapeHtmlSchedule(item.title)}</h4>
-          ${documentUrl ? `<a class="teams-link-ready session-document-link" href="${escapeHtmlSchedule(documentUrl)}" target="_blank" rel="noopener noreferrer">Tài liệu buổi học</a>` : ''}
+          <h4 class="session-title">${escapeHtmlSchedule(sessionTitle)}</h4>
+          ${docsHtml}
 
           <div class="session-details-row">
             <span class="detail-item">
-
               <strong>${escapeHtmlSchedule(item.startTime)} – ${escapeHtmlSchedule(item.endTime)}</strong> (${escapeHtmlSchedule(item.periods || 'Tiết 1 - 4')})
             </span>
 
             <span class="detail-item">
-
-              Trainer: <strong>${escapeHtmlSchedule(item.instructor || 'Trainer')}</strong>
+              Trainer: ${isGuest
+                ? `<span style="color: var(--text-muted); font-style: italic;">Đăng nhập để xem</span>`
+                : `<strong>${escapeHtmlSchedule(item.instructor || 'Trainer')}</strong>`
+              }
             </span>
 
             <span class="detail-item">
-
-              ${escapeHtmlSchedule(item.room || 'MS Teams Trực Tuyến')}
+              ${isOffline ? `<i class="fas fa-location-dot" style="color: #ef4444; margin-right: 4px;"></i><span style="color: #ef4444; font-weight: 600;">Địa điểm: <strong style="color: #ef4444;">${escapeHtmlSchedule(item.room && item.room !== 'MS Teams Trực Tuyến' ? item.room : 'Phòng học trực tiếp')}</strong></span>` : escapeHtmlSchedule(item.room || 'MS Teams Trực Tuyến')}
             </span>
           </div>
 
-          ${item.note ? `
+          ${cleanedNote ? `
             <div class="session-note-row">
-              <span class="note-label"> Ghi chú:</span>
-              <span class="note-content">${escapeHtmlSchedule(item.note)}</span>
+              <span class="note-label"><i class="fas fa-info-circle"></i></span>
+              <span class="note-content">${escapeHtmlSchedule(cleanedNote)}</span>
             </div>
           ` : ''}
 
-          <div class="session-teams-status-row">
-            ${hasTeamsLink
-              ? `<span class="teams-link-ready">
-
-                  Đã gán link MS Teams: <span class="teams-link-text">${escapeHtmlSchedule(item.teamsUrl)}</span>
-                 </span>`
-              : `<span class="teams-link-missing">
-
-                  Chưa gán link MS Teams (Quản trị viên có thể gán sau)
-                 </span>`
-            }
-          </div>
+          ${!isOffline ? `
+            <div class="session-teams-status-row">
+              ${hasTeamsLink
+                ? `<span class="teams-link-ready">
+                    Đã gán link MS Teams: <span class="teams-link-text">${escapeHtmlSchedule(item.teamsUrl)}</span>
+                   </span>`
+                : `<span class="teams-link-missing">
+                    Chưa gán link MS Teams
+                   </span>`
+              }
+            </div>
+          ` : ''}
         </div>
 
         <div class="session-card-actions">
           <!-- NÚT VÀO HỌC (MICROSOFT TEAMS) -->
-          <button type="button" class="btn-join-class ${hasTeamsLink ? 'btn-teams-ready' : 'btn-teams-waiting'}" data-id="${item._id || item.id}">
-
-            <span>${item.isTentative ? 'Chờ chốt lịch' : item.type === 'Offline' ? 'Xem địa điểm' : 'Vào học'}</span>
+          <button type="button" class="btn-join-class ${joinBtnClass}" data-id="${item._id || item.id}" ${joinBtnDisabled}>
+            <span>${joinBtnText}</span>
           </button>
 
           <!-- NÚT ADMIN: SỬA & XÓA (CHỈ HIỂN THỊ KHI LÀ ADMIN) -->
           ${isAdmin ? `
             <div class="session-admin-controls">
-              <button type="button" class="btn-action-icon btn-edit-session" data-id="${item._id || item.id}" title="Sửa thông tin & Gán link MS Teams">
-
-                <span>Sửa / Gán link</span>
+              <button type="button" class="btn-action-icon btn-edit-session" data-id="${item._id || item.id}" title="Sửa thông tin">
+                <span>Sửa</span>
               </button>
 
               <button type="button" class="btn-action-icon text-danger btn-delete-session" data-id="${item._id || item.id}" title="Xóa buổi học này">
-
                 <span>Xóa</span>
               </button>
             </div>
@@ -599,6 +727,10 @@ const ScheduleManager = {
       const joinBtn = card.querySelector('.btn-join-class');
       if (joinBtn) {
         joinBtn.addEventListener('click', () => {
+          if (isCompleted) {
+            window.showToast?.('Buổi học này đã kết thúc!', 'info');
+            return;
+          }
           this.handleJoinClass(item, isAdmin, onEdit);
         });
       }
@@ -670,14 +802,24 @@ const ScheduleManager = {
             ${daySessions.length > 0 ? `<span class="session-count-dot">${daySessions.length} buổi</span>` : ''}
           </div>
           <div class="cal-cell-events">
-            ${daySessions.map(s => `
-              <div class="cal-event-chip ${s.status === 'live' ? 'event-live' : ''}" data-id="${s._id || s.id}" title="${escapeHtmlSchedule(s.title)}">
+            ${daySessions.map((s, sIdx) => {
+              const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+              const chipTitle = getScheduleDisplayTitle(s, sIdx, isGuest);
+              return `
+              <div class="cal-event-chip ${s.status === 'live' ? 'event-live' : ''}" data-id="${s._id || s.id}" title="${escapeHtmlSchedule(chipTitle)}">
                 <div class="cal-chip-time">${escapeHtmlSchedule(s.startTime)}</div>
-                <div class="cal-chip-title">${escapeHtmlSchedule(s.title)}</div>
+                <div class="cal-chip-title">${escapeHtmlSchedule(chipTitle)}</div>
                 <div class="cal-chip-status">${s.isTentative ? 'Lịch dự kiến' : s.type === 'Offline' ? 'Trực tiếp' : s.teamsUrl ? 'MS Teams' : 'Chưa có link'}</div>
-                ${/^https?:\/\//i.test(s.documentUrl || '') ? `<a class="teams-link-ready session-document-link" href="${escapeHtmlSchedule(sanitizeUrlSchedule(s.documentUrl))}" target="_blank" rel="noopener noreferrer">Tài liệu buổi học</a>` : ''}
+                ${(() => {
+                  let calDocs = Array.isArray(s.documents) && s.documents.length > 0 ? s.documents : (s.documentUrl ? [{ title: 'Tài liệu', url: s.documentUrl }] : []);
+                  calDocs = calDocs.filter(d => d && d.url && /^https?:\/\//i.test(String(d.url).trim()));
+                  if (calDocs.length === 0) return '';
+                  return `<div class="cal-chip-docs" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">` +
+                    calDocs.map(d => `<a class="session-document-link" style="padding: 2px 6px; font-size: 0.7rem;" href="${escapeHtmlSchedule(sanitizeUrlSchedule(d.url))}" target="_blank" rel="noopener noreferrer" title="${escapeHtmlSchedule(d.title || 'Tài liệu')}"><i class="fas fa-file-lines"></i> ${escapeHtmlSchedule(d.title || 'Tài liệu')}</a>`).join('') +
+                    `</div>`;
+                })()}
               </div>
-            `).join('')}
+            `;}).join('')}
           </div>
         </div>
       `;

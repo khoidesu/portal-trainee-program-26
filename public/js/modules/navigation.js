@@ -27,6 +27,7 @@ function setupEventListeners() {
   if (elements.navProfile) {
     elements.navProfile.addEventListener('click', (e) => {
       e.preventDefault();
+      state.profileTargetId = null;
       switchTab('profile');
     });
   }
@@ -36,6 +37,7 @@ function setupEventListeners() {
       e.preventDefault();
       if (elements.headerAccountWrapper) elements.headerAccountWrapper.classList.remove('open');
       if (elements.accountDropdownMenu) elements.accountDropdownMenu.classList.remove('active');
+      state.profileTargetId = null;
       switchTab('profile');
     });
   }
@@ -246,6 +248,13 @@ function setupEventListeners() {
       renderAdminTable();
     });
   }
+  const adminStatusFilter = document.getElementById('adminStatusFilter');
+  if (adminStatusFilter) {
+    adminStatusFilter.addEventListener('change', (e) => {
+      state.adminSelectedStatus = e.target.value;
+      renderAdminTable();
+    });
+  }
 
   // Create Trainee Modal Events
   if (elements.closeCreateTraineeModalBtn) elements.closeCreateTraineeModalBtn.addEventListener('click', closeCreateTraineeModal);
@@ -367,63 +376,19 @@ function setupEventListeners() {
       }
     });
   }
-
-  // Profile View Event Listeners
-  if (elements.btnUploadProfileAvatar) {
-    elements.btnUploadProfileAvatar.addEventListener('click', () => {
-      if (elements.profileAvatarFileInput) elements.profileAvatarFileInput.click();
-    });
-  }
-  if (elements.profileAvatarFileInput) {
-    elements.profileAvatarFileInput.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (file) handleProfileAvatarChange(file);
-      e.target.value = '';
-    });
-  }
-  if (elements.btnRemoveProfileAvatar) {
-    elements.btnRemoveProfileAvatar.addEventListener('click', handleRemoveProfileAvatar);
-  }
-  if (elements.profileInfoForm) {
-    elements.profileInfoForm.addEventListener('submit', handleProfileInfoSave);
-  }
-  if (elements.profileSecurityForm) {
-    elements.profileSecurityForm.addEventListener('submit', handleProfilePasswordChange);
-  }
-
-  // Profile Forgot Password Modal Events
-  if (elements.btnProfileSendForgotReq) {
-    elements.btnProfileSendForgotReq.addEventListener('click', openProfileForgotModal);
-  }
-  if (elements.closeProfileForgotModalBtn) {
-    elements.closeProfileForgotModalBtn.addEventListener('click', closeProfileForgotModal);
-  }
-  if (elements.cancelProfileForgotBtn) {
-    elements.cancelProfileForgotBtn.addEventListener('click', closeProfileForgotModal);
-  }
-  if (elements.profileForgotModal) {
-    elements.profileForgotModal.addEventListener('click', (e) => {
-      if (e.target === elements.profileForgotModal) closeProfileForgotModal();
-    });
-  }
-  if (elements.profileForgotForm) {
-    elements.profileForgotForm.addEventListener('submit', handleProfileForgotSubmit);
-  }
-
-  // Admin Support Requests Refresh
-  if (elements.btnAdminRefreshSupport) {
-    elements.btnAdminRefreshSupport.addEventListener('click', () => {
-      renderAdminSupportRequests();
-      if (window.showToast) window.showToast('Đã làm mới danh sách yêu cầu hỗ trợ từ MongoDB Atlas!', 'success');
-    });
-  }
 }
 
 // ==========================================
 // TAB SWITCHING
 // ==========================================
-function switchTab(tab) {
+function switchTab(tab, updateHash = true) {
   state.activeTab = tab;
+  try {
+    sessionStorage.setItem('uit_portal_active_tab', tab);
+    if (updateHash && window.location.hash.replace('#', '') !== tab) {
+      history.replaceState(null, '', '#' + tab);
+    }
+  } catch (e) {}
 
   // Reset all nav links
   const allNavs = [elements.navDashboard, elements.navProfile, elements.navSchedule, elements.navLeaderboard, elements.navGrades, elements.navAssignments, elements.navLeave, elements.navQuestions, elements.navAdmin];
@@ -437,11 +402,24 @@ function switchTab(tab) {
     if (v) v.classList.remove('active');
   });
 
-  if (tab === 'dashboard' || tab === 'profile') {
+  if (tab === 'dashboard') {
     return switchTab('schedule');
   }
 
-  if (tab === 'schedule') {
+  if (tab === 'profile') {
+    const canViewManagedProfile = canManage('trainees:manage') && Boolean(state.profileTargetId);
+    if (state.currentUser?.role !== 'trainee' && !canViewManagedProfile) {
+      return switchTab('schedule');
+    }
+
+    if (elements.navProfile) elements.navProfile.classList.add('active');
+    if (elements.viewProfile) elements.viewProfile.classList.add('active');
+
+    elements.pageMainTitle.textContent = 'Hồ sơ cá nhân';
+    elements.pageSubBreadcrumb.textContent = 'Thông tin học viên, tài khoản & lịch sử hoạt động';
+
+    renderProfileView(state.profileTargetId || undefined);
+  } else if (tab === 'schedule') {
     if (elements.navSchedule) elements.navSchedule.classList.add('active');
     if (elements.viewSchedule) elements.viewSchedule.classList.add('active');
 
@@ -450,6 +428,16 @@ function switchTab(tab) {
 
     renderScheduleView();
   } else if (tab === 'assignments') {
+    if (!state.currentUser) {
+      if (window.showToast) {
+        window.showToast('Vui lòng đăng nhập tài khoản để xem phần bài tập!', 'info');
+      }
+      if (typeof openLoginModal === 'function') {
+        openLoginModal();
+      }
+      return switchTab('schedule');
+    }
+
     if (elements.navAssignments) elements.navAssignments.classList.add('active');
     if (elements.viewAssignments) elements.viewAssignments.classList.add('active');
 
@@ -472,7 +460,7 @@ function switchTab(tab) {
     if (elements.navGrades) elements.navGrades.classList.add('active');
     if (elements.viewGrades) elements.viewGrades.classList.add('active');
 
-    elements.pageMainTitle.textContent = 'Bảng Điểm Sao Buổi Học';
+    elements.pageMainTitle.textContent = 'Bảng Điểm Sao Chi Tiết';
     elements.pageSubBreadcrumb.textContent = 'Theo dõi chi tiết số sao cộng thêm của từng Trainee sau mỗi buổi học thực tế';
 
     renderGradesView();
@@ -496,9 +484,8 @@ function switchTab(tab) {
     // SECURITY CHECK: Only allow admin role
     if (!canManage('accounts:manage')) {
       if (window.showToast) {
-        window.showToast('Chỉ Quản trị viên (Admin) mới có quyền truy cập trang này!', 'danger');
+        window.showToast('Chỉ Quản trị viên (Admin) mới có quyền truy cập trang này!', 'warning');
       }
-      openLoginModal();
       switchTab('schedule');
       return;
     }

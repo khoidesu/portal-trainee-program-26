@@ -14,7 +14,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requirePermission, createRateLimiter } = require('../utils/security');
+const { requirePermission, canViewMssv, createRateLimiter } = require('../utils/security');
 const {
   getAllQuestions,
   createQuestion,
@@ -22,12 +22,22 @@ const {
   deleteQuestion
 } = require('../config/db');
 
-function publicQuestion(question) {
-  const { realMssv, likedBy, ...visible } = question;
+function publicQuestion(question, allowMssv = false) {
+  const { realMssv, likedBy, traineeId, ...visible } = question;
   if (visible.isAnonymous) {
     visible.mssv = 'Ẩn danh';
     visible.fullName = 'Sinh viên ẩn danh';
+    if (allowMssv) {
+      visible.realMssv = realMssv;
+    }
+    return visible;
   }
+  if (allowMssv) {
+    return visible;
+  }
+  // Trainee / Guest: bảo mật mã số sinh viên, không công khai
+  delete visible.mssv;
+  delete visible.realMssv;
   return visible;
 }
 
@@ -35,10 +45,11 @@ function publicQuestion(question) {
 router.get('/', async (req, res) => {
   try {
     const list = await getAllQuestions(req.query);
+    const allowMssv = canViewMssv(req.user);
     res.json({
       success: true,
       count: list.length,
-      data: list.map(publicQuestion)
+      data: list.map(q => publicQuestion(q, allowMssv))
     });
   } catch (err) {
     console.error('Lỗi API /api/questions:', err.message);
@@ -56,7 +67,7 @@ router.post('/', createRateLimiter(5, 60000), async (req, res) => {
     return res.status(400).json({ success: false, message: 'Thông tin câu hỏi không hợp lệ.' });
   }
   try {
-    const newQ = await createQuestion(req.body);
+    const newQ = await createQuestion({ ...req.body, traineeId: req.user?.role === 'trainee' ? req.user.traineeId : '' });
     res.status(201).json({
       success: true,
       message: 'Đã gửi câu hỏi lên diễn đàn thành công!',

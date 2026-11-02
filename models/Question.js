@@ -17,6 +17,11 @@ const QuestionSchema = new mongoose.Schema({
     trim: true,
     default: 'Trainee ẩn danh'
   },
+  traineeId: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   isAnonymous: {
     type: Boolean,
     default: false

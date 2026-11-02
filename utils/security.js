@@ -259,8 +259,15 @@ function createRateLimiter(maxRequests = 10, windowMs = 60000) {
 }
 
 function readSession(req) {
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
+  }
   const cookie = (req.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith(`${sessionCookie}=`));
-  return cookie ? cookie.slice(sessionCookie.length + 1) : null;
+  if (!cookie) return null;
+  let raw = cookie.slice(sessionCookie.length + 1).trim();
+  try { raw = decodeURIComponent(raw); } catch {}
+  return raw.replace(/^["']|["']$/g, '');
 }
 
 async function optionalAuth(req, res, next) {
@@ -283,6 +290,17 @@ function hasPermission(user, permission) {
   return Boolean(user && (user.isOwner || (Array.isArray(user.permissions) && user.permissions.includes(permission))));
 }
 
+function canViewMssv(user) {
+  if (!user) return false;
+  if (user.isOwner) return true;
+  if (Array.isArray(user.permissions) && user.permissions.some(p =>
+    ['trainees:manage', 'leave:manage', 'questions:manage', 'attendance:manage', 'accounts:manage'].includes(p)
+  )) {
+    return true;
+  }
+  return false;
+}
+
 function requirePermission(permission) {
   return async (req, res, next) => {
     await requireAuth(req, res, () => {
@@ -303,7 +321,7 @@ function clearSession(res) {
 function validateInput(req, res, next) {
   function valid(value, depth = 0) {
     if (depth > 12) return false;
-    if (typeof value === 'string') return value.length <= 500000 && !value.includes('\u0000');
+    if (typeof value === 'string') return value.length <= 5000000 && !value.includes('\u0000');
     if (typeof value === 'number') return Number.isFinite(value);
     if (Array.isArray(value)) return value.length <= 500 && value.every(item => valid(item, depth + 1));
     if (value && typeof value === 'object') return Object.entries(value).every(([key, item]) => !/[.$]/.test(key) && !['__proto__', 'prototype', 'constructor'].includes(key) && valid(item, depth + 1));
@@ -318,6 +336,7 @@ function validateInput(req, res, next) {
 module.exports = {
   CONTENT_PERMISSIONS,
   hasPermission,
+  canViewMssv,
   requirePermission,
   signToken,
   verifyToken,

@@ -429,9 +429,9 @@
     <div class="login-card">
       <!-- Logo CS -->
       <div class="logo-wrapper" aria-label="Khoa Khoa học Máy tính, Đoàn Thanh niên và Trainee Program">
-        <img src="assets/logo.png" alt="Khoa Khoa học Máy tính - UIT" class="login-logo" width="100" height="76">
-        <img src="assets/logo-doan-thanh-nien2.webp" alt="Đoàn Thanh niên" class="login-logo login-logo--youth" width="58" height="62">
-        <img src="assets/logo_trainee@4x.png" alt="Trainee Program" class="login-logo login-logo--trainee" width="108" height="62">
+        <img src="assets/logo.png" alt="Khoa Khoa học Máy tính - UIT" class="login-logo" width="80" height="60">
+        <img src="assets/logo-doan-thanh-nien2.webp" alt="Đoàn Thanh niên" class="login-logo login-logo--youth" width="46" height="50">
+        <img src="assets/logo_traineeprogram@4x.png" alt="Trainee Program" class="login-logo login-logo--trainee" width="90" height="50">
       </div>
 
       <!-- Title & Subtitle -->
@@ -458,7 +458,7 @@
               required
               autofocus
               autocomplete="username"
-              placeholder=""
+              placeholder="Nhập tên tài khoản hoặc MSSV"
             >
           </div>
         </div>
@@ -474,7 +474,7 @@
               class="form-control"
               required
               autocomplete="current-password"
-              placeholder=""
+              placeholder="Nhập mật khẩu"
             >
           </div>
         </div>
@@ -549,17 +549,6 @@
   <div id="toastPopup" class="toast-popup"></div>
 
   <script>
-    // Kiểm tra nếu đã đăng nhập Admin thì chuyển hướng vào Trang quản trị
-    (async function checkAlreadyLoggedIn() {
-      localStorage.removeItem('uit_trainee_auth_user');
-      localStorage.removeItem('uit_trainee_auth_token');
-      try {
-        const response = await fetch('/api/auth/me', { cache: 'no-store' });
-        const data = await response.json();
-        if (data.user) window.location.replace(data.user.isOwner ? '/#admin' : '/#schedule');
-      } catch {}
-    })();
-
     // Lấy thông tin tài khoản đã ghi nhớ nếu có
     const savedUsername = localStorage.getItem('uit_remembered_username');
     if (savedUsername) {
@@ -670,7 +659,7 @@
       hideAlert();
 
       const username = usernameInput.value.trim();
-      const password = passwordInput.value.trim();
+      const password = passwordInput.value;
 
       if (!username || !password) {
         showAlert('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
@@ -692,6 +681,7 @@
       try {
         const response = await fetch('/api/auth/login', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: {
             'Content-Type': 'application/json'
           },
@@ -701,18 +691,20 @@
         const data = await response.json();
 
         if (response.ok && data.success && data.user) {
-          // Lưu JWT Token xác thực Admin an toàn
-
-          showToast(`Xin chào ${data.user.fullName}! Đang chuyển hướng...`, 'success');
-
-          // Chuyển hướng sau khi đăng nhập thành công
-          setTimeout(() => {
-            if (data.user.isOwner) {
-              window.location.href = '/#admin';
-            } else {
-              window.location.href = '/';
+          showToast(`Xin chào ${data.user.fullName || data.user.username}! Đang đăng nhập...`, 'success');
+          const token = data.sessionToken || data.token;
+          try {
+            sessionStorage.setItem('uit_auth_user_cache', JSON.stringify(data.user));
+            localStorage.setItem('uit_auth_user_cache', JSON.stringify(data.user));
+            if (token) {
+              sessionStorage.setItem('uit_trainee_auth_token', token);
+              localStorage.setItem('uit_trainee_auth_token', token);
             }
-          }, 350);
+          } catch {}
+          const targetUrl = (data.user.isOwner || data.user.role === 'admin') ? '/#admin' : data.user.role === 'trainee' ? '/#profile' : '/#schedule';
+          setTimeout(() => {
+            window.location.replace(targetUrl);
+          }, 300);
         } else {
           btnSubmit.disabled = false;
           btnText.textContent = 'Đăng nhập';

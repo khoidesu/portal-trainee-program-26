@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requirePermission, requireAuth, hasPermission, createRateLimiter, isProduction } = require('../utils/security');
+const { requirePermission, requireAuth, hasPermission, canViewMssv, createRateLimiter, isProduction } = require('../utils/security');
 const {
   getSupportRequests, getPublicLeaveRequests, getSupportRequest, createSupportRequest, createLeaveRequest,
   updateLeaveRequest, resolveSupportRequest, deleteSupportRequest
@@ -10,8 +10,8 @@ const publicLimiter = createRateLimiter(5, 60000);
 
 async function verifyLeaveChallenge(req, res, next) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret && !isProduction) return next();
-  if (!secret || !process.env.TURNSTILE_SITE_KEY) return res.status(503).json({ success: false, message: 'Chức năng xin nghỉ chưa được cấu hình xác minh chống spam.' });
+  // Nếu chưa cấu hình Cloudflare Turnstile thì bỏ qua xác minh, cho phép gửi đơn bình thường
+  if (!secret || !process.env.TURNSTILE_SITE_KEY) return next();
   const token = req.body.turnstileToken;
   if (typeof token !== 'string' || !token || token.length > 2048) return res.status(400).json({ success: false, message: 'Vui lòng hoàn tất xác minh chống spam.' });
   try {
@@ -33,8 +33,18 @@ async function verifyLeaveChallenge(req, res, next) {
 }
 
 router.get('/leave', async (req, res) => {
-  try { const list = await getPublicLeaveRequests(); res.json({ success: true, count: list.length, data: list }); }
-  catch { res.status(503).json({ success: false, message: 'Không tải được bảng xin nghỉ.' }); }
+  try {
+    const list = await getPublicLeaveRequests();
+    const allowMssv = canViewMssv(req.user);
+    const data = list.map(item => {
+      if (allowMssv) return item;
+      const { traineeId, ...safe } = item;
+      return safe;
+    });
+    res.json({ success: true, count: data.length, data });
+  } catch {
+    res.status(503).json({ success: false, message: 'Không tải được bảng xin nghỉ.' });
+  }
 });
 
 router.get('/', requirePermission('accounts:manage'), async (req, res) => {
@@ -87,7 +97,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     } else if (request.type === 'forgot_password') {
       if (!hasPermission(req.user, 'accounts:manage')) return res.status(403).json({ success: false, message: 'Chưa có quyền quản lý tài khoản.' });
       const password = req.body.newPassword;
-      if (typeof password !== 'string' || password.length < 12 || password.length > 256) return res.status(400).json({ success: false, message: 'Mật khẩu mới cần 12–256 ký tự.' });
+      if (password !== undefined && (typeof password !== 'string' || password.length < 6 || password.length > 256)) return res.status(400).json({ success: false, message: 'Mật khẩu tạm thời cần 6–256 ký tự.' });
       updated = await resolveSupportRequest(req.params.id, password, req.user.username);
     } else {
       return res.status(400).json({ success: false, message: 'Loại yêu cầu này không hỗ trợ đặt lại mật khẩu.' });

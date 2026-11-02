@@ -25,7 +25,7 @@
               </div>
               <h2 class="schedule-page-title">Thời Khóa Biểu & Lịch Học Trực Tuyến</h2>
               <p class="schedule-page-desc">
-                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program UIT. Lịch được tổng hợp
+                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program. Lịch được tổng hợp
                 chung theo tháng, Trainee bấm nút <strong>"Vào học"</strong> để tham gia lớp học trực tuyến.
               </p>
             </div>
@@ -65,7 +65,7 @@
             <form class="filter-controls-form" id="scheduleFilterForm">
               <div class="filter-control-item">
                 <label for="filterScheduleMonth" class="filter-control-label">Tháng xem lịch</label>
-                <input type="month" id="filterScheduleMonth" class="form-input" min="2000-01" max="2100-12" required>
+                <input type="month" id="filterScheduleMonth" class="form-input" min="2000-01" max="2100-12" value="2026-11" required>
               </div>
               <button type="button" class="btn btn-outline" id="btnSchedulePrevious">Tháng trước</button>
               <button type="button" class="btn btn-outline" id="btnScheduleToday">Tháng hiện tại</button>
@@ -88,14 +88,6 @@
                 <span>Lưới lịch tháng</span>
               </button>
             </div>
-
-            <div class="schedule-legend-bar">
-              <span class="legend-title">Chú thích:</span>
-              <span class="legend-chip chip-online"> Học trực tuyến</span>
-              <span class="legend-chip chip-teams-link"> Đã có link Teams</span>
-              <span class="legend-chip chip-teams-missing"> Link gán sau</span>
-              <span class="legend-chip chip-live"> Đang diễn ra</span>
-            </div>
           </div>
 
           <!-- Khung hiển thị Lịch học theo tháng chính (Tất cả buổi học trong 1 lần) -->
@@ -104,4 +96,3 @@
           </div>
 
         </section>
-

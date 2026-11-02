@@ -21,11 +21,11 @@
                 <div class="grades-breadcrumb">
                   <span>Cổng Trainee Program</span>
                   <span class="sep">›</span>
-                  <span class="active">Bảng điểm sao buổi học</span>
+                  <span class="active">Bảng điểm sao chi tiết</span>
                 </div>
                 <h1 class="grades-title">Bảng Điểm Sao Theo Từng Buổi Học</h1>
                 <p class="grades-subtitle">
-                  Theo dõi điểm sao của mỗi Trainee sau từng buổi học thực tế trong chương trình Trainee Program UIT.
+                  Theo dõi điểm sao của mỗi Trainee sau từng buổi học thực tế.
                 </p>
               </div>
               <div class="grades-header-right">
@@ -53,8 +53,7 @@
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Tổng số Trainee</span>
-                  <strong class="grades-kpi-value" id="kpiTotalTrainees">10 Trainee</strong>
-                  <span class="grades-kpi-sub">Đồng bộ từ MongoDB Atlas</span>
+                  <strong class="grades-kpi-value" id="kpiTotalTrainees"><span class="kpi-skeleton-pulse">--</span></strong>
                 </div>
               </div>
 
@@ -62,8 +61,8 @@
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Số buổi học đã diễn ra</span>
-                  <strong class="grades-kpi-value" id="kpiTotalSessions">4 buổi học</strong>
-                  <span class="grades-kpi-sub" id="kpiLatestSessionDate">Buổi gần nhất: 27/10/2026</span>
+                  <strong class="grades-kpi-value" id="kpiTotalSessions"><span class="kpi-skeleton-pulse">--</span></strong>
+                  <span class="grades-kpi-sub" id="kpiLatestSessionDate">Đang cập nhật...</span>
                 </div>
               </div>
 
@@ -71,7 +70,7 @@
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Tổng sao đã cấp phát</span>
-                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned">326 </strong>
+                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned"><span class="kpi-skeleton-pulse">--</span></strong>
                   <span class="grades-kpi-sub">Toàn bộ các buổi đào tạo</span>
                 </div>
               </div>
@@ -80,8 +79,7 @@
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Trainee dẫn đầu</span>
-                  <strong class="grades-kpi-value" id="kpiTopStudent">Anh Khoi (50 )</strong>
-                  <span class="grades-kpi-sub"> Quán quân Trainee</span>
+                  <strong class="grades-kpi-value" id="kpiTopStudent"><span class="kpi-skeleton-pulse">--</span></strong>
                 </div>
               </div>
             </div>
@@ -112,7 +110,7 @@
                     <select id="selectGradesTrack" class="form-input"><option value="all">Tất cả</option></select>
                   </div>
 
-                  <span class="badge badge-primary" id="gradesCountBadge">10 Trainee</span>
+                  <span class="badge badge-primary" id="gradesCountBadge">-- Trainee</span>
                 </div>
               </div>
 
@@ -166,8 +164,7 @@
             <!-- Session Reference Section: Thông tin các buổi học đã diễn ra -->
             <div class="grades-session-reference-section">
               <div class="section-title-wrap">
-                <h4 class="session-reference-title"> Danh Sách Nội Dung Các Buổi Học Đã Đào Tạo</h4>
-                <span class="session-reference-badge">Phụ trách: <strong>Ban Hậu cần</strong></span>
+                <h4 class="session-reference-title"> Danh Sách Các Buổi Học Đã Diễn Ra</h4>
               </div>
               <div class="session-reference-grid" id="sessionReferenceGrid">
                 <!-- Populated dynamically by JS -->

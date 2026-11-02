@@ -17,8 +17,12 @@
 // ==========================================
 function renderDashboard(t) {
   // Student Card Banner
+  const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
   elements.studentName.textContent = t.fullName;
-  elements.studentId.textContent = t.traineeId;
+  if (elements.studentId) {
+    elements.studentId.textContent = showMssv ? t.traineeId : '';
+    elements.studentId.style.display = showMssv ? '' : 'none';
+  }
   elements.studentBatch.textContent = t.batch;
   elements.studentTrack.textContent = t.track;
   elements.studentEmail.textContent = t.email;
@@ -259,16 +263,51 @@ function renderPendingRequests(requests) {
 }
 
 function renderMentor(mentor) {
-  if (!mentor) return;
-  elements.mentorName.textContent = mentor.name;
-  elements.mentorEmail.textContent = mentor.email;
-  elements.mentorEmail.href = `mailto:${mentor.email}`;
-  elements.mentorPhone.textContent = mentor.phone;
-  elements.mentorPhone.href = `tel:${mentor.phone}`;
-  elements.mentorAvatar.textContent = mentor.avatarInitial || getInitials(mentor.name);
   const roleEl = document.getElementById('mentorRole');
+  if (!mentor || !mentor.name) {
+    if (elements.mentorName) elements.mentorName.textContent = 'Chưa công bố';
+    if (roleEl) roleEl.textContent = 'Chưa công bố';
+    if (elements.mentorEmail) {
+      elements.mentorEmail.textContent = '—';
+      elements.mentorEmail.style.display = 'none';
+      elements.mentorEmail.removeAttribute('href');
+    }
+    if (elements.mentorPhone) {
+      elements.mentorPhone.textContent = '—';
+      elements.mentorPhone.style.display = 'none';
+      elements.mentorPhone.removeAttribute('href');
+    }
+    if (elements.mentorAvatar) elements.mentorAvatar.textContent = '—';
+    return;
+  }
+  elements.mentorName.textContent = mentor.name;
   if (roleEl) {
-    roleEl.textContent = 'Trainer Trainee Program';
+    roleEl.textContent = mentor.role || 'Mentor Trainee Program';
+  }
+  if (elements.mentorEmail) {
+    if (mentor.email) {
+      elements.mentorEmail.textContent = mentor.email;
+      elements.mentorEmail.href = `mailto:${mentor.email}`;
+      elements.mentorEmail.style.display = 'inline';
+    } else {
+      elements.mentorEmail.textContent = '—';
+      elements.mentorEmail.style.display = 'none';
+      elements.mentorEmail.removeAttribute('href');
+    }
+  }
+  if (elements.mentorPhone) {
+    if (mentor.phone) {
+      elements.mentorPhone.textContent = mentor.phone;
+      elements.mentorPhone.href = `tel:${mentor.phone}`;
+      elements.mentorPhone.style.display = 'inline';
+    } else {
+      elements.mentorPhone.textContent = '—';
+      elements.mentorPhone.style.display = 'none';
+      elements.mentorPhone.removeAttribute('href');
+    }
+  }
+  if (elements.mentorAvatar) {
+    elements.mentorAvatar.textContent = mentor.avatarInitial || getInitials(mentor.name);
   }
 }
 

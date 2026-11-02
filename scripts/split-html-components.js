@@ -106,7 +106,7 @@ const componentDefs = [
     file: 'view-grades.html',
     start: 1151,
     end: 1344,
-    name: 'TAB VIEW: STAR TRANSCRIPT (Bảng Điểm Sao Buổi Học)',
+    name: 'TAB VIEW: STAR TRANSCRIPT (Bảng Điểm Sao Chi Tiết)',
     func: 'Bảng điểm chi tiết sao tích lũy và đánh giá rèn luyện theo từng buổi học.',
     links: 'public/js/modules/grades.js, public/css/style.css',
     tasks: [

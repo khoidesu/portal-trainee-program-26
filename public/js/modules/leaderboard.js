@@ -46,9 +46,24 @@ function renderSummaryStats() {
   `;
 }
 
+function compareTraineesForRank(a, b) {
+  const rankA = Number(a.currentRank || a.rank);
+  const rankB = Number(b.currentRank || b.rank);
+  if (Number.isFinite(rankA) && Number.isFinite(rankB) && rankA !== rankB) {
+    return rankA - rankB;
+  }
+  const starDiff = (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0);
+  if (starDiff !== 0) return starDiff;
+  const scoreDiff = (Number(b.assignmentScore) || 0) - (Number(a.assignmentScore) || 0);
+  if (scoreDiff !== 0) return scoreDiff;
+  const attDiff = (Number(b.attendedSessions) || 0) - (Number(a.attendedSessions) || 0);
+  if (attDiff !== 0) return attDiff;
+  return String(a.traineeId || '').localeCompare(String(b.traineeId || ''));
+}
+
 function renderPodium() {
   // BẢNG XẾP HẠNG THUẦN TÚY DỰA TRÊN SỐ SAO TÍCH LŨY (KHÔNG LIÊN QUAN ĐẾN ĐIỂM KHÁC)
-  const sorted = state.trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort((a, b) => (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0));
+  const sorted = state.trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort(compareTraineesForRank);
 
   const section = document.getElementById('podiumSection');
   if (section) section.style.display = sorted.length ? '' : 'none';
@@ -87,6 +102,7 @@ function renderLeaderboardTable() {
   tbody.innerHTML = '';
 
   const isAdmin = state.currentUser && state.currentUser.role === 'admin';
+  const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
 
   let filtered = [...state.trainees];
 
@@ -116,13 +132,13 @@ function renderLeaderboardTable() {
   } else if (state.sortBy === 'name_asc') {
     filtered.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'vi'));
   } else {
-    // Mặc định: Số sao nhiều nhất xếp trước
-    filtered.sort((a, b) => (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0));
+    // Mặc định: Số sao nhiều nhất xếp trước, đồng bộ với thứ hạng
+    filtered.sort(compareTraineesForRank);
   }
 
   // Bảng xếp hạng theo số sao trên toàn bộ cơ sở dữ liệu
   const starRankMap = new Map();
-  const allByStars = state.trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort((a, b) => (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0));
+  const allByStars = state.trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort(compareTraineesForRank);
   allByStars.forEach((t, i) => {
     starRankMap.set(t.traineeId, i + 1);
   });
@@ -144,8 +160,8 @@ function renderLeaderboardTable() {
       tr.classList.add('active-student-row');
     }
 
-    // Thứ hạng dựa trên số sao tích lũy
-    const rankNum = starRankMap.get(t.traineeId) || '—';
+    // Thứ hạng dựa trên số sao tích lũy đồng bộ với quản trị và cá nhân
+    const rankNum = t.currentRank || t.rank || starRankMap.get(t.traineeId) || '—';
     let rankBadgeClass = 'rank-other';
     if (rankNum === 1) rankBadgeClass = 'rank-1';
     else if (rankNum === 2) rankBadgeClass = 'rank-2';
@@ -160,7 +176,7 @@ function renderLeaderboardTable() {
           <img src="${getTraineeDicebearAvatar(t)}" alt="${escapeHtml(t.fullName)}" class="table-avatar-img" style="object-fit: cover;">
           <div>
             <span class="table-student-name">${escapeHtml(t.fullName)}</span>
-            <span class="table-student-id">MSSV: ${escapeHtml(t.traineeId)}</span>
+            ${showMssv ? `<span class="table-student-id">MSSV: ${escapeHtml(t.traineeId)}</span>` : ''}
           </div>
         </div>
       </td>
@@ -208,19 +224,21 @@ window.openTraineeDetail = async function(traineeId) {
   const trainee = await window.API.getTraineeById(traineeId);
   if (!trainee) return;
 
-  // Xếp hạng dựa trên số sao tích lũy
-  const starRank = [...state.trainees]
-    .sort((a, b) => (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0))
-    .findIndex(t => t.traineeId === trainee.traineeId) + 1;
+  // Xếp hạng dựa trên số sao tích lũy đồng bộ
+  const starRank = trainee.currentRank || trainee.rank || ([...state.trainees]
+    .filter(t => Number.isFinite(t.accumulatedStars))
+    .sort(compareTraineesForRank)
+    .findIndex(t => t.traineeId === trainee.traineeId) + 1);
 
+  const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
   const body = elements.traineeDetailModalBody;
   body.innerHTML = `
     <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
       <img src="${getTraineeDicebearAvatar(trainee)}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-blue-border);">
       <div>
         <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-main);">${escapeHtml(trainee.fullName)}</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">MSSV: <strong>${escapeHtml(trainee.traineeId)}</strong> · Lớp: <strong>${escapeHtml(trainee.batch || '')}</strong></p>
-        <p style="font-size: 0.82rem; color: var(--primary-blue); font-weight: 600;">${escapeHtml(trainee.email || '')}</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">${showMssv ? `MSSV: <strong>${escapeHtml(trainee.traineeId)}</strong> · ` : ''}Lớp: <strong>${escapeHtml(trainee.batch || '')}</strong> · Chuyên ban: <strong>${escapeHtml(trainee.track || 'Khoa KHMT')}</strong></p>
+        ${showMssv ? `<p style="font-size: 0.82rem; color: var(--primary-blue); font-weight: 600;">${escapeHtml(trainee.email || '')}</p>` : ''}
       </div>
     </div>
 
@@ -249,7 +267,7 @@ window.openTraineeDetail = async function(traineeId) {
     <div style="margin-bottom: 16px;">
       <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main);">Giới thiệu & Đánh giá:</h4>
       <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; background: var(--bg-card-subtle); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-        ${escapeHtml(trainee.bio || 'Trainee tích cực tham gia đầy đủ các buổi đào tạo chuyên sâu và đồ án tốt nghiệp.')}
+        ${escapeHtml(trainee.bio || 'Trainee tích cực tham gia đầy đủ các buổi đào tạo.')}
       </p>
     </div>
 

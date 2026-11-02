@@ -24,6 +24,12 @@ const permissionLabels = {
 };
 let managedAccounts = [];
 
+function formatAccountDate(value) {
+  if (!value) return 'Chưa có';
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleString('vi-VN') : 'Chưa có';
+}
+
 async function renderAdminView() {
   if (!canManage('accounts:manage')) return;
   const form = document.getElementById('accountEditorForm');
@@ -35,6 +41,7 @@ async function renderAdminView() {
       Object.entries(permissionLabels).map(([value, label]) => `<label><input type="checkbox" name="accountPermission" value="${value}"> ${label}</label>`).join('');
     document.getElementById('btnResetAccountForm').addEventListener('click', resetAccountEditor);
     document.getElementById('btnReloadAccounts').addEventListener('click', renderAdminView);
+    document.getElementById('btnAdminRefreshSupport')?.addEventListener('click', renderAdminSupportRequests);
     document.getElementById('accountRole').addEventListener('change', updateAccountPermissionInputs);
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -42,12 +49,13 @@ async function renderAdminView() {
       button.disabled = true;
       try {
         const id = document.getElementById('accountEditId').value;
+        const activeValue = id ? (document.getElementById('accountActive')?.checked ?? true) : true;
         await API.saveAccount(id, {
           username: document.getElementById('accountUsername').value.trim(),
           fullName: document.getElementById('accountFullName').value.trim(),
           password: document.getElementById('accountPassword').value,
           role: document.getElementById('accountRole').value,
-          active: document.getElementById('accountActive').checked,
+          active: activeValue,
           permissions: [...form.querySelectorAll('[name="accountPermission"]:checked')].map(input => input.value)
         });
         resetAccountEditor();
@@ -62,12 +70,16 @@ async function renderAdminView() {
   try {
     managedAccounts = await API.getAccounts();
     body.innerHTML = managedAccounts.map(account => `<tr>
-      <td><strong>${escapeHtml(account.username)}</strong><br>${escapeHtml(account.fullName)}</td>
-      <td>${account.isOwner ? 'Quản trị gốc' : account.role === 'admin' ? 'Quản trị nội dung' : 'Trainer'}</td>
+      <td><strong>${escapeHtml(account.username)}</strong><br>${escapeHtml(account.fullName)}${account.isOwner ? '' : `<br><small>Tạo: ${escapeHtml(formatAccountDate(account.createdAt))}<br>Đăng nhập: ${escapeHtml(formatAccountDate(account.lastLoginAt))}<br>Đổi mật khẩu: ${escapeHtml(formatAccountDate(account.lastPasswordChangeAt))}</small>${account.loginHistory?.length ? `<details><summary>${account.loginHistory.length} lần đăng nhập gần đây</summary>${account.loginHistory.map(log => `<div><small>${escapeHtml(formatAccountDate(log.timestamp))} · ${escapeHtml(log.ip || 'Không rõ IP')}</small></div>`).join('')}</details>` : ''}`}</td>
+      <td>${account.isOwner ? 'Quản trị gốc' : account.role === 'admin' ? 'Quản trị nội dung' : account.role === 'trainee' ? 'Trainee' : 'Trainer'}</td>
       <td>${account.isOwner ? 'Toàn bộ, bao gồm quản lý tài khoản' : account.permissions.map(permission => permissionLabels[permission]).filter(Boolean).map(escapeHtml).join(', ') || 'Chỉ xem'}</td>
-      <td>${account.active ? 'Đang hoạt động' : 'Đã khóa'}</td>
-      <td>${account.isOwner ? 'Cấu hình qua biến môi trường' : `<div class="context-actions"><button type="button" class="btn btn-outline btn-xs account-edit" data-id="${escapeHtml(account.id)}">Sửa quyền</button><button type="button" class="btn btn-outline btn-xs account-toggle" data-id="${escapeHtml(account.id)}">${account.active ? 'Khóa' : 'Mở khóa'}</button></div>`}</td>
+      <td>${account.active ? (account.mustChangePassword ? 'Cần đổi mật khẩu' : 'Đang hoạt động') : 'Đã khóa'}</td>
+      <td>${account.isOwner ? '<span class="badge badge-primary">Tài khoản Quản trị gốc</span>' : `<div class="context-actions">${account.role === 'trainee' ? `<button type="button" class="btn btn-outline btn-xs account-profile" data-trainee-id="${escapeHtml(account.traineeId || account.username)}">Hồ sơ</button>` : `<button type="button" class="btn btn-outline btn-xs account-edit" data-id="${escapeHtml(account.id)}">Sửa quyền</button>`}<button type="button" class="btn btn-outline btn-xs account-reset-password" data-id="${escapeHtml(account.id)}">Reset mật khẩu</button><button type="button" class="btn btn-outline btn-xs account-require-password" data-id="${escapeHtml(account.id)}">Yêu cầu đổi MK</button><button type="button" class="btn btn-outline btn-xs account-toggle" data-id="${escapeHtml(account.id)}">${account.active ? 'Khóa' : 'Mở khóa'}</button>${account.role === 'trainee' ? '' : `<button type="button" class="btn btn-danger btn-xs account-delete" data-id="${escapeHtml(account.id)}" data-username="${escapeHtml(account.username)}"><i class="fas fa-trash"></i> Xóa</button>`}</div>`}</td>
     </tr>`).join('');
+    body.querySelectorAll('.account-profile').forEach(button => button.addEventListener('click', () => {
+      state.profileTargetId = button.dataset.traineeId;
+      switchTab('profile');
+    }));
     body.querySelectorAll('.account-edit').forEach(button => button.addEventListener('click', () => {
       const account = managedAccounts.find(item => item.id === button.dataset.id);
       document.getElementById('accountEditId').value = account.id;
@@ -77,7 +89,9 @@ async function renderAdminView() {
       document.getElementById('accountRole').value = account.role;
       document.getElementById('accountPassword').value = '';
       document.getElementById('accountPassword').required = false;
-      document.getElementById('accountActive').checked = account.active;
+      if (document.getElementById('accountActive')) document.getElementById('accountActive').checked = account.active;
+      const activeLabel = document.getElementById('accountActiveLabel');
+      if (activeLabel) activeLabel.style.display = 'none';
       form.querySelectorAll('[name="accountPermission"]').forEach(input => { input.checked = account.permissions.includes(input.value); });
       document.getElementById('accountEditorTitle').textContent = 'Sửa tài khoản ' + account.username;
       updateAccountPermissionInputs();
@@ -87,21 +101,51 @@ async function renderAdminView() {
       const account = managedAccounts.find(item => item.id === button.dataset.id);
       button.disabled = true;
       try {
-        await API.saveAccount(account.id, { ...account, active: !account.active, password: '' });
+        await API.adminToggleAccountActive(account.id, !account.active);
         await renderAdminView();
       } catch (error) { document.getElementById('accountFeedback').textContent = error.message; button.disabled = false; }
     }));
+    body.querySelectorAll('.account-reset-password').forEach(button => button.addEventListener('click', async () => {
+      if (!confirm('Đặt lại mật khẩu của tài khoản này về mật khẩu mặc định và thu hồi các phiên đăng nhập cũ?')) return;
+      button.disabled = true;
+      const result = await API.adminResetPassword(button.dataset.id);
+      document.getElementById('accountFeedback').textContent = result.message || 'Đã đặt lại mật khẩu.';
+      button.disabled = false;
+      await renderAdminView();
+    }));
+    body.querySelectorAll('.account-require-password').forEach(button => button.addEventListener('click', async () => {
+      button.disabled = true;
+      const result = await API.adminRequirePasswordChange(button.dataset.id);
+      document.getElementById('accountFeedback').textContent = result.message || 'Đã yêu cầu đổi mật khẩu.';
+      button.disabled = false;
+      await renderAdminView();
+    }));
+    body.querySelectorAll('.account-delete').forEach(button => button.addEventListener('click', async () => {
+      const id = button.dataset.id;
+      const username = button.dataset.username;
+      if (!confirm(`Xác nhận xóa vĩnh viễn tài khoản "${username}"?\nTài khoản này sẽ bị xóa khỏi cơ sở dữ liệu MongoDB Atlas.`)) return;
+      button.disabled = true;
+      try {
+        const res = await API.deleteAccount(id);
+        if (window.showToast) window.showToast(res.message || `Đã xóa tài khoản ${username} thành công!`, 'success');
+        document.getElementById('accountFeedback').textContent = res.message || `Đã xóa tài khoản ${username}.`;
+        await renderAdminView();
+      } catch (error) {
+        if (window.showToast) window.showToast(error.message || 'Lỗi khi xóa tài khoản', 'danger');
+        document.getElementById('accountFeedback').textContent = error.message;
+        button.disabled = false;
+      }
+    }));
   } catch (error) {
-    body.innerHTML = '<tr><td colspan="5">Không tải được tài khoản. Bấm Tải lại để thử.</td></tr>';
+    body.innerHTML = '<tr><td colspan="5">Không tải được tài khoản. Bấm "Làm mới" để thử.</td></tr>';
     document.getElementById('accountFeedback').textContent = error.message;
   }
+  await renderAdminSupportRequests();
 }
 
 function updateAccountPermissionInputs() {
-  const isAdmin = document.getElementById('accountRole').value === 'admin';
   document.querySelectorAll('[name="accountPermission"]').forEach(input => {
-    input.disabled = isAdmin;
-    if (isAdmin) input.checked = true;
+    input.disabled = false;
   });
 }
 
@@ -111,17 +155,38 @@ function resetAccountEditor() {
   document.getElementById('accountUsername').disabled = false;
   document.getElementById('accountPassword').required = true;
   document.getElementById('accountEditorTitle').textContent = 'Tạo tài khoản';
+  const activeInput = document.getElementById('accountActive');
+  if (activeInput) activeInput.checked = true;
+  const activeLabel = document.getElementById('accountActiveLabel');
+  if (activeLabel) activeLabel.style.display = 'none';
   updateAccountPermissionInputs();
 }
 
 function renderAdminTable() {
   if (!elements.adminTraineesTableBody) return;
 
+  if (canManage('accounts:manage') && managedAccounts.length === 0) {
+    API.getAccounts().then(accounts => { managedAccounts = accounts; renderAdminTable(); }).catch(() => {});
+  }
+
   let list = [...(state.trainees || [])];
+  const accountMap = new Map(managedAccounts.filter(account => account.role === 'trainee').map(account => [String(account.traineeId || account.username).toLowerCase(), account]));
 
   // Filter by track
   if (state.adminSelectedTrack && state.adminSelectedTrack !== 'all') {
     list = list.filter(t => (t.track || '').includes(state.adminSelectedTrack) || (t.department || '').includes(state.adminSelectedTrack));
+  }
+
+  // Filter by status
+  if (state.adminSelectedStatus && state.adminSelectedStatus !== 'all') {
+    list = list.filter(t => {
+      const s = (t.status || 'active').toLowerCase();
+      const account = accountMap.get(String(t.traineeId).toLowerCase());
+      if (state.adminSelectedStatus === 'active') return account?.active !== false && (s === 'active' || s === 'đang học');
+      if (state.adminSelectedStatus === 'completed') return s === 'completed' || s === 'hoàn thành';
+      if (state.adminSelectedStatus === 'inactive') return account?.active === false || s === 'inactive' || s === 'ngừng học' || s === 'đã khóa';
+      return true;
+    });
   }
 
   // Filter by search
@@ -130,7 +195,10 @@ function renderAdminTable() {
     list = list.filter(t =>
       (t.fullName || '').toLowerCase().includes(q) ||
       (t.traineeId || '').toLowerCase().includes(q) ||
-      (t.email || '').toLowerCase().includes(q)
+      (t.email || '').toLowerCase().includes(q) ||
+      (t.track || '').toLowerCase().includes(q) ||
+      (t.department || '').toLowerCase().includes(q) ||
+      (t.batch || '').toLowerCase().includes(q)
     );
   }
 
@@ -152,6 +220,7 @@ function renderAdminTable() {
     const unexcused = formatTraineeMetric(t.absentUnexcused);
     const assignScore = Number.isFinite(t.assignmentScore) ? t.assignmentScore.toFixed(1) : '—';
     const rank = Number.isFinite(t.accumulatedStars) ? t.currentRank || t.rank || '—' : '—';
+    const account = accountMap.get(String(t.traineeId).toLowerCase());
 
     return `
       <tr data-trainee-id="${t.traineeId}">
@@ -161,7 +230,7 @@ function renderAdminTable() {
               <img src="${getTraineeDicebearAvatar(t)}" alt="${escapeHtml(t.fullName)}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
             </div>
             <div class="admin-user-info">
-              <span class="admin-user-name">${escapeHtml(t.fullName)}</span><span class="badge-tag ${t.status === 'Ngừng học' ? 'status-stopped' : 'status-active'}">${escapeHtml(t.status || 'Đang học')}</span>
+              <span class="admin-user-name">${escapeHtml(t.fullName)}</span><span class="badge-tag ${(t.status === 'Ngừng học' || account?.active === false) ? 'status-stopped' : 'status-active'}">${account?.active === false ? 'Tài khoản đã khóa' : escapeHtml(t.status || 'Đang học')}</span>
               <span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong> · ${escapeHtml(t.email)}</span>
             </div>
           </div>
@@ -169,6 +238,10 @@ function renderAdminTable() {
         <td>
           <div style="font-weight: 600;">${escapeHtml(t.batch || 'KHMT2026.2')}</div>
           <div style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(t.track || 'Khoa KHMT')}</div>
+          <div style="font-size: 0.74rem; margin-top: 3px; color: ${t.mentor?.name ? 'var(--primary-blue)' : 'var(--text-muted)'};">
+            <i class="fas fa-user-tie" style="font-size: 0.7rem; margin-right: 3px;"></i>
+            <span>${t.mentor?.name ? `Mentor: <strong>${escapeHtml(t.mentor.name)}</strong>` : '<em>Chưa công bố</em>'}</span>
+          </div>
         </td>
         <td>
           <div class="star-chip">
@@ -203,9 +276,15 @@ function renderAdminTable() {
           </div>
         </td>
         <td>
-          <div class="admin-actions-cell">
+          <div class="admin-actions-cell" style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn-admin-action view-btn" data-action="view-profile" data-id="${t.traineeId}" title="Xem hồ sơ cá nhân" style="background: rgba(37,99,235,0.1); color: var(--primary-blue); border-color: rgba(37,99,235,0.25);">
+               Hồ sơ
+            </button>
             <button type="button" class="btn-admin-action edit-btn" data-action="edit" data-id="${t.traineeId}" title="Sửa chỉ số và thông tin">
                Sửa
+            </button>
+            <button type="button" class="btn-admin-action reset-btn" data-action="reset-pass" data-id="${t.traineeId}" title="Reset về mật khẩu mặc định" style="background: rgba(245,158,11,0.1); color: #d97706; border-color: rgba(245,158,11,0.25);">
+               Reset MK
             </button>
             <button type="button" class="btn-admin-action delete-btn" data-action="delete" data-id="${t.traineeId}" title="Xóa người dùng">
                Xóa
@@ -218,12 +297,30 @@ function renderAdminTable() {
 
   // Attach button events
   elements.adminTraineesTableBody.querySelectorAll('.btn-admin-action').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const action = btn.getAttribute('data-action');
       const id = btn.getAttribute('data-id');
-      if (action === 'edit') {
+      if (action === 'view-profile') {
+        state.profileTargetId = id;
+        switchTab('profile');
+      } else if (action === 'edit') {
         openEditTraineeModal(id);
+      } else if (action === 'reset-pass') {
+        if (!confirm(`Xác nhận đặt lại mật khẩu mặc định cho Trainee (MSSV: ${id}) và thu hồi các phiên đăng nhập cũ?`)) return;
+        btn.disabled = true;
+        try {
+          const res = await API.adminResetPassword(id);
+          if (res && res.success) {
+            if (window.showToast) window.showToast(res.message || 'Đã đặt lại mật khẩu về mặc định thành công!', 'success');
+          } else {
+            if (window.showToast) window.showToast(res?.message || 'Không thể đặt lại mật khẩu!', 'danger');
+          }
+        } catch (err) {
+          if (window.showToast) window.showToast('Lỗi: ' + err.message, 'danger');
+        } finally {
+          btn.disabled = false;
+        }
       } else if (action === 'delete') {
         openDeleteModal(id);
       }
@@ -295,6 +392,11 @@ function openEditTraineeModal(traineeId) {
   elements.editEmail.value = t.email || '';
   elements.editTrack.value = t.track || '';
   elements.editBatch.value = t.batch || '';
+  if (elements.editProgramStatus) elements.editProgramStatus.value = ({ Active: 'Đang học', Completed: 'Hoàn thành', Inactive: 'Ngừng học' })[t.status] || t.status || 'Đang học';
+  if (elements.editMentorName) elements.editMentorName.value = t.mentor?.name || '';
+  if (elements.editMentorEmail) elements.editMentorEmail.value = t.mentor?.email || '';
+  if (elements.editMentorRole) elements.editMentorRole.value = t.mentor?.role || '';
+  if (elements.editMentorPhone) elements.editMentorPhone.value = t.mentor?.phone || '';
 
   elements.editAttendedSessions.value = t.attendedSessions !== undefined ? t.attendedSessions : 40;
   elements.editTotalSessions.value = t.totalSessions ?? '';
@@ -470,11 +572,29 @@ async function handleEditTraineeSubmit(e) {
     });
   });
 
+  const mentorName = elements.editMentorName ? elements.editMentorName.value.trim() : '';
+  const mentorEmail = elements.editMentorEmail ? elements.editMentorEmail.value.trim() : '';
+  const mentorRole = elements.editMentorRole ? elements.editMentorRole.value.trim() : '';
+  const mentorPhone = elements.editMentorPhone ? elements.editMentorPhone.value.trim() : '';
+
+  let mentor = null;
+  if (mentorName) {
+    mentor = {
+      name: mentorName,
+      email: mentorEmail,
+      role: mentorRole || 'Mentor Trainee Program',
+      phone: mentorPhone,
+      avatarInitial: getInitials(mentorName)
+    };
+  }
+
   const updateData = {
     fullName: elements.editFullName.value.trim(),
     email: elements.editEmail.value.trim(),
     track: elements.editTrack.value.trim(),
     batch: elements.editBatch.value.trim(),
+    status: elements.editProgramStatus?.value || 'Đang học',
+    mentor,
     accumulatedStars: calculatedTotalStars,
     sessionStars: sessionStars, // Cập nhật sessionStars đồng bộ MongoDB
     attendedSessions: Number(elements.editAttendedSessions.value),
@@ -494,12 +614,25 @@ async function handleEditTraineeSubmit(e) {
     const res = await window.API.updateTrainee(id, updateData);
     if (res && res.success) {
       closeEditTraineeModal();
+      const updatedTrainee = res.data;
+      if (updatedTrainee) {
+        const idx = (state.trainees || []).findIndex(trainee => trainee.traineeId === id);
+        if (idx !== -1) {
+          state.trainees[idx] = { ...state.trainees[idx], ...updatedTrainee, mentor: updatedTrainee.mentor || mentor };
+        }
+      }
       if (window.showToast) {
-        window.showToast(`Đã lưu thay đổi theo từng buổi học cho Trainee ${updateData.fullName} vào MongoDB! (Tổng: ${calculatedTotalStars} )`, 'success');
+        window.showToast(`Đã lưu thay đổi cho Trainee ${updateData.fullName}! (Tổng: ${calculatedTotalStars} ⭐)`, 'success');
       }
       await refreshPortalData();
       if (state.currentTraineeId === id) {
         await loadCurrentTrainee(id);
+      }
+      if (typeof renderAdminTraineesTable === 'function') {
+        renderAdminTraineesTable();
+      }
+      if (state.currentTab === 'profile' && state.profileTargetId === id && typeof renderProfileView === 'function') {
+        renderProfileView();
       }
     } else {
       alert(res?.message || 'Lỗi khi cập nhật Trainee');
@@ -638,13 +771,8 @@ async function renderAdminSupportRequests() {
 }
 
 window.handleResolveSupport = async function(id) {
-  const password = prompt('Nhập mật khẩu tạm mới cho Trainee (12–256 ký tự):');
-  if (!password) return;
-  if (password.length < 12 || password.length > 256) {
-    window.showToast?.('Mật khẩu cần 12–256 ký tự.', 'warning');
-    return;
-  }
-  const result = await API.resolveSupportRequest(id, password);
+  if (!confirm('Đặt lại tài khoản về mật khẩu mặc định, thu hồi phiên cũ và yêu cầu Trainee đổi mật khẩu?')) return;
+  const result = await API.resolveSupportRequest(id);
   window.showToast?.(result.success ? 'Đã đặt lại mật khẩu.' : result.message || 'Không thể đặt lại mật khẩu.', result.success ? 'success' : 'danger');
   await renderAdminSupportRequests();
 };
@@ -1083,7 +1211,7 @@ async function renderAssignmentSubmissions() {
     }));
   } catch (err) {
     if (request !== assignmentReviewRequest) return;
-    tbody.innerHTML = '<tr><td colspan="6">Không tải được dữ liệu. Bấm Tải lại để thử.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">Không tải được dữ liệu. Bấm "Làm mới" để thử.</td></tr>';
     feedback.textContent = err.message;
   }
 }

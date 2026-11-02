@@ -15,6 +15,7 @@ const express = require('express');
 const router = express.Router();
 const Trainee = require('../models/Trainee');
 const {
+  signToken,
   hashPassword,
   verifyPassword,
   createRateLimiter,
@@ -23,7 +24,7 @@ const {
   setSession,
   clearSession
 } = require('../utils/security');
-const { authenticateUser, getAccounts, saveAccount, changeAccountPassword } = require('../config/db');
+const { authenticateUser, getAccounts, saveAccount, deleteAccount, changeAccountPassword, adminResetPassword, adminRequirePasswordChange, adminToggleAccountActive } = require('../config/db');
 
 // Giới hạn 5 lần đăng nhập sai trong 1 phút chống tấn công brute-force
 const loginLimiter = createRateLimiter(5, 60000);
@@ -39,22 +40,32 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
-    const authResult = await authenticateUser(username, password);
+    const clientInfo = {
+      ip: req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1',
+      userAgent: req.headers['user-agent'] || ''
+    };
+
+    const authResult = await authenticateUser(username, password, clientInfo);
     if (!authResult.success) {
       return res.status(401).json(authResult);
     }
 
-    setSession(res, {
+    const sessionPayload = {
       username: authResult.user.username,
       role: authResult.user.role,
       fullName: authResult.user.fullName,
       root: authResult.user.isOwner === true,
-      accountId: authResult.user.id,
+      accountId: authResult.user.id || (authResult.user.isOwner ? 'owner' : undefined),
+      traineeId: authResult.user.traineeId,
       sessionVersion: authResult.user.sessionVersion
-    });
+    };
+
+    setSession(res, sessionPayload);
+    const sessionToken = signToken(sessionPayload);
 
     res.json({
-      ...authResult
+      ...authResult,
+      sessionToken
     });
   } catch (err) {
     console.error('Lỗi khi xử lý đăng nhập:', err.message);
@@ -81,11 +92,47 @@ router.get('/me', (req, res) => {
 // Đổi mật khẩu tài khoản người dùng (Xác thực mật khẩu cũ & Hash scrypt)
 router.post('/change-password', requireAuth, loginLimiter, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 256) return res.status(400).json({ success: false, message: 'Mật khẩu mới cần 12–256 ký tự.' });
+  const minLen = req.user?.role === 'trainee' ? 6 : 12;
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length < minLen || newPassword.length > 256) {
+    return res.status(400).json({ success: false, message: `Mật khẩu mới cần ${minLen}–256 ký tự.` });
+  }
   try {
     await changeAccountPassword(req.user, currentPassword, newPassword);
     clearSession(res);
     res.json({ success: true, message: 'Đã đổi mật khẩu. Vui lòng đăng nhập lại.' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/admin/reset-password', requirePermission('accounts:manage'), async (req, res) => {
+  const { id, identifier, password } = req.body;
+  const target = id || identifier;
+  if (!target) return res.status(400).json({ success: false, message: 'Thiếu định danh tài khoản cần đặt lại mật khẩu.' });
+  try {
+    const result = await adminResetPassword(target, password);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/admin/require-password-change', requirePermission('accounts:manage'), async (req, res) => {
+  const target = req.body.id || req.body.identifier;
+  if (!target) return res.status(400).json({ success: false, message: 'Thiếu định danh tài khoản.' });
+  try {
+    res.json(await adminRequirePasswordChange(target));
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/admin/toggle-active/:id', requirePermission('accounts:manage'), async (req, res) => {
+  const { active } = req.body;
+  if (typeof active !== 'boolean') return res.status(400).json({ success: false, message: 'Thiếu hoặc sai trạng thái kích hoạt.' });
+  try {
+    const result = await adminToggleAccountActive(req.params.id, active);
+    res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -104,6 +151,15 @@ router.post('/accounts', requirePermission('accounts:manage'), async (req, res) 
 router.put('/accounts/:id', requirePermission('accounts:manage'), async (req, res) => {
   try { res.json({ success: true, data: await saveAccount(req.params.id, req.body) }); }
   catch (error) { res.status(400).json({ success: false, message: error.message }); }
+});
+
+router.delete('/accounts/:id', requirePermission('accounts:manage'), async (req, res) => {
+  try {
+    const result = await deleteAccount(req.params.id, req.user);
+    res.json({ success: true, message: result.message });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Lỗi khi xóa tài khoản.' });
+  }
 });
 
 module.exports = router;

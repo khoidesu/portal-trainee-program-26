@@ -38,6 +38,8 @@ const questionRoutes = require('./routes/questionRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const profileRoutes = require('./routes/profileRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,7 +63,7 @@ app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://api.dicebear.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://api.dicebear.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com");
   if (isProduction) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   next();
 });
@@ -75,9 +77,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Giới hạn kích thước payload (2MB)
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+// Giới hạn kích thước payload (6MB hỗ trợ upload avatar)
+app.use(express.json({ limit: '6mb' }));
+app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -112,6 +114,8 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/requests', supportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Kiểm tra trạng thái cơ sở dữ liệu
 app.get('/api/status', (req, res) => {

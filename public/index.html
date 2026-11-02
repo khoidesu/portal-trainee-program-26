@@ -10,7 +10,7 @@
   <meta name="description"
     content="Cổng thông tin theo dõi sinh viên và thực tập sinh trong chương trình Trainee Program UIT. Bảng xếp hạng, tiến độ học tập và đánh giá năng lực.">
 
-  <!-- Early Theme Initializer to prevent white overscroll & flashes -->
+  <!-- Early Theme & Sidebar Initializer to prevent white overscroll & layout flashes -->
   <script>
     (function () {
       try {
@@ -27,6 +27,9 @@
           document.documentElement.style.backgroundColor = '#eaf4ff';
           document.documentElement.style.colorScheme = 'light';
         }
+        if (localStorage.getItem('uit_portal_sidebar_collapsed') === 'true') {
+          document.documentElement.classList.add('preload-sidebar-collapsed');
+        }
       } catch (e) { }
     })();
   </script>
@@ -37,6 +40,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700&amp;family=Source+Sans+3:wght@400;500;600;700;800&amp;display=swap"
     rel="stylesheet">
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
@@ -53,47 +59,61 @@
       <div class="sidebar-header">
         <div class="brand-logo">
           <div class="brand-marks" aria-label="Khoa Khoa học Máy tính, Đoàn Thanh niên và Trainee Program">
-            <img src="assets/logo.png" class="brand-mark" width="66" height="48" alt="Khoa Khoa học Máy tính - UIT">
-            <img src="assets/logo-doan-thanh-nien2.webp" class="brand-mark brand-mark--youth" width="34" height="40" alt="Đoàn Thanh niên">
-            <img src="assets/logo_trainee@4x.png" class="brand-mark brand-mark--trainee" width="72" height="40" alt="Trainee Program">
+            <img src="assets/logo.png" class="brand-mark" width="50" height="36" alt="Khoa Khoa học Máy tính - UIT">
+            <img src="assets/logo-doan-thanh-nien2.webp" class="brand-mark brand-mark--youth" width="26" height="32" alt="Đoàn Thanh niên">
+            <img src="assets/logo_traineeprogram@4x.png" class="brand-mark brand-mark--trainee" width="56" height="32" alt="Trainee Program">
           </div>
           <div class="brand-text">
-            <h1 class="brand-title">Cổng thông tin</h1>
-            <span class="brand-subtitle">Trainee Program</span>
+            <div class="brand-title">Cổng thông tin</div>
+            <div class="brand-subtitle">Trainee Program</div>
           </div>
         </div>
       </div>
 
       <nav class="sidebar-nav" id="sidebarNav">
-        <!-- CÁC MỤC DÀNH CHO Trainee / USER THƯỜNG (ADMIN SẼ ẨN TOÀN BỘ) -->
+        <!-- CÁC MỤC DÀNH CHO Trainee / USER THƯỜNG -->
         <div class="student-only-nav-sections" id="studentOnlyNavSections">
           <!-- ================= NHÓM HỌC VỤ ================= -->
           <div class="nav-group-label">CHƯƠNG TRÌNH</div>
           <ul class="nav-list">
             <li class="nav-item">
-              <a href="#schedule" class="nav-link active" id="navSchedule" data-tab="schedule" data-short-label="Lịch" aria-label="Lịch">
-
+              <a href="#schedule" class="nav-link active" id="navSchedule" data-tab="schedule" data-tooltip="Thời khóa biểu" aria-label="Thời khóa biểu">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2"/>
+                  <path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
+                </svg>
                 <span class="nav-text">Thời khóa biểu</span>
               </a>
             </li>
             <li class="nav-item">
-              <a href="#leaderboard" class="nav-link" id="navLeaderboard" data-tab="leaderboard" data-short-label="Xếp hạng" aria-label="Xếp hạng">
-
+              <a href="#leaderboard" class="nav-link" id="navLeaderboard" data-tab="leaderboard" data-tooltip="Bảng xếp hạng" aria-label="Bảng xếp hạng">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                  <path d="M4 22h16"/>
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                </svg>
                 <span class="nav-text">Bảng xếp hạng</span>
-                <span class="nav-badge" id="traineeCountBadge">8</span>
+                <span class="nav-badge" id="traineeCountBadge" style="display: none;"></span>
               </a>
             </li>
             <li class="nav-item">
-              <a href="#grades" class="nav-link" id="navGrades" data-tab="grades" data-short-label="Điểm" aria-label="Điểm">
-
+              <a href="#grades" class="nav-link" id="navGrades" data-tab="grades" data-tooltip="Bảng điểm sao" aria-label="Bảng điểm">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
                 <span class="nav-text">Bảng điểm</span>
               </a>
             </li>
             <li class="nav-item">
-              <a href="#leave" class="nav-link" id="navLeave" data-tab="leave" data-short-label="Xin nghỉ" aria-label="Xin nghỉ">
-
+              <a href="#leave" class="nav-link" id="navLeave" data-tab="leave" data-tooltip="Đơn xin nghỉ" aria-label="Xin nghỉ">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
                 <span class="nav-text">Xin nghỉ</span>
-                <span class="nav-badge" style="background: rgba(37,99,235,0.12); color: var(--primary-blue); font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 6px;">FORM</span>
               </a>
             </li>
           </ul>
@@ -102,8 +122,12 @@
           <div class="nav-group-label">THI CỬ &amp; RÈN LUYỆN</div>
           <ul class="nav-list">
             <li class="nav-item">
-              <a href="#assignments" class="nav-link" id="navAssignments" data-tab="assignments" data-short-label="Bài tập" aria-label="Bài tập">
-
+              <a href="#assignments" class="nav-link" id="navAssignments" data-tab="assignments" data-tooltip="Bài tập rèn luyện" aria-label="Bài tập">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <path d="m9 14 2 2 4-4"/>
+                </svg>
                 <span class="nav-text">Bài tập</span>
               </a>
             </li>
@@ -113,34 +137,54 @@
           <div class="nav-group-label">TRỢ GIÚP &amp; HỎI ĐÁP</div>
           <ul class="nav-list">
             <li class="nav-item">
-              <a href="#questions" class="nav-link" id="navQuestions" data-tab="questions" data-short-label="Hỏi đáp" aria-label="Hỏi đáp">
-
+              <a href="#questions" class="nav-link" id="navQuestions" data-tab="questions" data-tooltip="Đặt câu hỏi Q&A" aria-label="Đặt câu hỏi">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <path d="M12 17h.01"/>
+                </svg>
                 <span class="nav-text">Đặt câu hỏi</span>
-                <span class="nav-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 6px;">HỎI ĐÁP</span>
+              </a>
+            </li>
+          </ul>
+
+          <!-- ================= NHÓM 5: TÀI KHOẢN CÁ NHÂN ================= -->
+          <div class="nav-group-label" id="profileNavGroupLabel" style="display: none;">TÀI KHOẢN</div>
+          <ul class="nav-list" id="profileNavList" style="display: none;">
+            <li class="nav-item">
+              <a href="#profile" class="nav-link" id="navProfile" data-tab="profile" data-tooltip="Hồ sơ cá nhân" aria-label="Hồ sơ cá nhân">
+                <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span class="nav-text">Hồ sơ</span>
               </a>
             </li>
           </ul>
         </div>
 
-        <!-- ================= NHÓM ADMIN: QUẢN TRỊ HỆ THỐNG (CHỈ ADMIN MỚI THẤY VÀ TRUY CẬP ĐƯỢC) ================= -->
-        <div class="nav-group-label admin-only-element" id="adminNavGroupLabel" data-permission="accounts:manage" style="display: none;">QUẢN TRỊ HỆ THỐNG
-        </div>
+        <!-- ================= NHÓM ADMIN: QUẢN TRỊ HỆ THỐNG ================= -->
+        <div class="nav-group-label admin-only-element" id="adminNavGroupLabel" data-permission="accounts:manage" style="display: none;">QUẢN TRỊ HỆ THỐNG</div>
         <ul class="nav-list admin-only-element" id="adminNavList" data-permission="accounts:manage" style="display: none;">
           <li class="nav-item">
-            <a href="#admin" class="nav-link admin-nav-link" id="navAdmin" data-tab="admin" data-short-label="Admin" aria-label="Admin">
-
+            <a href="#admin" class="nav-link admin-nav-link" id="navAdmin" data-tab="admin" data-tooltip="Tài khoản & Quyền" aria-label="Tài khoản & quyền">
+              <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
               <span class="nav-text">Tài khoản &amp; quyền</span>
-              <span class="nav-badge admin-badge">ADMIN</span>
             </a>
           </li>
         </ul>
-
-
       </nav>
 
       <div class="sidebar-footer">
-        <button class="collapse-toggle-btn" id="collapseSidebarBtn" title="Thu gọn thanh điều hướng">
-
+        <button class="collapse-toggle-btn" id="collapseSidebarBtn" title="Thu gọn / Mở rộng menu" aria-label="Thu gọn hoặc mở rộng thanh điều hướng">
+          <svg class="collapse-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M9 3v18"/>
+            <path d="m16 15-3-3 3-3"/>
+          </svg>
           <span class="collapse-text">Thu gọn</span>
         </button>
       </div>
@@ -222,10 +266,22 @@ SOFTWARE.
           <!-- Hidden helper select to preserve JS compatibility -->
           <select id="traineeSelect" style="display: none;"></select>
 
-          <!-- Theme Mode Dropdown (Phục hồi Chế độ Giao diện: Sáng / Tối / Hệ thống) -->
+          <div class="notification-wrapper" id="notificationWrapper" style="display: none;">
+            <button type="button" class="header-action-btn theme-toggle-btn notification-btn" id="notificationBtn"
+              title="Thông báo" aria-label="Thông báo" aria-expanded="false" aria-controls="notificationDropdown"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg><span class="notification-badge" id="notificationBadge" hidden>0</span></button>
+            <div class="theme-dropdown-menu notification-dropdown" id="notificationDropdown" role="region" aria-label="Thông báo">
+              <div class="notification-header">
+                <span class="theme-dropdown-header">THÔNG BÁO</span>
+                <button type="button" class="notification-read-all" id="notificationReadAll">Đánh dấu đã đọc</button>
+              </div>
+              <div class="notification-list" id="notificationList" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- Theme Mode Dropdown (Chế độ Giao diện: chỉ hiện icon, bấm vào mới hiện thêm thông tin) -->
           <div class="theme-mode-wrapper" id="themeModeWrapper">
             <button class="header-action-btn theme-toggle-btn" id="themeToggleBtn" title="Chế độ giao diện (Sáng / Tối)"
-              aria-label="Chế độ giao diện" aria-expanded="false" aria-controls="themeDropdownMenu"><svg class="theme-toggle-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#theme-icon-monitor"></use></svg><span class="theme-toggle-label">Giao diện</span></button>
+              aria-label="Chế độ giao diện" aria-expanded="false" aria-controls="themeDropdownMenu"><svg class="theme-toggle-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#theme-icon-monitor"></use></svg></button>
 
             <!-- Dropdown Menu: Sáng / Tối / Hệ thống -->
             <div class="theme-dropdown-menu" id="themeDropdownMenu">
@@ -258,20 +314,23 @@ SOFTWARE.
 
           <!-- Ô nhỏ Đăng nhập duy nhất -->
           <a href="/login" class="header-action-btn login-header-btn" id="openLoginModalBtn"
-            title="Đăng nhập tài khoản quản lý hoặc Trainer"
+            title="Đăng nhập tài khoản Trainee hoặc Quản trị viên"
             style="text-decoration: none; padding: 7px 16px; font-weight: 600; font-size: 13.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: var(--primary-blue); color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
-
             <span class="btn-text">Đăng nhập</span>
           </a>
 
-          <!-- Trạng thái khi Admin đã đăng nhập -->
-          <div class="admin-only-element" id="headerAdminStatus" style="display: none; align-items: center; gap: 8px;">
-            <a href="#admin" data-permission="accounts:manage"
-              style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
+          <!-- Trạng thái khi người dùng đã đăng nhập (Admin hoặc Trainee) -->
+          <div id="headerUserStatus" style="display: none; align-items: center; gap: 8px;">
+            <a href="#admin" id="headerAdminStatus" class="admin-only-element" data-permission="accounts:manage"
+              style="display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
               <span> Ban Tổ chức</span>
             </a>
+            <a href="#profile" id="headerTraineeBadge"
+              style="display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(37,99,235,0.12); color: var(--primary-blue); border: 1px solid rgba(37,99,235,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
+              <span id="headerTraineeBadgeName">Hồ sơ Trainee</span>
+            </a>
             <button type="button" class="header-action-btn logout-header-btn" id="headerLogoutBtn"
-              title="Đăng xuất khỏi tài khoản Quản trị"
+              title="Đăng xuất khỏi tài khoản"
               style="padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;">
               Đăng xuất
             </button>
@@ -438,26 +497,26 @@ SOFTWARE.
                 <div class="card-header">
                   <div class="header-left">
 
-                    <h3 class="card-title">Trainer</h3>
+                    <h3 class="card-title">Mentor</h3>
                   </div>
                 </div>
                 <div class="card-subtitle">Liên hệ khi cần hỗ trợ chuyên môn & học vụ.</div>
 
                 <div class="card-body">
                   <div class="mentor-box">
-                    <div class="mentor-avatar-circle" id="mentorAvatar">NV</div>
+                    <div class="mentor-avatar-circle" id="mentorAvatar">—</div>
                     <div class="mentor-info">
-                      <div class="mentor-name" id="mentorName">Võ Thị Xuân Quỳnh</div>
+                      <div class="mentor-name" id="mentorName">Chưa công bố</div>
                       <div class="mentor-role-badge" id="mentorRole"
                         style="font-size:0.75rem; color:var(--primary-blue); font-weight:600; margin-bottom:4px;">
-                        Trainer Trainee Program</div>
+                        Chưa công bố</div>
                       <div class="mentor-contact-item">
 
-                        <a href="mailto:vannb@uit.edu.vn" id="mentorEmail">vannb@uit.edu.vn</a>
+                        <a href="mailto:" id="mentorEmail" style="display: none;">—</a>
                       </div>
                       <div class="mentor-contact-item">
 
-                        <a href="tel:0904607220" id="mentorPhone">0904607220</a>
+                        <a href="tel:" id="mentorPhone" style="display: none;">—</a>
                       </div>
                     </div>
                   </div>
@@ -521,9 +580,9 @@ SOFTWARE.
           </div>
         </section>
         <!-- ======================================================== -->
-        <!-- TAB: HỒ SƠ CÁ NHÂN & CÀI ĐẶT TÀI KHOẢN (ĐÃ ẨN THEO YÊU CẦU) -->
+        <!-- TAB: HỒ SƠ CÁ NHÂN & CÀI ĐẶT TÀI KHOẢN -->
         <!-- ======================================================== -->
-        <section class="tab-view" id="viewProfile" style="display: none !important;">
+        <section class="tab-view" id="viewProfile">
 
           <!-- Profile Page Header -->
           <div class="profile-header-card">
@@ -535,23 +594,17 @@ SOFTWARE.
               </div>
               <h2 class="profile-page-title">Hồ Sơ Cá Nhân & Quản Trị Tài Khoản</h2>
               <p class="profile-page-desc">
-                Quản lý và cập nhật thông tin họ tên, email, ảnh đại diện và mật khẩu của bạn. Dữ liệu được lưu trữ và
-                cập nhật trực tiếp trên cơ sở dữ liệu MongoDB Atlas.
+                Quản lý thông tin học viên, ảnh đại diện, tài khoản đăng nhập và theo dõi thành tích.
               </p>
-            </div>
-            <div class="profile-header-actions">
-              <div class="admin-db-status-chip">
-                <span class="db-chip-dot pulse"></span>
-                <span class="db-chip-text">MongoDB Atlas Active</span>
-              </div>
             </div>
           </div>
 
           <!-- Profile Main Content Grid -->
           <div class="profile-grid-container">
 
-            <!-- Left Column: Avatar & Overview Card -->
+            <!-- Left Column: Avatar, Program Badge & Account Security -->
             <div class="profile-col-sidebar">
+              <!-- Card 1: Avatar -->
               <div class="portal-card profile-avatar-card">
                 <div class="profile-card-header">
                   <h3 class="card-title">Ảnh Đại Diện</h3>
@@ -563,26 +616,33 @@ SOFTWARE.
                     <div id="profileAvatarInitials" class="profile-avatar-initials">SV</div>
                   </div>
 
-                  <div class="avatar-upload-actions">
-                    <input type="file" id="profileAvatarFileInput" accept="image/*" style="display: none;">
-                    <button type="button" class="btn btn-primary btn-sm" id="btnUploadProfileAvatar">
+                  <!-- Khung Xem Trước Ảnh Trước Khi Upload -->
+                  <div id="profileAvatarPreviewBox" style="display: none; width: 100%; padding: 12px; background: rgba(37,99,235,0.06); border: 1px dashed var(--primary-blue); border-radius: 10px; margin-top: 10px; text-align: center;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 8px;">Xem trước ảnh mới:</div>
+                    <img id="profileAvatarPreviewImg" src="" alt="Xem trước" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-blue); margin: 0 auto 10px auto; display: block;">
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                      <button type="button" class="btn btn-primary btn-xs" id="btnConfirmUploadAvatar" style="padding: 4px 12px; font-size: 12px;">Lưu ảnh này</button>
+                      <button type="button" class="btn btn-outline btn-xs" id="btnCancelAvatarPreview" style="padding: 4px 12px; font-size: 12px;">Hủy bỏ</button>
+                    </div>
+                  </div>
 
+                  <div class="avatar-upload-actions" id="avatarNormalActions">
+                    <input type="file" id="profileAvatarFileInput" accept="image/png, image/jpeg, image/webp" style="display: none;">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnUploadProfileAvatar">
                       <span>Tải ảnh mới</span>
                     </button>
-                    <button type="button" class="btn btn-outline btn-sm" id="btnRemoveProfileAvatar"
-                      title="Gỡ ảnh về chữ viết tắt">
-                      <span> Gỡ ảnh</span>
+                    <button type="button" class="btn btn-outline btn-sm" id="btnRemoveProfileAvatar" title="Gỡ ảnh về chữ viết tắt">
+                      <span>Gỡ ảnh</span>
                     </button>
                   </div>
                   <p class="profile-avatar-hint">
-                    Hỗ trợ định dạng JPG, PNG, WebP (tối đa 5MB). Ảnh được cập nhật và lưu trực tiếp lên cơ sở dữ liệu
-                    MongoDB Atlas.
+                    Hỗ trợ file JPG, PNG, WebP (tối đa 3MB).
                   </p>
                 </div>
 
                 <div class="profile-badge-summary">
                   <div class="profile-badge-item">
-                    <span class="badge-label">Mã số Trainee:</span>
+                    <span class="badge-label">Mã số sinh viên (MSSV):</span>
                     <strong class="badge-value" id="profileBadgeId">--</strong>
                   </div>
                   <div class="profile-badge-item">
@@ -590,124 +650,244 @@ SOFTWARE.
                     <span class="badge badge-success" id="profileBadgeRole">Trainee UIT</span>
                   </div>
                   <div class="profile-badge-item">
+                    <span class="badge-label">Trạng thái tham gia:</span>
+                    <span class="badge badge-primary" id="profileBadgeProgramStatus">Active</span>
+                  </div>
+                  <div class="profile-badge-item">
                     <span class="badge-label">Khóa đào tạo:</span>
                     <strong class="badge-value" id="profileBadgeBatch">Trainee 2026</strong>
                   </div>
                   <div class="profile-badge-item">
-                    <span class="badge-label">Nhóm:</span>
+                    <span class="badge-label">Chuyên ban:</span>
                     <strong class="badge-value" id="profileBadgeTrack">Khoa học Máy tính</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Mentor phụ trách:</span>
+                    <strong class="badge-value" id="profileBadgeMentor">Chưa công bố</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2: Thông tin tài khoản & bảo mật -->
+              <div class="portal-card profile-security-summary-card" style="margin-top: 20px;">
+                <div class="profile-card-header">
+                  <h3 class="card-title">Thông Tin Tài Khoản</h3>
+                </div>
+                <div class="profile-badge-summary" style="margin-top: 0; padding-top: 0; border-top: none;">
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Tên đăng nhập:</span>
+                    <strong class="badge-value" id="profileAccountUsername">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Trạng thái tài khoản:</span>
+                    <span class="badge badge-success" id="profileAccountStatusBadge">Đang hoạt động</span>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Ngày tạo tài khoản:</span>
+                    <strong class="badge-value" id="profileAccountCreatedAt" style="font-size: 0.8rem;">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Lần đăng nhập gần nhất:</span>
+                    <strong class="badge-value" id="profileAccountLastLogin" style="font-size: 0.8rem;">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Đổi MK gần nhất:</span>
+                    <strong class="badge-value" id="profileAccountLastPassChange" style="font-size: 0.8rem;">Chưa thay đổi</strong>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Right Column: Info & Password & Support Forms -->
+            <!-- Right Column: Personal Info Form, Password Change, & Activities -->
             <div class="profile-col-main">
 
-              <!-- Card 1: Chỉnh sửa thông tin cá nhân (Họ tên & Email) -->
+              <!-- Card 3: Chỉnh sửa thông tin cá nhân -->
               <div class="portal-card profile-form-card">
                 <div class="profile-card-header">
-
                   <div>
-                    <h3 class="card-title">Thông Tin Cá Nhân Cơ Bản</h3>
-                    <p class="card-subtitle">Chỉnh sửa họ tên và email liên hệ (lưu trực tiếp lên MongoDB)</p>
+                    <h3 class="card-title">Thông Tin Cá Nhân</h3>
                   </div>
                 </div>
 
                 <form id="profileInfoForm" class="profile-form">
                   <div class="profile-form-grid">
                     <div class="form-group">
-                      <label for="profileInputFullName" class="form-label">Họ và tên <span
-                          class="text-danger">*</span></label>
-                      <input type="text" id="profileInputFullName" class="form-input"
-                        placeholder="Nhập họ và tên đầy đủ" required>
+                      <label for="profileInputFullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                      <input type="text" id="profileInputFullName" class="form-input" placeholder="Nhập họ và tên đầy đủ" required>
                     </div>
                     <div class="form-group">
-                      <label for="profileInputEmail" class="form-label">Email liên hệ <span
-                          class="text-danger">*</span></label>
-                      <input type="email" id="profileInputEmail" class="form-input" placeholder="vidu@uit.edu.vn"
-                        required>
+                      <label for="profileInputId" class="form-label">Mã số sinh viên (MSSV) <span title="Định danh tài khoản không thể chỉnh sửa" style="cursor: help;"></span></label>
+                      <input type="text" id="profileInputId" class="form-input" readonly disabled style="opacity: 0.75; cursor: not-allowed; background: var(--bg-card-subtle);">
                     </div>
                     <div class="form-group">
-                      <label for="profileInputId" class="form-label">Mã số Trainee (MSSV)</label>
-                      <input type="text" id="profileInputId" class="form-input" readonly disabled
-                        style="opacity: 0.75; cursor: not-allowed;">
+                      <label for="profileInputEmail" class="form-label">Email liên hệ <span class="text-danger">*</span></label>
+                      <input type="email" id="profileInputEmail" class="form-input" placeholder="vidu@uit.edu.vn" required>
                     </div>
                     <div class="form-group">
-                      <label for="profileInputTrack" class="form-label">Nhóm</label>
-                      <input type="text" id="profileInputTrack" class="form-input" readonly disabled
-                        style="opacity: 0.75; cursor: not-allowed;">
+                      <label for="profileInputPhone" class="form-label">Số điện thoại</label>
+                      <input type="tel" id="profileInputPhone" class="form-input" placeholder="Ví dụ: 0901234567">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputDob" class="form-label">Ngày sinh</label>
+                      <input type="date" id="profileInputDob" class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileSelectGender" class="form-label">Giới tính</label>
+                      <select id="profileSelectGender" class="form-input">
+                        <option value="">Chưa chọn</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                      <label for="profileInputAddress" class="form-label">Địa chỉ</label>
+                      <input type="text" id="profileInputAddress" class="form-input" placeholder="Ví dụ: Ký túc xá Khu B, ĐHQG-HCM">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputFacebook" class="form-label">Link Facebook</label>
+                      <input type="url" id="profileInputFacebook" class="form-input" placeholder="https://facebook.com/username">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputLinkedin" class="form-label">Link LinkedIn</label>
+                      <input type="url" id="profileInputLinkedin" class="form-input" placeholder="https://linkedin.com/in/username">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                      <label for="profileTextareaBio" class="form-label">Giới thiệu bản thân (About Me)</label>
+                      <textarea id="profileTextareaBio" class="form-input" rows="3" placeholder="Chia sẻ đôi nét về mục tiêu, sở thích hoặc định hướng công nghệ của bạn..."></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Tùy chọn thông báo cá nhân -->
+                  <div style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
+                    <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Tùy chọn thông báo (Notification Preferences)</div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                        <input type="checkbox" id="profilePrefSchedule" checked> Nhận thông báo cập nhật lịch học & sự kiện mới
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                        <input type="checkbox" id="profilePrefAssignments" checked> Nhận thông báo bài tập & nhắc nhở hạn nộp bài
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                        <input type="checkbox" id="profilePrefQuestions" checked> Nhận thông báo khi câu hỏi Q&A được phản hồi
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group admin-only-element" id="profileMentorGroup" style="grid-column: 1 / -1; display: none;">
+                    <div style="background: rgba(37,99,235,0.05); border: 1px dashed rgba(37,99,235,0.3); border-radius: 8px; padding: 12px; margin-top: 4px;">
+                      <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary-blue); margin-bottom: 8px;">
+                        <i class="fas fa-user-tie"></i> Phân công Mentor (Chỉ Quản trị viên)
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                          <label for="profileInputMentorName" class="form-label" style="font-size: 0.8rem;">Tên Mentor</label>
+                          <input type="text" id="profileInputMentorName" class="form-input" placeholder="Để trống nếu chưa công bố" maxlength="150">
+                        </div>
+                        <div>
+                          <label for="profileInputMentorEmail" class="form-label" style="font-size: 0.8rem;">Email Mentor</label>
+                          <input type="email" id="profileInputMentorEmail" class="form-input" placeholder="mentor@uit.edu.vn" maxlength="254">
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div class="profile-form-footer">
                     <button type="submit" class="btn btn-primary" id="btnSaveProfileInfo">
-
-                      <span> Lưu Thay Đổi Thông Tin</span>
+                      <span>Lưu thay đổi</span>
                     </button>
                   </div>
                 </form>
               </div>
 
-              <!-- Card 2: Đổi mật khẩu tài khoản -->
+              <!-- Card 4: Thông tin chương trình đào tạo (Chỉ đọc) -->
               <div class="portal-card profile-form-card" style="margin-top: 20px;">
                 <div class="profile-card-header">
+                  <div>
+                    <h3 class="card-title">Thông Tin Chương Trình Đào Tạo</h3>
+                    <p class="card-subtitle">Thông tin tiến độ do Ban Quản trị quản lý</p>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Trạng thái học tập</div>
+                    <div id="profileProgStatusDisplay" style="font-size: 1rem; font-weight: 700; color: var(--primary-blue);">Đang học (Active)</div>
+                  </div>
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Khóa đào tạo</div>
+                    <div id="profileProgBatchDisplay" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Trainee 2026</div>
+                  </div>
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Tổng sao tích lũy</div>
+                    <div id="profileProgStarsDisplay" style="font-size: 1rem; font-weight: 700; color: #d97706;">0 sao</div>
+                  </div>
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Chuyên cần / Điểm danh</div>
+                    <div id="profileProgAttendanceDisplay" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">0 buổi</div>
+                  </div>
+                </div>
+              </div>
 
+              <!-- Card 5: Đổi mật khẩu tài khoản -->
+              <div class="portal-card profile-form-card" id="profileSecurityCard" style="margin-top: 20px;">
+                <div class="profile-card-header">
                   <div>
                     <h3 class="card-title">Đổi Mật Khẩu Đăng Nhập</h3>
-                    <p class="card-subtitle">Cập nhật mật khẩu tài khoản và đồng bộ an toàn vào MongoDB Atlas</p>
                   </div>
                 </div>
 
                 <form id="profileSecurityForm" class="profile-form">
                   <div class="profile-form-grid profile-security-grid">
                     <div class="form-group">
-                      <label for="profileOldPass" class="form-label">Mật khẩu hiện tại <span
-                          class="text-danger">*</span></label>
-                      <input type="password" id="profileOldPass" class="form-input" placeholder="Mật khẩu đang dùng"
-                        required>
+                      <label for="profileOldPass" class="form-label">Mật khẩu hiện tại <span class="text-danger">*</span></label>
+                      <input type="password" id="profileOldPass" class="form-input" placeholder="Mật khẩu đang dùng" required>
                     </div>
                     <div class="form-group">
-                      <label for="profileNewPass" class="form-label">Mật khẩu mới <span
-                          class="text-danger">*</span></label>
-                      <input type="password" id="profileNewPass" class="form-input" placeholder="Tối thiểu 4 ký tự"
-                        required minlength="4">
+                      <label for="profileNewPass" class="form-label">Mật khẩu mới <span class="text-danger">*</span></label>
+                      <input type="password" id="profileNewPass" class="form-input" placeholder="Tối thiểu 6 ký tự" required minlength="6">
                     </div>
                     <div class="form-group">
-                      <label for="profileConfirmPass" class="form-label">Xác nhận mật khẩu mới <span
-                          class="text-danger">*</span></label>
-                      <input type="password" id="profileConfirmPass" class="form-input"
-                        placeholder="Nhập lại mật khẩu mới" required minlength="4">
+                      <label for="profileConfirmPass" class="form-label">Xác nhận mật khẩu mới <span class="text-danger">*</span></label>
+                      <input type="password" id="profileConfirmPass" class="form-input" placeholder="Nhập lại mật khẩu mới" required minlength="6">
                     </div>
                   </div>
 
                   <div class="profile-form-footer">
                     <button type="submit" class="btn btn-secondary" id="btnSaveNewPassword">
-
-                      <span> Cập Nhật Mật Khẩu Mới</span>
+                      <span>Cập nhật mật khẩu</span>
                     </button>
                   </div>
                 </form>
               </div>
 
-              <!-- Card 3: Quên mật khẩu & Gửi yêu cầu hỗ trợ Admin -->
-              <div class="portal-card profile-forgot-card" style="margin-top: 20px;">
+              <!-- Card 6: Quên mật khẩu & Gửi yêu cầu hỗ trợ Admin -->
+              <div class="portal-card profile-forgot-card" id="profileForgotCard" style="margin-top: 20px;">
                 <div class="forgot-card-inner">
-
                   <div class="forgot-card-content">
-                    <h4 class="forgot-card-title">Bạn quên mật khẩu hoặc cần admin hỗ trợ?</h4>
+                    <h4 class="forgot-card-title">Bạn quên mật khẩu hoặc cần Admin đặt lại?</h4>
                     <p class="forgot-card-desc">
-                      Nếu không nhớ mật khẩu cũ hoặc cần cấp lại mật khẩu mới, nhấn nút bên dưới để gửi yêu cầu trực
-                      tiếp tới Admin. Ban quản trị sẽ nhận được thông báo ngay lập tức và cấp lại mật khẩu mặc định
-                      (1234) cho bạn.
+                      Nếu không nhớ mật khẩu cũ hoặc tài khoản bị khóa, bạn có thể gửi yêu cầu hỗ trợ. Ban Quản trị sẽ reset mật khẩu về mặc định <code>traineeprogram</code> cho bạn.
                     </p>
                   </div>
                   <div class="forgot-card-action">
                     <button type="button" class="btn btn-danger" id="btnProfileSendForgotReq">
-
-                      <span>Quên mật khẩu? Gửi yêu cầu tới Admin</span>
+                      <span>Gửi yêu cầu</span>
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <!-- Card 7: Hoạt động gần đây (Recent Activities) -->
+              <div class="portal-card profile-form-card" style="margin-top: 20px;">
+                <div class="profile-card-header" style="justify-content: space-between;">
+                  <div>
+                    <h3 class="card-title">Hoạt Động Gần Đây</h3>
+                    <p class="card-subtitle">Nhật ký đăng nhập, các bài tập đã nộp, đơn xin nghỉ và câu hỏi Q&A đã gửi.</p>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-xs" id="btnRefreshActivities" style="padding: 4px 10px;">Làm mới</button>
+                </div>
+                <div id="profileActivitiesContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding-right: 4px;">
+                  <div style="text-align: center; color: var(--text-muted); padding: 20px;">Đang tải lịch sử hoạt động...</div>
                 </div>
               </div>
 
@@ -731,7 +911,7 @@ SOFTWARE.
               </div>
               <h2 class="schedule-page-title">Thời Khóa Biểu & Lịch Học Trực Tuyến</h2>
               <p class="schedule-page-desc">
-                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program UIT. Lịch được tổng hợp
+                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program. Lịch được tổng hợp
                 chung theo tháng, Trainee bấm nút <strong>"Vào học"</strong> để tham gia lớp học trực tuyến.
               </p>
             </div>
@@ -771,7 +951,7 @@ SOFTWARE.
             <form class="filter-controls-form" id="scheduleFilterForm">
               <div class="filter-control-item">
                 <label for="filterScheduleMonth" class="filter-control-label">Tháng xem lịch</label>
-                <input type="month" id="filterScheduleMonth" class="form-input" min="2000-01" max="2100-12" required>
+                <input type="month" id="filterScheduleMonth" class="form-input" min="2000-01" max="2100-12" value="2026-11" required>
               </div>
               <button type="button" class="btn btn-outline" id="btnSchedulePrevious">Tháng trước</button>
               <button type="button" class="btn btn-outline" id="btnScheduleToday">Tháng hiện tại</button>
@@ -794,14 +974,6 @@ SOFTWARE.
                 <span>Lưới lịch tháng</span>
               </button>
             </div>
-
-            <div class="schedule-legend-bar">
-              <span class="legend-title">Chú thích:</span>
-              <span class="legend-chip chip-online"> Học trực tuyến</span>
-              <span class="legend-chip chip-teams-link"> Đã có link Teams</span>
-              <span class="legend-chip chip-teams-missing"> Link gán sau</span>
-              <span class="legend-chip chip-live"> Đang diễn ra</span>
-            </div>
           </div>
 
           <!-- Khung hiển thị Lịch học theo tháng chính (Tất cả buổi học trong 1 lần) -->
@@ -820,8 +992,7 @@ SOFTWARE.
             <div class="header-content">
               <h2 class="leaderboard-title">Bảng Xếp Hạng Trainee</h2>
               <p class="leaderboard-desc">
-                Theo dõi sao tham gia và bảng xếp hạng của các Trainee trong Trainee
-                Program.
+                Theo dõi sao tham gia và bảng xếp hạng của các Trainee.
               </p>
             </div>
             <div class="header-stats-summary" id="leaderboardSummaryStats">
@@ -921,18 +1092,37 @@ SOFTWARE.
           </div>
 
         <section class="context-management portal-card" data-permission="trainees:manage" style="display:none">
-  <div class="context-header"><h3>Quản lý Trainee</h3><button type="button" class="btn btn-primary" id="btnOpenCreateUserModal">Thêm Trainee</button></div>
-            <!-- Admin Toolbar -->
-          <div class="admin-toolbar-card">
-            <div class="admin-search-box">
+          <div class="context-header" style="margin-bottom: 14px;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Quản lý Trainee</h3>
+          </div>
 
+          <!-- Admin Toolbar: Thanh tìm kiếm, Bộ lọc và Nút Thêm Trainee trên cùng 1 hàng ngay ngắn -->
+          <div class="admin-toolbar-card" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+            <div class="admin-search-box" style="flex: 1; min-width: 260px; position: relative;">
+              <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
               <input type="text" id="adminSearchInput" class="admin-search-input"
                 placeholder="Tìm theo MSSV, Họ và tên, Email...">
             </div>
 
-            <div class="admin-filter-group">
-              <select id="adminTrackFilter" class="form-select admin-filter-select"><option value="all">Tất cả</option></select>
+            <div class="admin-filter-group" style="min-width: 160px;">
+              <select id="adminTrackFilter" class="form-select admin-filter-select" style="height: 42px; width: 100%;">
+                <option value="all">Tất cả nhóm</option>
+              </select>
             </div>
+
+            <div class="admin-filter-group" style="min-width: 140px;">
+              <select id="adminStatusFilter" class="form-select admin-filter-select" style="height: 42px; width: 100%;">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang học / Active</option>
+                <option value="completed">Đã hoàn thành</option>
+                <option value="inactive">Đã khóa / Inactive</option>
+              </select>
+            </div>
+
+            <button type="button" class="btn btn-primary" id="btnOpenCreateUserModal" style="height: 42px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 600; padding: 0 18px;">
+              <i class="fas fa-user-plus"></i>
+              <span>Thêm Trainee</span>
+            </button>
           </div>
 
           <!-- Admin Trainees Data Table -->
@@ -985,11 +1175,11 @@ SOFTWARE.
                 <div class="grades-breadcrumb">
                   <span>Cổng Trainee Program</span>
                   <span class="sep">›</span>
-                  <span class="active">Bảng điểm sao buổi học</span>
+                  <span class="active">Bảng điểm sao chi tiết</span>
                 </div>
                 <h1 class="grades-title">Bảng Điểm Sao Theo Từng Buổi Học</h1>
                 <p class="grades-subtitle">
-                  Theo dõi điểm sao của mỗi Trainee sau từng buổi học thực tế trong chương trình Trainee Program UIT.
+                  Theo dõi điểm sao của mỗi Trainee sau từng buổi học thực tế.
                 </p>
               </div>
               <div class="grades-header-right">
@@ -1017,8 +1207,7 @@ SOFTWARE.
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Tổng số Trainee</span>
-                  <strong class="grades-kpi-value" id="kpiTotalTrainees">10 Trainee</strong>
-                  <span class="grades-kpi-sub">Đồng bộ từ MongoDB Atlas</span>
+                  <strong class="grades-kpi-value" id="kpiTotalTrainees"><span class="kpi-skeleton-pulse">--</span></strong>
                 </div>
               </div>
 
@@ -1026,8 +1215,8 @@ SOFTWARE.
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Số buổi học đã diễn ra</span>
-                  <strong class="grades-kpi-value" id="kpiTotalSessions">4 buổi học</strong>
-                  <span class="grades-kpi-sub" id="kpiLatestSessionDate">Buổi gần nhất: 27/10/2026</span>
+                  <strong class="grades-kpi-value" id="kpiTotalSessions"><span class="kpi-skeleton-pulse">--</span></strong>
+                  <span class="grades-kpi-sub" id="kpiLatestSessionDate">Đang cập nhật...</span>
                 </div>
               </div>
 
@@ -1035,7 +1224,7 @@ SOFTWARE.
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Tổng sao đã cấp phát</span>
-                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned">326 </strong>
+                  <strong class="grades-kpi-value" id="kpiTotalStarsEarned"><span class="kpi-skeleton-pulse">--</span></strong>
                   <span class="grades-kpi-sub">Toàn bộ các buổi đào tạo</span>
                 </div>
               </div>
@@ -1044,8 +1233,7 @@ SOFTWARE.
 
                 <div class="grades-kpi-info">
                   <span class="grades-kpi-label">Trainee dẫn đầu</span>
-                  <strong class="grades-kpi-value" id="kpiTopStudent">Anh Khoi (50 )</strong>
-                  <span class="grades-kpi-sub"> Quán quân Trainee</span>
+                  <strong class="grades-kpi-value" id="kpiTopStudent"><span class="kpi-skeleton-pulse">--</span></strong>
                 </div>
               </div>
             </div>
@@ -1076,7 +1264,7 @@ SOFTWARE.
                     <select id="selectGradesTrack" class="form-input"><option value="all">Tất cả</option></select>
                   </div>
 
-                  <span class="badge badge-primary" id="gradesCountBadge">10 Trainee</span>
+                  <span class="badge badge-primary" id="gradesCountBadge">-- Trainee</span>
                 </div>
               </div>
 
@@ -1130,8 +1318,7 @@ SOFTWARE.
             <!-- Session Reference Section: Thông tin các buổi học đã diễn ra -->
             <div class="grades-session-reference-section">
               <div class="section-title-wrap">
-                <h4 class="session-reference-title"> Danh Sách Nội Dung Các Buổi Học Đã Đào Tạo</h4>
-                <span class="session-reference-badge">Phụ trách: <strong>Ban Hậu cần</strong></span>
+                <h4 class="session-reference-title"> Danh Sách Các Buổi Học Đã Diễn Ra</h4>
               </div>
               <div class="session-reference-grid" id="sessionReferenceGrid">
                 <!-- Populated dynamically by JS -->
@@ -1295,15 +1482,9 @@ SOFTWARE.
             <!-- Banner Header -->
             <div class="leave-header-card">
               <div class="leave-header-content">
-                <div class="leave-badge-pill">
-
-                  <span>THAM GIA CHƯƠNG TRÌNH</span>
-                  <span class="badge-dot">·</span>
-                  <span>TRAINEE PROGRAM 2026</span>
-                </div>
                 <h2 class="leave-main-title">Đơn Xin Nghỉ Học Trực Tuyến</h2>
                 <p class="leave-subtext">
-                  Dành cho Trainee trong chương trình Trainee Program UIT. Đơn được đăng công khai kèm thời gian gửi; bạn vui lòng gửi trước buổi học ít nhất 2 tiếng để Trainer và Ban Tổ chức Trainee Program nắm thông tin điểm danh.
+                  Đơn được đăng công khai kèm thời gian gửi; bạn vui lòng gửi trước buổi học ít nhất 2 tiếng để Trainer và Ban Tổ chức Trainee Program nắm thông tin điểm danh.
                 </p>
               </div>
               <div class="leave-header-stat">
@@ -1362,7 +1543,7 @@ SOFTWARE.
                 <div class="leave-form-grid-2">
                   <div class="form-group">
                     <label for="leaveInputMssv" class="form-label">
-                      <span>1. Mã số Trainee (MSSV)</span>
+                      <span>1. Mã số sinh viên (MSSV)</span>
                       <span class="text-danger">*</span>
                     </label>
                     <div class="input-with-icon">
@@ -1386,7 +1567,7 @@ SOFTWARE.
                 <!-- Row 2: Buổi học xin nghỉ (Dropdown from schedule database) -->
                 <div class="form-group" style="margin-top: 14px;">
                   <label for="leaveSelectSchedule" class="form-label">
-                    <span>3. Buổi học xin nghỉ (Lựa chọn từ cơ sở dữ liệu Lịch đào tạo)</span>
+                    <span>3. Buổi học xin nghỉ</span>
                     <span class="text-danger">*</span>
                   </label>
                   <div class="input-with-icon">
@@ -1395,7 +1576,6 @@ SOFTWARE.
                       <option value="">-- Đang nạp danh sách lịch học từ cơ sở dữ liệu --</option>
                     </select>
                   </div>
-                  <span class="form-help-text">Dữ liệu được đồng bộ trực tiếp từ Lịch đào tạo trực tuyến của chương trình.</span>
 
                   <!-- Preview Selected Session Box -->
                   <div class="leave-schedule-preview" id="leaveSchedulePreview" style="display: none;">
@@ -1433,19 +1613,28 @@ SOFTWARE.
                   <!-- Gợi ý lý do nhanh (Quick Chips) -->
                   <div class="leave-quick-chips">
                     <span class="chips-label">Gợi ý lý do nhanh:</span>
-                    <button type="button" class="leave-chip" data-reason="Trùng lịch thi / Kiểm tra học phần tại trường Đại học Công nghệ Thông tin (UIT).">
+                    <button type="button" class="leave-chip" data-reason="Trùng lịch thi / Kiểm tra học phần tại trường Đại học Công nghệ Thông tin (UIT). Em xin phép xem lại video recording và nộp bài tập bù đúng hạn.">
                        Trùng lịch thi UIT
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Lý do sức khỏe (bị ốm/sốt), cần nghỉ ngơi phục hồi và sẽ xem lại video sau.">
+                    <button type="button" class="leave-chip" data-reason="Trùng lịch học bù học phần chuyên ngành / Báo cáo đồ án tại trường Đại học Công nghệ Thông tin (UIT).">
+                       Trùng lịch học / Đồ án UIT
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Lý do sức khỏe cá nhân (bị ốm/sốt mệt), cần nghỉ ngơi phục hồi và sẽ xem lại video bài giảng sau.">
                        Lý do sức khỏe / Ốm
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Bận công việc cơ quan / Công tác đột xuất có giấy xác nhận.">
+                    <button type="button" class="leave-chip" data-reason="Bận lịch công tác / Công việc cơ quan đột xuất có giấy xác nhận.">
                        Bận công việc đột xuất
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Khu vực xảy ra sự cố mất điện / mất kết nối internet không thể vào MS Teams.">
+                    <button type="button" class="leave-chip" data-reason="Bận lịch làm ca tối / Trực kỹ thuật on-site tại công ty thực tập.">
+                       Thực tập / Doanh nghiệp
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Tham gia tổ chức hoạt động Đoàn - Hội / Sự kiện chính trị - tình nguyện cấp Trường.">
+                       Hoạt động Đoàn - Hội
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Khu vực lưu trú xảy ra sự cố mất điện / mất kết nối internet không thể tham gia phòng học MS Teams.">
                        Sự cố mạng / Mất điện
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Có công việc gia đình đột xuất cần giải quyết.">
+                    <button type="button" class="leave-chip" data-reason="Có công việc gia đình đột xuất cần giải quyết gấp.">
                        Việc gia đình đột xuất
                     </button>
                   </div>
@@ -1456,7 +1645,7 @@ SOFTWARE.
                   <label class="custom-checkbox-label">
                     <input type="checkbox" id="leaveCheckCommit" required>
                     <span class="checkbox-text">
-                      Tôi đồng ý công khai họ tên, MSSV, buổi xin nghỉ, lý do và thời gian gửi trên cổng thông tin. Tôi cam kết thông tin là trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
+                      Tôi đồng ý công khai họ tên, buổi xin nghỉ, lý do và thời gian gửi trên cổng thông tin (Mã Trainee/MSSV được bảo mật, chỉ Ban tổ chức/Admin xem được). Tôi cam kết thông tin là trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
                     </span>
                   </label>
                 </div>
@@ -1484,17 +1673,22 @@ SOFTWARE.
             <div class="leave-history-card">
               <div class="leave-history-header">
                 <div class="leave-history-title-wrap">
-
-                <h3 class="leave-history-title">Bảng xin nghỉ công khai</h3>
+                  <h3 class="leave-history-title">Bảng xin nghỉ công khai</h3>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm" id="btnRefreshLeaveBoard">Tải lại</button><span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
+                <div class="leave-history-header-right">
+                  <span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
+                  <button type="button" class="btn btn-secondary leave-refresh-btn" id="btnRefreshLeaveBoard" title="Tải lại danh sách đơn xin nghỉ">
+                    <i class="fas fa-rotate-right"></i>
+                    <span>Làm mới</span>
+                  </button>
+                </div>
               </div>
               <div class="table-responsive">
                 <table class="leave-table">
                   <thead>
                     <tr>
                       <th style="width: 50px;">STT</th>
-                      <th>MSSV</th>
+                      <th class="leave-col-mssv" id="leaveColMssv" style="display: none;">MSSV</th>
                       <th>Họ và tên</th>
                       <th>Buổi học xin nghỉ</th>
                       <th>Lý do</th>
@@ -1534,7 +1728,7 @@ SOFTWARE.
               <div class="question-notice-body">
                 <h4 class="question-notice-title">Lưu ý</h4>
                 <ul class="question-notice-list">
-                  <li>Chọn <strong>Gửi ẩn danh</strong> để ẩn MSSV trên bảng câu hỏi công khai.</li>
+                  <li>Chọn <strong>Gửi ẩn danh</strong> nếu không muốn hiển thị tên sinh viên.</li>
                   <li>Tra cứu trước khi gửi; mô tả rõ vấn đề và đính kèm thông báo lỗi nếu có.</li>
                 </ul>
               </div>
@@ -1575,14 +1769,14 @@ SOFTWARE.
                 <div class="question-form-grid-2">
                   <div class="form-group">
                     <label for="questionInputMssv" class="form-label">
-                      <span>1. Mã số Trainee (MSSV)</span>
+                      <span>1. Mã số sinh viên (MSSV)</span>
                       <span class="text-danger" id="questionMssvRequiredStar">*</span>
                     </label>
                     <div class="input-with-icon">
 
                       <input type="text" id="questionInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
                     </div>
-                    <span class="form-help-text" id="questionMssvHelpText">Mã số Trainee chính thức tại UIT của bạn.</span>
+                    <span class="form-help-text" id="questionMssvHelpText">Mã số Trainee chính thức tại UIT của bạn (Bảo mật, chỉ Admin xem được).</span>
                   </div>
 
                   <!-- Tùy chọn Ẩn Danh (Interactive Toggle Card) -->
@@ -1594,11 +1788,11 @@ SOFTWARE.
                       <div class="anon-toggle-left">
                         <div class="anon-toggle-icon" id="anonToggleIcon"></div>
                         <div class="anon-toggle-info">
-                          <div class="anon-toggle-title" id="anonToggleTitle">Công khai MSSV</div>
-                          <div class="anon-toggle-desc" id="anonToggleDesc">MSSV hiển thị trên bảng câu hỏi.</div>
+                          <div class="anon-toggle-title" id="anonToggleTitle">Chế độ công khai</div>
+                          <div class="anon-toggle-desc" id="anonToggleDesc">Tên hiển thị công khai (MSSV bảo mật, chỉ Admin xem).</div>
                         </div>
                       </div>
-                      <label class="anon-switch" title="Bật/Tắt chế độ ẩn danh">
+                      <label class="anon-switch" for="questionCheckAnonymous" title="Bật/Tắt chế độ ẩn danh">
                         <input type="checkbox" id="questionCheckAnonymous">
                         <span class="anon-slider"></span>
                       </label>
@@ -1706,7 +1900,7 @@ SOFTWARE.
               <div class="question-toolbar">
                 <div class="question-search-box">
 
-                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa, MSSV...">
+                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa...">
                 </div>
 
                 <div class="question-filter-pills" id="questionFilterPills">
@@ -1745,7 +1939,7 @@ SOFTWARE.
         <section class="tab-view" id="viewAdmin">
   <div class="context-header">
     <div><h2>Tài khoản và phân quyền</h2><p>Quản trị gốc tạo tài khoản, khóa truy cập và cấp quyền theo từng nghiệp vụ.</p></div>
-    <button type="button" class="btn btn-outline" id="btnReloadAccounts">Tải lại</button>
+    <button type="button" class="btn btn-outline" id="btnReloadAccounts">Làm mới</button>
   </div>
   <section class="portal-card account-editor">
     <h3 id="accountEditorTitle">Tạo tài khoản</h3>
@@ -1758,8 +1952,7 @@ SOFTWARE.
         <label>Vai trò<select class="form-input" id="accountRole"><option value="trainer">Trainer</option><option value="admin">Quản trị nội dung</option></select></label>
       </div>
       <fieldset class="account-permissions" id="accountPermissions"><legend>Quyền chỉnh sửa</legend></fieldset>
-      <label><input type="checkbox" id="accountActive" checked> Cho phép đăng nhập</label>
-      <p class="form-help-text">Quản trị nội dung sửa tất cả nghiệp vụ. Trainer chỉ sửa các mục được chọn. Quyền quản lý tài khoản dành cho quản trị gốc; khóa tài khoản hoặc đổi quyền sẽ thu hồi phiên cũ.</p>
+      <p class="form-help-text">Admin chọn từng quyền cho Trainer hoặc Quản trị nội dung. Quyền quản lý tài khoản chỉ dành cho Quản trị gốc; khóa tài khoản hoặc đổi quyền sẽ thu hồi phiên cũ.</p>
       <div class="context-actions"><button class="btn btn-primary" type="submit" id="btnSaveAccount">Lưu tài khoản</button><button class="btn btn-outline" type="button" id="btnResetAccountForm">Tạo mới</button></div>
     </form>
     <p id="accountFeedback" role="status" aria-live="polite"></p>
@@ -1770,6 +1963,17 @@ SOFTWARE.
       <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Quyền được cấp</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
       <tbody id="accountsTableBody"><tr><td colspan="5">Đang tải…</td></tr></tbody>
     </table></div>
+  </section>
+  <section class="portal-card account-list">
+    <div class="context-header">
+      <div><h3>Yêu cầu hỗ trợ tài khoản</h3><p>Xử lý yêu cầu quên mật khẩu bằng cơ chế reset an toàn; hệ thống không hiển thị mật khẩu.</p></div>
+      <div class="context-actions"><span class="badge badge-warning" id="adminSupportPendingBadge">0 chờ xử lý</span><button type="button" class="btn btn-outline" id="btnAdminRefreshSupport">Làm mới</button></div>
+    </div>
+    <div class="table-responsive"><table class="admin-table">
+      <thead><tr><th>STT</th><th>Loại</th><th>MSSV</th><th>Họ tên</th><th>Liên hệ</th><th>Nội dung</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <tbody id="adminSupportTableBody"><tr><td colspan="9">Đang tải…</td></tr></tbody>
+    </table></div>
+    <div class="empty-state" id="adminSupportEmptyState" style="display: none;">Chưa có yêu cầu hỗ trợ.</div>
   </section>
 </section>
       </main>
@@ -1862,123 +2066,158 @@ SOFTWARE.
       <div class="modal-body">
         <div class="modal-admin-shield-hint">
           <span class="shield-tag"> QUYỀN ADMIN</span>
-          <span>Chỉ Quản trị viên mới được sửa lịch học. Dữ liệu được lưu trữ trực tiếp vào MongoDB Atlas.</span>
+          <span>Chỉ Quản trị viên mới được sửa lịch học.</span>
         </div>
 
         <form id="scheduleCourseForm" class="schedule-course-form">
           <input type="hidden" id="courseEditId" value="">
 
-          <div class="form-grid-2col">
-            <div class="form-group">
-              <label for="courseTitleInput" class="form-label">Tên buổi học / Chuyên đề đào tạo <span
-                  class="required">*</span></label>
-              <input type="text" id="courseTitleInput" class="form-input"
-                placeholder="Ví dụ: Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống" required>
+          <section class="sf-section">
+            <h4 class="sf-section-title">Thông tin chung</h4>
+            <div class="sf-grid">
+              <div class="form-group sf-col-6">
+                <label for="courseTitleInput" class="form-label">Tên buổi học / Chuyên đề đào tạo <span
+                    class="required">*</span></label>
+                <input type="text" id="courseTitleInput" class="form-input"
+                  placeholder="Ví dụ: Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseCodeInput" class="form-label">Mã buổi học / Lớp HP</label>
+                <input type="text" id="courseCodeInput" class="form-input" placeholder="Ví dụ: TP-M10.01">
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseDepartmentSelect" class="form-label">Ban phụ trách</label>
+                <select id="courseDepartmentSelect" class="form-select">
+                  <option value="">-- Chọn Ban phụ trách --</option>
+                  <option value="Hệ thống">Ban Hệ thống</option>
+                  <option value="Truyền thông - Sự kiện">Ban Truyền thông - Sự kiện</option>
+                </select>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseInstructorInput" class="form-label">Trainer phụ trách</label>
+                <input type="text" id="courseInstructorInput" class="form-input"
+                  placeholder="Ví dụ: TS. Dương Việt Hằng...">
+              </div>
             </div>
-            <div class="form-group">
-              <label for="courseCodeInput" class="form-label">Mã buổi học / Lớp HP</label>
-              <input type="text" id="courseCodeInput" class="form-input" placeholder="Ví dụ: TP-M10.01">
-            </div>
-          </div>
+          </section>
 
-          <div class="form-grid-3col">
-            <div class="form-group">
-              <label for="courseDateInput" class="form-label">Ngày học <span class="required">*</span></label>
-              <input type="date" id="courseDateInput" class="form-input" value="2026-10-27" required>
+          <section class="sf-section">
+            <h4 class="sf-section-title">Thời gian</h4>
+            <div class="sf-grid">
+              <div class="form-group sf-col-2">
+                <label for="courseDateInput" class="form-label">Ngày học <span class="required">*</span></label>
+                <input type="date" id="courseDateInput" class="form-input" value="2026-10-27" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseStartTime" class="form-label">Giờ bắt đầu <span class="required">*</span></label>
+                <input type="time" id="courseStartTime" class="form-input" value="19:30" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseEndTime" class="form-label">Giờ kết thúc <span class="required">*</span></label>
+                <input type="time" id="courseEndTime" class="form-input" value="21:30" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseDaySelect" class="form-label">Thứ <span class="sf-label-hint">(tự động)</span></label>
+                <select id="courseDaySelect" class="form-select" disabled aria-disabled="true">
+                  <option value="Thứ 2">Thứ 2</option>
+                  <option value="Thứ 3">Thứ 3</option>
+                  <option value="Thứ 4">Thứ 4</option>
+                  <option value="Thứ 5">Thứ 5</option>
+                  <option value="Thứ 6">Thứ 6</option>
+                  <option value="Thứ 7">Thứ 7</option>
+                  <option value="Chủ nhật">Chủ nhật</option>
+                </select>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="coursePeriods" class="form-label">Khung tiết học</label>
+                <input type="text" id="coursePeriods" class="form-input" value="Tiết 1 - 4 (Tối)"
+                  placeholder="VD: Tiết 1 - 4">
+              </div>
+              <div class="form-group sf-col-2 sf-align-end">
+                <label class="sf-check-chip" for="courseTentativeInput">
+                  <input type="checkbox" id="courseTentativeInput">
+                  <span>Lịch dự kiến ngày/giờ</span>
+                </label>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="courseStartTime" class="form-label">Giờ bắt đầu <span class="required">*</span></label>
-              <input type="time" id="courseStartTime" class="form-input" value="19:30" required>
-            </div>
-            <div class="form-group">
-              <label for="courseEndTime" class="form-label">Giờ kết thúc <span class="required">*</span></label>
-              <input type="time" id="courseEndTime" class="form-input" value="21:30" required>
-            </div>
-          </div>
+          </section>
 
-          <div class="form-grid-3col">
-            <div class="form-group">
-              <label for="courseDaySelect" class="form-label">Thứ trong tuần</label>
-              <select id="courseDaySelect" class="form-select">
-                <option value="Thứ 2">Thứ 2</option>
-                <option value="Thứ 3" selected>Thứ 3</option>
-                <option value="Thứ 4">Thứ 4</option>
-                <option value="Thứ 5">Thứ 5</option>
-                <option value="Thứ 6">Thứ 6</option>
-                <option value="Thứ 7">Thứ 7</option>
-                <option value="Chủ nhật">Chủ nhật</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="coursePeriods" class="form-label">Khung tiết học</label>
-              <input type="text" id="coursePeriods" class="form-input" value="Tiết 1 - 4 (Tối)"
-                placeholder="VD: Tiết 1 - 4">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Trạng thái buổi học</label>
-              <p class="form-help-text">Tự động theo ngày và giờ học (UTC+7).</p>
-            </div>
-          </div>
+          <section class="sf-section">
+            <h4 class="sf-section-title">Hình thức đào tạo</h4>
+            <div class="sf-grid">
+              <div class="form-group sf-col-6">
+                <label for="courseTypeSelect" class="form-label">Hình thức đào tạo</label>
+                <select id="courseTypeSelect" class="form-select">
+                  <option value="Offline">Trực tiếp (Offline)</option>
+                  <option value="Online" selected>Học Trực Tuyến (Online MS Teams)</option>
+                  <option value="Lý thuyết">Lý thuyết Trực tuyến</option>
+                  <option value="Thực hành">Thực hành Trực tuyến</option>
+                  <option value="Báo cáo">Báo cáo & Đồ án</option>
+                </select>
+              </div>
 
-          <div class="form-grid-2col">
-            <div class="form-group">
-              <label for="courseInstructorInput" class="form-label">Trainer phụ trách</label>
-              <input type="text" id="courseInstructorInput" class="form-input"
-                placeholder="Ví dụ: TS. Dương Việt Hằng, Trainer...">
+              <div class="form-group sf-col-6" id="courseOfflineLocationGroup" style="display: none;">
+                <label for="courseRoomInput" class="form-label">
+                  <i class="fas fa-location-dot" style="color: #ef4444;"></i>
+                  <span>Địa điểm học Trực tiếp (Offline)</span> <span class="required">*</span>
+                </label>
+                <input type="text" id="courseRoomInput" class="form-input"
+                  placeholder="Ví dụ: Phòng B4.12, Hội trường E, Giảng đường A, Tòa nhà C...">
+                <p class="form-help-text">Nhập chính xác phòng học và cơ sở để Trainee và khách mời đến tham dự trực tiếp.</p>
+              </div>
+
+              <div class="form-group sf-col-6 highlight-teams-form-group">
+                <label for="courseTeamsUrl" class="form-label teams-field-label">
+                  <span>Đường Dẫn Phòng Họp Microsoft Teams</span>
+                </label>
+                <input type="url" id="courseTeamsUrl" class="form-input teams-url-input"
+                  placeholder="https://teams.microsoft.com/l/meetup-join/...">
+                <p class="teams-input-hint" id="courseTeamsHelpText">
+                   <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
+                  Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng Trainee vào phòng học
+                  MS Teams!
+                </p>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="courseTypeSelect" class="form-label">Hình thức đào tạo</label>
-              <select id="courseTypeSelect" class="form-select">
-                <option value="Offline">Trực tiếp (Offline)</option>
-                <option value="Online" selected>Học Trực Tuyến (Online MS Teams)</option>
-                <option value="Lý thuyết">Lý thuyết Trực tuyến</option>
-                <option value="Thực hành">Thực hành Trực tuyến</option>
-                <option value="Báo cáo">Báo cáo & Đồ án</option>
-              </select>
-              <label class="form-help-text"><input type="checkbox" id="courseTentativeInput"> Lịch dự kiến ngày hoặc giờ</label>
+          </section>
+
+          <section class="sf-section course-documents-section">
+            <div class="course-documents-header">
+              <h4 class="sf-section-title sf-title-inline">
+                <i class="fas fa-folder-open"></i>
+                Tài liệu buổi học <span class="sf-label-hint">(tùy chọn)</span>
+              </h4>
+              <div class="doc-count-control">
+                <label for="courseDocCountInput" class="doc-count-label">Số lượng tài liệu:</label>
+                <input type="number" id="courseDocCountInput" class="doc-count-input" min="0" max="10" step="1"
+                  value="0" inputmode="numeric">
+              </div>
             </div>
-          </div>
+            <div id="courseDocumentsContainer" class="course-documents-container"></div>
+          </section>
 
-          <!-- PHẦN GÁN LINK MICROSOFT TEAMS (CHO NÚT "VÀO HỌC") -->
-          <div class="form-group full-width-group highlight-teams-form-group">
-            <label for="courseTeamsUrl" class="form-label teams-field-label">
-
-              <span>Đường Dẫn Phòng Họp Microsoft Teams (Link "Vào học")</span>
-            </label>
-            <input type="url" id="courseTeamsUrl" class="form-input teams-url-input"
-              placeholder="https://teams.microsoft.com/l/meetup-join/... (Để trống nếu bạn muốn gán sau)">
-            <p class="teams-input-hint">
-               <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
-              Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng Trainee vào phòng học
-              MS Teams!
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label for="courseDocumentUrl" class="form-label">Link tài liệu buổi học (tùy chọn)</label>
-            <input type="url" id="courseDocumentUrl" class="form-input" maxlength="2048" placeholder="https://...">
-            <p class="form-help-text">Có link thì Trainee và khách thấy nút Tài liệu buổi học. Để trống để ẩn nút.</p>
-          </div>
-
-          <div class="form-group">
-            <label for="courseNoteInput" class="form-label">Ghi chú & Yêu cầu chuẩn bị buổi học</label>
-            <textarea id="courseNoteInput" class="form-input" rows="2"
+          <section class="sf-section">
+            <h4 class="sf-section-title">Ghi chú & yêu cầu chuẩn bị</h4>
+            <textarea id="courseNoteInput" class="form-input sf-textarea" rows="3"
               placeholder="Ví dụ: Cài đặt trước Node.js và clone mã nguồn bài tập về máy..."></textarea>
-          </div>
+          </section>
 
-          <div class="modal-form-actions">
-            <button type="button" class="btn btn-secondary admin-only-element" id="btnResetDefaultSchedule"
-              title="Khôi phục lại dữ liệu mẫu Tháng 10 vào database">
-              ↺ Khôi phục mẫu Tháng 10
-            </button>
-            <button type="button" class="btn btn-danger admin-only-element" id="btnDeleteCourse" style="display: none;">
-               Xóa buổi học
-            </button>
-            <div style="flex: 1;"></div>
-            <button type="button" class="btn btn-secondary" id="cancelScheduleBtn">Hủy</button>
-            <button type="submit" class="btn btn-primary" id="btnSaveCourse">
-               Lưu buổi học & Link MS Teams
-            </button>
+          <div class="modal-form-actions sf-footer">
+            <div class="sf-footer-left">
+              <button type="button" class="btn btn-secondary admin-only-element" id="btnResetDefaultSchedule"
+                title="Khôi phục lại dữ liệu mẫu Tháng 10 vào database">
+                ↺ Khôi phục mẫu Tháng 10
+              </button>
+              <button type="button" class="btn btn-danger admin-only-element" id="btnDeleteCourse" style="display: none;">
+                 Xóa buổi học
+              </button>
+            </div>
+            <div class="sf-footer-right">
+              <button type="button" class="btn btn-secondary" id="cancelScheduleBtn">Hủy</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveCourse">
+                 Lưu thông tin
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -2137,6 +2376,45 @@ SOFTWARE.
             </div>
           </div>
 
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editProgramStatus" class="form-label">Trạng thái chương trình</label>
+              <select id="editProgramStatus" class="form-input">
+                <option value="Đang học">Active / Đang học</option>
+                <option value="Hoàn thành">Completed / Hoàn thành</option>
+                <option value="Ngừng học">Inactive / Ngừng học</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">&nbsp;</label>
+              <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; height: 38px;">
+                <i class="fas fa-info-circle" style="margin-right: 6px; color: var(--primary-blue);"></i> Thông tin Mentor phụ trách
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section-title">THÔNG TIN MENTOR PHỤ TRÁCH</div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editMentorName" class="form-label">Họ và tên Mentor</label>
+              <input type="text" id="editMentorName" class="form-input" maxlength="150" placeholder="Để trống nếu chưa công bố">
+            </div>
+            <div class="form-group">
+              <label for="editMentorEmail" class="form-label">Email Mentor</label>
+              <input type="email" id="editMentorEmail" class="form-input" maxlength="254" placeholder="mentor@uit.edu.vn">
+            </div>
+          </div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editMentorRole" class="form-label">Vai trò / Lĩnh vực Mentor</label>
+              <input type="text" id="editMentorRole" class="form-input" maxlength="120" placeholder="VD: Mentor Kỹ thuật, Mentor Dự án...">
+            </div>
+            <div class="form-group">
+              <label for="editMentorPhone" class="form-label">Số điện thoại Mentor</label>
+              <input type="tel" id="editMentorPhone" class="form-input" maxlength="30" placeholder="VD: 0904607220">
+            </div>
+          </div>
+
           <div class="form-section-title">CẬP NHẬT CHỈ SỐ KPI & BUỔI HỌC</div>
           <div class="form-grid-3col">
             <div class="form-group">
@@ -2245,7 +2523,7 @@ SOFTWARE.
 
           <div>
             <h3 class="modal-title">Đổi Mật Khẩu Tài Khoản</h3>
-            <span class="modal-subtitle">Cập nhật mật khẩu mới và lưu vào MongoDB Atlas</span>
+            <span class="modal-subtitle">Cập nhật mật khẩu và lưu vào MongoDB Atlas</span>
           </div>
         </div>
         <button class="modal-close-btn" id="closeChangePasswordModalBtn">Đóng</button>
@@ -2296,7 +2574,7 @@ SOFTWARE.
       <div class="modal-body">
         <form id="profileForgotForm">
           <div class="form-group" style="margin-bottom: 14px;">
-            <label for="profileForgotIdentifier" class="form-label">Mã số Trainee (MSSV) / Tài khoản <span
+            <label for="profileForgotIdentifier" class="form-label">Mã số sinh viên (MSSV) / Tài khoản <span
                 class="text-danger">*</span></label>
             <input type="text" id="profileForgotIdentifier" class="form-input" placeholder="Nhập MSSV" required>
           </div>
@@ -2325,8 +2603,8 @@ SOFTWARE.
   </div>
 
   <!-- ================= Modal: Xem & Mở Link Bài Tập Duolingo ================= -->
-  <div class="duo-modal-overlay" id="duoAssignmentModal">
-    <div class="duo-modal-card">
+  <div class="duo-modal-overlay" id="duoAssignmentModal" role="dialog" aria-modal="true" aria-labelledby="duoModalTitle">
+    <div class="duo-modal-card" tabindex="-1">
       <button type="button" class="duo-modal-close-btn" id="duoModalCloseBtn" aria-label="Đóng">Đóng</button>
 
       <div class="duo-modal-badge green" id="duoModalBadge"> BÀI HỌC TIẾP THEO</div>
@@ -2389,7 +2667,7 @@ SOFTWARE.
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px;">
 
-            <span>ĐƯỜNG LINK BÀI TẬP (ADMIN ĐÃ GÁN)</span>
+            <span>ĐƯỜNG LINK BÀI TẬP</span>
           </span>
           <span class="badge badge-success" id="duoLinkOfficialBadge" style="font-size: 0.68rem;">Link Chính Thức</span>
         </div>
@@ -2409,7 +2687,7 @@ SOFTWARE.
       <!-- Quick Link & Deadline Editor (Dành riêng cho Admin chỉnh sửa link & thời hạn nộp) -->
       <div class="duo-link-edit-box" id="duoAdminQuickEditBox" style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 14px; display: none;">
         <div style="font-weight: 800; color: #dc2626; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-          <span> QUẢN TRỊ VIÊN: CẤU HÌNH BÀI TẬP</span>
+          <span>CẤU HÌNH BÀI TẬP</span>
         </div>
 
         <label for="duoLinkInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
@@ -2422,7 +2700,7 @@ SOFTWARE.
         </div>
 
         <label for="duoDeadlineInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
-           Cài đặt thời hạn nộp bài (Hạn chót đếm ngược do Admin set):
+           Cài đặt thời hạn nộp bài:
         </label>
         <div class="duo-link-input-wrap" style="margin-top: 4px;">
           <input type="datetime-local" id="duoDeadlineInput" class="duo-link-input" style="font-size: 12.5px;">
@@ -2603,7 +2881,7 @@ SOFTWARE.
           <div class="star-modal-avatar" id="starDetailStudentAvatar" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #3b82f6; flex-shrink: 0;"></div>
           <div>
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.96rem;" id="starDetailStudentName">Họ và tên</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);" id="starDetailStudentMeta">MSSV: 25520918 · Khoa KHMT</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="starDetailStudentMeta">Khoa KHMT</div>
           </div>
         </div>
 
@@ -2676,6 +2954,7 @@ SOFTWARE.
   <script src="js/modules/grades.js"></script>
   <script src="js/modules/leave.js"></script>
   <script src="js/modules/qa.js"></script>
+  <script src="js/modules/notifications.js"></script>
   <script src="js/modules/admin.js"></script>
   <script src="js/app.js"></script>
 

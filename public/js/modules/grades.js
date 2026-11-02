@@ -59,6 +59,32 @@ function extractUniqueSessions(trainees) {
   return list;
 }
 
+// Buổi đã/đang diễn ra có mặt trong bảng điểm của admin ngay cả khi chưa ai được chấm
+function mergeScheduleSessions(sessions, schedules) {
+  const known = new Set(sessions.map(s => s.sessionCode));
+  const merged = sessions.slice();
+  (schedules || []).forEach(sc => {
+    if (!sc.code || !sc.date || known.has(sc.code)) return;
+    if (sc.status !== 'completed' && sc.status !== 'live') return;
+    known.add(sc.code);
+    merged.push({
+      sessionCode: sc.code,
+      sessionTitle: sc.title || 'Buổi học',
+      sessionDate: sc.date,
+      trainerName: sc.instructor || '',
+      stage: 'Giai đoạn 1',
+      stageName: 'Vòng 1'
+    });
+  });
+  merged.sort((a, b) => {
+    if (a.sessionDate && b.sessionDate && a.sessionDate !== b.sessionDate) {
+      return new Date(a.sessionDate) - new Date(b.sessionDate);
+    }
+    return (a.sessionCode || '').localeCompare(b.sessionCode || '');
+  });
+  return merged;
+}
+
 function formatDateShort(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -91,6 +117,14 @@ async function renderGradesView(reload = true) {
   const trainees = (state.trainees || []).slice().sort((a, b) => (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0));
   gradesState.traineesList = trainees;
   gradesState.uniqueSessions = extractUniqueSessions(trainees);
+  if (canManage('attendance:manage')) {
+    try {
+      const schedules = await API.getSchedules({ all: true });
+      gradesState.uniqueSessions = mergeScheduleSessions(gradesState.uniqueSessions, schedules);
+    } catch (err) {
+      console.warn('Không tải được lịch học để bổ sung buổi chưa chấm điểm:', err);
+    }
+  }
 
   // Cập nhật các thẻ KPI tóm tắt ở đầu trang
   updateGradesKpis(trainees, gradesState.uniqueSessions);
@@ -360,9 +394,10 @@ function renderSessionBoxesView() {
         if (rank === 1) rankBadge = ' #1';
         else if (rank === 2) rankBadge = ' #2';
         else if (rank === 3) rankBadge = ' #3';
+        const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
         return `<tr data-trainee-id="${escapeHtml(t.traineeId)}" data-session-code="${escapeHtml(s.sessionCode)}">
             <td style="text-align:center;font-weight:700;white-space:nowrap;color:${rank === 1 ? '#eab308' : rank === 2 ? '#94a3b8' : rank === 3 ? '#d97706' : 'var(--text-muted)'};">${rankBadge}</td>
-            <td><div class="admin-user-cell"><div class="admin-user-avatar" style="padding:0;overflow:hidden;background:transparent;width:34px;height:34px;"><img src="${avatarUrl}" alt="${escapeHtml(t.fullName)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div><div class="admin-user-info"><span class="admin-user-name" style="font-weight:700;">${escapeHtml(t.fullName)}</span><span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong></span></div></div></td>
+            <td><div class="admin-user-cell"><div class="admin-user-avatar" style="padding:0;overflow:hidden;background:transparent;width:34px;height:34px;"><img src="${avatarUrl}" alt="${escapeHtml(t.fullName)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div><div class="admin-user-info"><span class="admin-user-name" style="font-weight:700;">${escapeHtml(t.fullName)}</span>${showMssv ? `<span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong></span>` : ''}</div></div></td>
             <td><div style="font-weight:600;font-size:0.84rem;">${escapeHtml(t.batch || 'KHMT2026.2')}</div><div style="font-size:0.74rem;color:var(--text-muted);">${escapeHtml(t.track || 'Khoa KHMT')}</div></td>
             <td style="text-align:center;"><span class="session-star-badge-lg" title="Điểm sao buổi này">${formatStarDelta(item.starsAwarded)}</span><div class="session-attendance-label">${escapeHtml(attendanceLabel(item.sessionLog?.attendanceStatus))}</div></td>
             <td style="text-align:center;"><span style="font-weight:700;color:var(--text-main);font-size:0.9rem;">${item.cumulativeStars}</span></td>
@@ -394,6 +429,13 @@ function renderSessionBoxesView() {
       ? `<colgroup><col style="min-width:220px"><col style="width:90px"><col style="width:120px"><col style="min-width:160px"><col style="width:80px"><col style="width:80px"></colgroup>`
       : `<colgroup><col class="session-col-rank"><col class="session-col-trainee"><col class="session-col-group"><col class="session-col-points"><col class="session-col-total"><col class="session-col-note"><col class="session-col-actions"></colgroup>`;
 
+    const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+    let sessionTitle = s.sessionTitle;
+    if (isGuest) {
+      const match = (s.sessionTitle || '').match(/^(buổi\s*\d+)/i);
+      sessionTitle = match ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : `Buổi ${displayNum}`;
+    }
+
     return `
       <div class="session-box-card" id="session-box-${escapeHtml(s.sessionCode)}">
         <div class="session-box-header">
@@ -407,10 +449,14 @@ function renderSessionBoxesView() {
                 <span class="session-tag-code">${escapeHtml(s.sessionCode)}</span>
                 <span class="session-tag-stage">${escapeHtml(s.stage || 'Giai đoạn 1')}</span>
                 <span class="session-tag-date"> ${s.sessionDate ? formatDateVN(s.sessionDate) : 'Chưa xếp ngày'}</span>
+                ${isAdmin && recordedCount === 0 ? '<span class="legend-chip chip-upcoming">Chưa chấm điểm</span>' : ''}
               </div>
-              <h3 class="session-box-title">${escapeHtml(s.sessionTitle)}</h3>
+              <h3 class="session-box-title">${escapeHtml(sessionTitle)}</h3>
               <div class="session-box-trainer">
-                <span>Phụ trách: <strong>${escapeHtml(s.trainerName || 'Ban Hậu cần')}</strong></span>
+                <span>Phụ trách: ${isGuest
+                  ? '<strong style="color: var(--text-muted); font-style: italic;">Đăng nhập để xem</strong>'
+                  : `<strong>${escapeHtml(s.trainerName || 'Ban Hậu cần')}</strong>`
+                }</span>
               </div>
             </div>
           </div>
@@ -577,10 +623,13 @@ function renderGradesMatrixTable() {
       <th style="min-width: 130px;">KHOA / LỚP</th>
   `;
 
+  const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+
   sessions.forEach((s, idx) => {
     const shortDate = s.sessionDate ? formatDateShort(s.sessionDate) : `B${idx + 1}`;
+    const headerTitle = isGuest ? `Buổi ${idx + 1}` : (s.sessionTitle || `Buổi ${idx + 1}`);
     theadHtml += `
-      <th class="col-session-header" title="${escapeHtml(s.sessionTitle)}">
+      <th class="col-session-header" title="${escapeHtml(headerTitle)}">
         <div class="session-header-code">Buổi ${idx + 1}</div>
         <div class="session-header-date">${escapeHtml(shortDate)}</div>
       </th>
@@ -625,7 +674,7 @@ function renderGradesMatrixTable() {
             <button type="button" class="session-star-pill ${isHigh ? 'high-star' : ''}"
               data-trainee-id="${escapeHtml(t.traineeId)}"
               data-session-code="${escapeHtml(s.sessionCode)}"
-              title="Buổi ${sIdx + 1}: ${escapeHtml(studentSession.sessionTitle || s.sessionTitle)}&#10;Điểm sao: ${formatStarDelta(stars)}  · Lũy kế: ${studentSession.cumulativeStars ?? t.accumulatedStars} &#10;Lý do: ${escapeHtml(studentSession.note || 'Hoàn thành buổi học')}">
+              title="${isGuest ? `Buổi ${sIdx + 1}` : `Buổi ${sIdx + 1}: ${escapeHtml(studentSession.sessionTitle || s.sessionTitle)}`}&#10;Điểm sao: ${formatStarDelta(stars)}  · Lũy kế: ${studentSession.cumulativeStars ?? t.accumulatedStars} &#10;Lý do: ${escapeHtml(studentSession.note || 'Hoàn thành buổi học')}">
               ${formatStarDelta(stars)}
             </button>
           </td>
@@ -655,7 +704,7 @@ function renderGradesMatrixTable() {
             </div>
             <div class="admin-user-info">
               <span class="admin-user-name" style="font-weight: 700;">${escapeHtml(t.fullName)}</span>
-              <span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong></span>
+              ${Boolean(window.canViewMssv && window.canViewMssv()) ? `<span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong></span>` : ''}
             </div>
           </div>
         </td>
@@ -753,18 +802,27 @@ function openSessionStarDetailModal(traineeId, sessionCode) {
   const elNote = document.getElementById('starDetailNote');
 
   if (elName) elName.textContent = trainee.fullName;
-  if (elMeta) elMeta.textContent = `MSSV: ${trainee.traineeId} · ${trainee.track || 'Khoa KHMT'} (${trainee.batch || 'KHMT2026.2'})`;
+  const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
+  if (elMeta) elMeta.textContent = showMssv ? `MSSV: ${trainee.traineeId} · ${trainee.track || 'Khoa KHMT'} (${trainee.batch || 'KHMT2026.2'})` : `${trainee.track || 'Khoa KHMT'} (${trainee.batch || 'KHMT2026.2'})`;
   if (elAvatar) {
     const avatarUrl = getTraineeDicebearAvatar(trainee);
     elAvatar.innerHTML = `<img src="${avatarUrl}" alt="${escapeHtml(trainee.fullName)}" style="width: 100%; height: 100%; object-fit: cover;">`;
   }
 
   if (displayLog) {
+    const isGuest = Boolean(window.state ? !window.state.currentUser : false);
     if (elAwarded) elAwarded.textContent = `${formatStarDelta(displayLog.starsAwarded)} `;
     if (elCumulative) elCumulative.textContent = formatTraineeMetric(displayLog.cumulativeStars);
-    if (elSessionName) elSessionName.textContent = displayLog.sessionTitle || sessionCode;
+    if (elSessionName) {
+      if (isGuest) {
+        const match = (displayLog.sessionTitle || '').match(/^(buổi\s*\d+)/i);
+        elSessionName.textContent = match ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : `Buổi học (${displayLog.sessionDate ? formatDateVN(displayLog.sessionDate) : sessionCode})`;
+      } else {
+        elSessionName.textContent = displayLog.sessionTitle || sessionCode;
+      }
+    }
     if (elSessionDate) elSessionDate.textContent = displayLog.sessionDate ? formatDateVN(displayLog.sessionDate) : '—';
-    if (elTrainer) elTrainer.textContent = displayLog.trainerName || 'Võ Thị Xuân Quỳnh';
+    if (elTrainer) elTrainer.textContent = isGuest ? 'Đăng nhập để xem' : (displayLog.trainerName || 'Võ Thị Xuân Quỳnh');
     if (elNote) elNote.textContent = displayLog.note || 'Điểm danh đúng giờ, tham gia tích cực và hoàn thành xuất sắc yêu cầu buổi học.';
   }
 

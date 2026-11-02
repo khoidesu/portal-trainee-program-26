@@ -83,10 +83,22 @@ SOFTWARE.
           <!-- Hidden helper select to preserve JS compatibility -->
           <select id="traineeSelect" style="display: none;"></select>
 
-          <!-- Theme Mode Dropdown (Phục hồi Chế độ Giao diện: Sáng / Tối / Hệ thống) -->
+          <div class="notification-wrapper" id="notificationWrapper" style="display: none;">
+            <button type="button" class="header-action-btn theme-toggle-btn notification-btn" id="notificationBtn"
+              title="Thông báo" aria-label="Thông báo" aria-expanded="false" aria-controls="notificationDropdown"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg><span class="notification-badge" id="notificationBadge" hidden>0</span></button>
+            <div class="theme-dropdown-menu notification-dropdown" id="notificationDropdown" role="region" aria-label="Thông báo">
+              <div class="notification-header">
+                <span class="theme-dropdown-header">THÔNG BÁO</span>
+                <button type="button" class="notification-read-all" id="notificationReadAll">Đánh dấu đã đọc</button>
+              </div>
+              <div class="notification-list" id="notificationList" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- Theme Mode Dropdown (Chế độ Giao diện: chỉ hiện icon, bấm vào mới hiện thêm thông tin) -->
           <div class="theme-mode-wrapper" id="themeModeWrapper">
             <button class="header-action-btn theme-toggle-btn" id="themeToggleBtn" title="Chế độ giao diện (Sáng / Tối)"
-              aria-label="Chế độ giao diện" aria-expanded="false" aria-controls="themeDropdownMenu"><svg class="theme-toggle-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#theme-icon-monitor"></use></svg><span class="theme-toggle-label">Giao diện</span></button>
+              aria-label="Chế độ giao diện" aria-expanded="false" aria-controls="themeDropdownMenu"><svg class="theme-toggle-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#theme-icon-monitor"></use></svg></button>
 
             <!-- Dropdown Menu: Sáng / Tối / Hệ thống -->
             <div class="theme-dropdown-menu" id="themeDropdownMenu">
@@ -119,20 +131,23 @@ SOFTWARE.
 
           <!-- Ô nhỏ Đăng nhập duy nhất -->
           <a href="/login" class="header-action-btn login-header-btn" id="openLoginModalBtn"
-            title="Đăng nhập tài khoản quản lý hoặc Trainer"
+            title="Đăng nhập tài khoản Trainee hoặc Quản trị viên"
             style="text-decoration: none; padding: 7px 16px; font-weight: 600; font-size: 13.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: var(--primary-blue); color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
-
             <span class="btn-text">Đăng nhập</span>
           </a>
 
-          <!-- Trạng thái khi Admin đã đăng nhập -->
-          <div class="admin-only-element" id="headerAdminStatus" style="display: none; align-items: center; gap: 8px;">
-            <a href="#admin" data-permission="accounts:manage"
-              style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
+          <!-- Trạng thái khi người dùng đã đăng nhập (Admin hoặc Trainee) -->
+          <div id="headerUserStatus" style="display: none; align-items: center; gap: 8px;">
+            <a href="#admin" id="headerAdminStatus" class="admin-only-element" data-permission="accounts:manage"
+              style="display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
               <span> Ban Tổ chức</span>
             </a>
+            <a href="#profile" id="headerTraineeBadge"
+              style="display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(37,99,235,0.12); color: var(--primary-blue); border: 1px solid rgba(37,99,235,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
+              <span id="headerTraineeBadgeName">Hồ sơ Trainee</span>
+            </a>
             <button type="button" class="header-action-btn logout-header-btn" id="headerLogoutBtn"
-              title="Đăng xuất khỏi tài khoản Quản trị"
+              title="Đăng xuất khỏi tài khoản"
               style="padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;">
               Đăng xuất
             </button>

@@ -101,123 +101,158 @@
       <div class="modal-body">
         <div class="modal-admin-shield-hint">
           <span class="shield-tag"> QUYỀN ADMIN</span>
-          <span>Chỉ Quản trị viên mới được sửa lịch học. Dữ liệu được lưu trữ trực tiếp vào MongoDB Atlas.</span>
+          <span>Chỉ Quản trị viên mới được sửa lịch học.</span>
         </div>
 
         <form id="scheduleCourseForm" class="schedule-course-form">
           <input type="hidden" id="courseEditId" value="">
 
-          <div class="form-grid-2col">
-            <div class="form-group">
-              <label for="courseTitleInput" class="form-label">Tên buổi học / Chuyên đề đào tạo <span
-                  class="required">*</span></label>
-              <input type="text" id="courseTitleInput" class="form-input"
-                placeholder="Ví dụ: Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống" required>
+          <section class="sf-section">
+            <h4 class="sf-section-title">Thông tin chung</h4>
+            <div class="sf-grid">
+              <div class="form-group sf-col-6">
+                <label for="courseTitleInput" class="form-label">Tên buổi học / Chuyên đề đào tạo <span
+                    class="required">*</span></label>
+                <input type="text" id="courseTitleInput" class="form-input"
+                  placeholder="Ví dụ: Buổi 1: Khởi động Trainee Program & Tổng quan Hệ thống" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseCodeInput" class="form-label">Mã buổi học / Lớp HP</label>
+                <input type="text" id="courseCodeInput" class="form-input" placeholder="Ví dụ: TP-M10.01">
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseDepartmentSelect" class="form-label">Ban phụ trách</label>
+                <select id="courseDepartmentSelect" class="form-select">
+                  <option value="">-- Chọn Ban phụ trách --</option>
+                  <option value="Hệ thống">Ban Hệ thống</option>
+                  <option value="Truyền thông - Sự kiện">Ban Truyền thông - Sự kiện</option>
+                </select>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseInstructorInput" class="form-label">Trainer phụ trách</label>
+                <input type="text" id="courseInstructorInput" class="form-input"
+                  placeholder="Ví dụ: TS. Dương Việt Hằng...">
+              </div>
             </div>
-            <div class="form-group">
-              <label for="courseCodeInput" class="form-label">Mã buổi học / Lớp HP</label>
-              <input type="text" id="courseCodeInput" class="form-input" placeholder="Ví dụ: TP-M10.01">
-            </div>
-          </div>
+          </section>
 
-          <div class="form-grid-3col">
-            <div class="form-group">
-              <label for="courseDateInput" class="form-label">Ngày học <span class="required">*</span></label>
-              <input type="date" id="courseDateInput" class="form-input" value="2026-10-27" required>
+          <section class="sf-section">
+            <h4 class="sf-section-title">Thời gian</h4>
+            <div class="sf-grid">
+              <div class="form-group sf-col-2">
+                <label for="courseDateInput" class="form-label">Ngày học <span class="required">*</span></label>
+                <input type="date" id="courseDateInput" class="form-input" value="2026-10-27" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseStartTime" class="form-label">Giờ bắt đầu <span class="required">*</span></label>
+                <input type="time" id="courseStartTime" class="form-input" value="19:30" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseEndTime" class="form-label">Giờ kết thúc <span class="required">*</span></label>
+                <input type="time" id="courseEndTime" class="form-input" value="21:30" required>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="courseDaySelect" class="form-label">Thứ <span class="sf-label-hint">(tự động)</span></label>
+                <select id="courseDaySelect" class="form-select" disabled aria-disabled="true">
+                  <option value="Thứ 2">Thứ 2</option>
+                  <option value="Thứ 3">Thứ 3</option>
+                  <option value="Thứ 4">Thứ 4</option>
+                  <option value="Thứ 5">Thứ 5</option>
+                  <option value="Thứ 6">Thứ 6</option>
+                  <option value="Thứ 7">Thứ 7</option>
+                  <option value="Chủ nhật">Chủ nhật</option>
+                </select>
+              </div>
+              <div class="form-group sf-col-2">
+                <label for="coursePeriods" class="form-label">Khung tiết học</label>
+                <input type="text" id="coursePeriods" class="form-input" value="Tiết 1 - 4 (Tối)"
+                  placeholder="VD: Tiết 1 - 4">
+              </div>
+              <div class="form-group sf-col-2 sf-align-end">
+                <label class="sf-check-chip" for="courseTentativeInput">
+                  <input type="checkbox" id="courseTentativeInput">
+                  <span>Lịch dự kiến ngày/giờ</span>
+                </label>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="courseStartTime" class="form-label">Giờ bắt đầu <span class="required">*</span></label>
-              <input type="time" id="courseStartTime" class="form-input" value="19:30" required>
-            </div>
-            <div class="form-group">
-              <label for="courseEndTime" class="form-label">Giờ kết thúc <span class="required">*</span></label>
-              <input type="time" id="courseEndTime" class="form-input" value="21:30" required>
-            </div>
-          </div>
+          </section>
 
-          <div class="form-grid-3col">
-            <div class="form-group">
-              <label for="courseDaySelect" class="form-label">Thứ trong tuần</label>
-              <select id="courseDaySelect" class="form-select">
-                <option value="Thứ 2">Thứ 2</option>
-                <option value="Thứ 3" selected>Thứ 3</option>
-                <option value="Thứ 4">Thứ 4</option>
-                <option value="Thứ 5">Thứ 5</option>
-                <option value="Thứ 6">Thứ 6</option>
-                <option value="Thứ 7">Thứ 7</option>
-                <option value="Chủ nhật">Chủ nhật</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="coursePeriods" class="form-label">Khung tiết học</label>
-              <input type="text" id="coursePeriods" class="form-input" value="Tiết 1 - 4 (Tối)"
-                placeholder="VD: Tiết 1 - 4">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Trạng thái buổi học</label>
-              <p class="form-help-text">Tự động theo ngày và giờ học (UTC+7).</p>
-            </div>
-          </div>
+          <section class="sf-section">
+            <h4 class="sf-section-title">Hình thức đào tạo</h4>
+            <div class="sf-grid">
+              <div class="form-group sf-col-6">
+                <label for="courseTypeSelect" class="form-label">Hình thức đào tạo</label>
+                <select id="courseTypeSelect" class="form-select">
+                  <option value="Offline">Trực tiếp (Offline)</option>
+                  <option value="Online" selected>Học Trực Tuyến (Online MS Teams)</option>
+                  <option value="Lý thuyết">Lý thuyết Trực tuyến</option>
+                  <option value="Thực hành">Thực hành Trực tuyến</option>
+                  <option value="Báo cáo">Báo cáo & Đồ án</option>
+                </select>
+              </div>
 
-          <div class="form-grid-2col">
-            <div class="form-group">
-              <label for="courseInstructorInput" class="form-label">Trainer phụ trách</label>
-              <input type="text" id="courseInstructorInput" class="form-input"
-                placeholder="Ví dụ: TS. Dương Việt Hằng, Trainer...">
+              <div class="form-group sf-col-6" id="courseOfflineLocationGroup" style="display: none;">
+                <label for="courseRoomInput" class="form-label">
+                  <i class="fas fa-location-dot" style="color: #ef4444;"></i>
+                  <span>Địa điểm học Trực tiếp (Offline)</span> <span class="required">*</span>
+                </label>
+                <input type="text" id="courseRoomInput" class="form-input"
+                  placeholder="Ví dụ: Phòng B4.12, Hội trường E, Giảng đường A, Tòa nhà C...">
+                <p class="form-help-text">Nhập chính xác phòng học và cơ sở để Trainee và khách mời đến tham dự trực tiếp.</p>
+              </div>
+
+              <div class="form-group sf-col-6 highlight-teams-form-group">
+                <label for="courseTeamsUrl" class="form-label teams-field-label">
+                  <span>Đường Dẫn Phòng Họp Microsoft Teams</span>
+                </label>
+                <input type="url" id="courseTeamsUrl" class="form-input teams-url-input"
+                  placeholder="https://teams.microsoft.com/l/meetup-join/...">
+                <p class="teams-input-hint" id="courseTeamsHelpText">
+                   <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
+                  Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng Trainee vào phòng học
+                  MS Teams!
+                </p>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="courseTypeSelect" class="form-label">Hình thức đào tạo</label>
-              <select id="courseTypeSelect" class="form-select">
-                <option value="Offline">Trực tiếp (Offline)</option>
-                <option value="Online" selected>Học Trực Tuyến (Online MS Teams)</option>
-                <option value="Lý thuyết">Lý thuyết Trực tuyến</option>
-                <option value="Thực hành">Thực hành Trực tuyến</option>
-                <option value="Báo cáo">Báo cáo & Đồ án</option>
-              </select>
-              <label class="form-help-text"><input type="checkbox" id="courseTentativeInput"> Lịch dự kiến ngày hoặc giờ</label>
+          </section>
+
+          <section class="sf-section course-documents-section">
+            <div class="course-documents-header">
+              <h4 class="sf-section-title sf-title-inline">
+                <i class="fas fa-folder-open"></i>
+                Tài liệu buổi học <span class="sf-label-hint">(tùy chọn)</span>
+              </h4>
+              <div class="doc-count-control">
+                <label for="courseDocCountInput" class="doc-count-label">Số lượng tài liệu:</label>
+                <input type="number" id="courseDocCountInput" class="doc-count-input" min="0" max="10" step="1"
+                  value="0" inputmode="numeric">
+              </div>
             </div>
-          </div>
+            <div id="courseDocumentsContainer" class="course-documents-container"></div>
+          </section>
 
-          <!-- PHẦN GÁN LINK MICROSOFT TEAMS (CHO NÚT "VÀO HỌC") -->
-          <div class="form-group full-width-group highlight-teams-form-group">
-            <label for="courseTeamsUrl" class="form-label teams-field-label">
-
-              <span>Đường Dẫn Phòng Họp Microsoft Teams (Link "Vào học")</span>
-            </label>
-            <input type="url" id="courseTeamsUrl" class="form-input teams-url-input"
-              placeholder="https://teams.microsoft.com/l/meetup-join/... (Để trống nếu bạn muốn gán sau)">
-            <p class="teams-input-hint">
-               <strong>Học online & gán link sau:</strong> Bạn có thể để trống trường này và gán sau trước giờ học.
-              Khi có link, nút <strong>"Vào học"</strong> trên giao diện sẽ tự động chuyển hướng Trainee vào phòng học
-              MS Teams!
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label for="courseDocumentUrl" class="form-label">Link tài liệu buổi học (tùy chọn)</label>
-            <input type="url" id="courseDocumentUrl" class="form-input" maxlength="2048" placeholder="https://...">
-            <p class="form-help-text">Có link thì Trainee và khách thấy nút Tài liệu buổi học. Để trống để ẩn nút.</p>
-          </div>
-
-          <div class="form-group">
-            <label for="courseNoteInput" class="form-label">Ghi chú & Yêu cầu chuẩn bị buổi học</label>
-            <textarea id="courseNoteInput" class="form-input" rows="2"
+          <section class="sf-section">
+            <h4 class="sf-section-title">Ghi chú & yêu cầu chuẩn bị</h4>
+            <textarea id="courseNoteInput" class="form-input sf-textarea" rows="3"
               placeholder="Ví dụ: Cài đặt trước Node.js và clone mã nguồn bài tập về máy..."></textarea>
-          </div>
+          </section>
 
-          <div class="modal-form-actions">
-            <button type="button" class="btn btn-secondary admin-only-element" id="btnResetDefaultSchedule"
-              title="Khôi phục lại dữ liệu mẫu Tháng 10 vào database">
-              ↺ Khôi phục mẫu Tháng 10
-            </button>
-            <button type="button" class="btn btn-danger admin-only-element" id="btnDeleteCourse" style="display: none;">
-               Xóa buổi học
-            </button>
-            <div style="flex: 1;"></div>
-            <button type="button" class="btn btn-secondary" id="cancelScheduleBtn">Hủy</button>
-            <button type="submit" class="btn btn-primary" id="btnSaveCourse">
-               Lưu buổi học & Link MS Teams
-            </button>
+          <div class="modal-form-actions sf-footer">
+            <div class="sf-footer-left">
+              <button type="button" class="btn btn-secondary admin-only-element" id="btnResetDefaultSchedule"
+                title="Khôi phục lại dữ liệu mẫu Tháng 10 vào database">
+                ↺ Khôi phục mẫu Tháng 10
+              </button>
+              <button type="button" class="btn btn-danger admin-only-element" id="btnDeleteCourse" style="display: none;">
+                 Xóa buổi học
+              </button>
+            </div>
+            <div class="sf-footer-right">
+              <button type="button" class="btn btn-secondary" id="cancelScheduleBtn">Hủy</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveCourse">
+                 Lưu thông tin
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -376,6 +411,45 @@
             </div>
           </div>
 
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editProgramStatus" class="form-label">Trạng thái chương trình</label>
+              <select id="editProgramStatus" class="form-input">
+                <option value="Đang học">Active / Đang học</option>
+                <option value="Hoàn thành">Completed / Hoàn thành</option>
+                <option value="Ngừng học">Inactive / Ngừng học</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">&nbsp;</label>
+              <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; height: 38px;">
+                <i class="fas fa-info-circle" style="margin-right: 6px; color: var(--primary-blue);"></i> Thông tin Mentor phụ trách
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section-title">THÔNG TIN MENTOR PHỤ TRÁCH</div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editMentorName" class="form-label">Họ và tên Mentor</label>
+              <input type="text" id="editMentorName" class="form-input" maxlength="150" placeholder="Để trống nếu chưa công bố">
+            </div>
+            <div class="form-group">
+              <label for="editMentorEmail" class="form-label">Email Mentor</label>
+              <input type="email" id="editMentorEmail" class="form-input" maxlength="254" placeholder="mentor@uit.edu.vn">
+            </div>
+          </div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editMentorRole" class="form-label">Vai trò / Lĩnh vực Mentor</label>
+              <input type="text" id="editMentorRole" class="form-input" maxlength="120" placeholder="VD: Mentor Kỹ thuật, Mentor Dự án...">
+            </div>
+            <div class="form-group">
+              <label for="editMentorPhone" class="form-label">Số điện thoại Mentor</label>
+              <input type="tel" id="editMentorPhone" class="form-input" maxlength="30" placeholder="VD: 0904607220">
+            </div>
+          </div>
+
           <div class="form-section-title">CẬP NHẬT CHỈ SỐ KPI & BUỔI HỌC</div>
           <div class="form-grid-3col">
             <div class="form-group">
@@ -484,7 +558,7 @@
 
           <div>
             <h3 class="modal-title">Đổi Mật Khẩu Tài Khoản</h3>
-            <span class="modal-subtitle">Cập nhật mật khẩu mới và lưu vào MongoDB Atlas</span>
+            <span class="modal-subtitle">Cập nhật mật khẩu và lưu vào MongoDB Atlas</span>
           </div>
         </div>
         <button class="modal-close-btn" id="closeChangePasswordModalBtn">Đóng</button>
@@ -535,7 +609,7 @@
       <div class="modal-body">
         <form id="profileForgotForm">
           <div class="form-group" style="margin-bottom: 14px;">
-            <label for="profileForgotIdentifier" class="form-label">Mã số Trainee (MSSV) / Tài khoản <span
+            <label for="profileForgotIdentifier" class="form-label">Mã số sinh viên (MSSV) / Tài khoản <span
                 class="text-danger">*</span></label>
             <input type="text" id="profileForgotIdentifier" class="form-input" placeholder="Nhập MSSV" required>
           </div>
@@ -564,8 +638,8 @@
   </div>
 
   <!-- ================= Modal: Xem & Mở Link Bài Tập Duolingo ================= -->
-  <div class="duo-modal-overlay" id="duoAssignmentModal">
-    <div class="duo-modal-card">
+  <div class="duo-modal-overlay" id="duoAssignmentModal" role="dialog" aria-modal="true" aria-labelledby="duoModalTitle">
+    <div class="duo-modal-card" tabindex="-1">
       <button type="button" class="duo-modal-close-btn" id="duoModalCloseBtn" aria-label="Đóng">Đóng</button>
 
       <div class="duo-modal-badge green" id="duoModalBadge"> BÀI HỌC TIẾP THEO</div>
@@ -628,7 +702,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px;">
 
-            <span>ĐƯỜNG LINK BÀI TẬP (ADMIN ĐÃ GÁN)</span>
+            <span>ĐƯỜNG LINK BÀI TẬP</span>
           </span>
           <span class="badge badge-success" id="duoLinkOfficialBadge" style="font-size: 0.68rem;">Link Chính Thức</span>
         </div>
@@ -648,7 +722,7 @@
       <!-- Quick Link & Deadline Editor (Dành riêng cho Admin chỉnh sửa link & thời hạn nộp) -->
       <div class="duo-link-edit-box" id="duoAdminQuickEditBox" style="margin-top: 14px; border-top: 1px dashed var(--border-color); padding-top: 14px; display: none;">
         <div style="font-weight: 800; color: #dc2626; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-          <span> QUẢN TRỊ VIÊN: CẤU HÌNH BÀI TẬP</span>
+          <span>CẤU HÌNH BÀI TẬP</span>
         </div>
 
         <label for="duoLinkInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
@@ -661,7 +735,7 @@
         </div>
 
         <label for="duoDeadlineInput" class="duo-link-label" style="font-weight: 700; color: var(--text-main); font-size: 12px;">
-           Cài đặt thời hạn nộp bài (Hạn chót đếm ngược do Admin set):
+           Cài đặt thời hạn nộp bài:
         </label>
         <div class="duo-link-input-wrap" style="margin-top: 4px;">
           <input type="datetime-local" id="duoDeadlineInput" class="duo-link-input" style="font-size: 12.5px;">
@@ -842,7 +916,7 @@
           <div class="star-modal-avatar" id="starDetailStudentAvatar" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #3b82f6; flex-shrink: 0;"></div>
           <div>
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.96rem;" id="starDetailStudentName">Họ và tên</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);" id="starDetailStudentMeta">MSSV: 25520918 · Khoa KHMT</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="starDetailStudentMeta">Khoa KHMT</div>
           </div>
         </div>
 

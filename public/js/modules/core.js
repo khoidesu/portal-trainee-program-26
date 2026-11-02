@@ -23,6 +23,7 @@ const state = {
   scheduleViewMode: 'week',
   trainees: [],
   currentTrainee: null,
+  profileTargetId: null,
   announcements: [],
   dbStatus: null,
   searchQuery: '',
@@ -41,6 +42,11 @@ const state = {
 function getTraineeDicebearAvatar(traineeOrId, name = '') {
   let seed = '';
   if (typeof traineeOrId === 'object' && traineeOrId !== null) {
+    const avatar = String(traineeOrId.avatar || '').trim();
+    if (/^\/uploads\/avatars\/[a-zA-Z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(avatar) ||
+        /^\/assets\/whale_[1-4]\.png$/.test(avatar)) {
+      return avatar;
+    }
     seed = traineeOrId.traineeId || traineeOrId.username || traineeOrId.email || traineeOrId.fullName || 'student';
   } else {
     seed = String(traineeOrId || 'student').trim();
@@ -57,6 +63,19 @@ function canManage(permission) {
   const user = state.currentUser;
   return Boolean(user && (user.isOwner || user.permissions?.includes(permission)));
 }
+
+function canViewMssv() {
+  const user = state.currentUser;
+  if (!user) return false;
+  if (user.isOwner) return true;
+  if (Array.isArray(user.permissions) && user.permissions.some(p =>
+    ['trainees:manage', 'leave:manage', 'questions:manage', 'attendance:manage', 'accounts:manage'].includes(p)
+  )) {
+    return true;
+  }
+  return false;
+}
+window.canViewMssv = canViewMssv;
 
 async function refreshPortalData() {
   await loadTrainees();
@@ -94,6 +113,8 @@ const elements = {
   navLeave: document.getElementById('navLeave'),
   navQuestions: document.getElementById('navQuestions'),
   navAdmin: document.getElementById('navAdmin'),
+  profileNavGroupLabel: document.getElementById('profileNavGroupLabel'),
+  profileNavList: document.getElementById('profileNavList'),
   adminNavGroupLabel: document.getElementById('adminNavGroupLabel'),
   adminNavList: document.getElementById('adminNavList'),
   viewDashboard: document.getElementById('viewDashboard'),
@@ -140,6 +161,11 @@ const elements = {
   courseInstructorInput: document.getElementById('courseInstructorInput'),
   courseTeamsUrl: document.getElementById('courseTeamsUrl'),
   courseDocumentUrl: document.getElementById('courseDocumentUrl'),
+  courseRoomInput: document.getElementById('courseRoomInput'),
+  courseOfflineLocationGroup: document.getElementById('courseOfflineLocationGroup'),
+  courseDocCountInput: document.getElementById('courseDocCountInput'),
+  courseDocumentsContainer: document.getElementById('courseDocumentsContainer'),
+  btnAddDocRowBtn: document.getElementById('btnAddDocRowBtn'),
   courseNoteInput: document.getElementById('courseNoteInput'),
   scheduleModalTitle: document.getElementById('scheduleModalTitle'),
 
@@ -191,17 +217,43 @@ const elements = {
   profileAvatarImg: document.getElementById('profileAvatarImg'),
   profileAvatarInitials: document.getElementById('profileAvatarInitials'),
   profileAvatarFileInput: document.getElementById('profileAvatarFileInput'),
+  profileAvatarPreviewBox: document.getElementById('profileAvatarPreviewBox'),
+  profileAvatarPreviewImg: document.getElementById('profileAvatarPreviewImg'),
+  btnConfirmUploadAvatar: document.getElementById('btnConfirmUploadAvatar'),
+  btnCancelAvatarPreview: document.getElementById('btnCancelAvatarPreview'),
   btnUploadProfileAvatar: document.getElementById('btnUploadProfileAvatar'),
   btnRemoveProfileAvatar: document.getElementById('btnRemoveProfileAvatar'),
   profileBadgeId: document.getElementById('profileBadgeId'),
   profileBadgeRole: document.getElementById('profileBadgeRole'),
+  profileBadgeProgramStatus: document.getElementById('profileBadgeProgramStatus'),
   profileBadgeBatch: document.getElementById('profileBadgeBatch'),
   profileBadgeTrack: document.getElementById('profileBadgeTrack'),
+  profileBadgeMentor: document.getElementById('profileBadgeMentor'),
+  profileAccountUsername: document.getElementById('profileAccountUsername'),
+  profileAccountStatusBadge: document.getElementById('profileAccountStatusBadge'),
+  profileAccountCreatedAt: document.getElementById('profileAccountCreatedAt'),
+  profileAccountLastLogin: document.getElementById('profileAccountLastLogin'),
+  profileAccountLastPassChange: document.getElementById('profileAccountLastPassChange'),
   profileInfoForm: document.getElementById('profileInfoForm'),
   profileInputFullName: document.getElementById('profileInputFullName'),
   profileInputEmail: document.getElementById('profileInputEmail'),
   profileInputId: document.getElementById('profileInputId'),
-  profileInputTrack: document.getElementById('profileInputTrack'),
+  profileInputPhone: document.getElementById('profileInputPhone'),
+  profileInputDob: document.getElementById('profileInputDob'),
+  profileSelectGender: document.getElementById('profileSelectGender'),
+  profileInputAddress: document.getElementById('profileInputAddress'),
+  profileInputFacebook: document.getElementById('profileInputFacebook'),
+  profileInputLinkedin: document.getElementById('profileInputLinkedin'),
+  profileTextareaBio: document.getElementById('profileTextareaBio'),
+  profilePrefSchedule: document.getElementById('profilePrefSchedule'),
+  profilePrefAssignments: document.getElementById('profilePrefAssignments'),
+  profilePrefQuestions: document.getElementById('profilePrefQuestions'),
+  profileProgStatusDisplay: document.getElementById('profileProgStatusDisplay'),
+  profileProgBatchDisplay: document.getElementById('profileProgBatchDisplay'),
+  profileProgStarsDisplay: document.getElementById('profileProgStarsDisplay'),
+  profileProgAttendanceDisplay: document.getElementById('profileProgAttendanceDisplay'),
+  profileActivitiesContainer: document.getElementById('profileActivitiesContainer'),
+  btnRefreshActivities: document.getElementById('btnRefreshActivities'),
   btnSaveProfileInfo: document.getElementById('btnSaveProfileInfo'),
   profileSecurityForm: document.getElementById('profileSecurityForm'),
   profileOldPass: document.getElementById('profileOldPass'),
@@ -355,6 +407,11 @@ const elements = {
   editEmail: document.getElementById('editEmail'),
   editTrack: document.getElementById('editTrack'),
   editBatch: document.getElementById('editBatch'),
+  editProgramStatus: document.getElementById('editProgramStatus'),
+  editMentorName: document.getElementById('editMentorName'),
+  editMentorEmail: document.getElementById('editMentorEmail'),
+  editMentorRole: document.getElementById('editMentorRole'),
+  editMentorPhone: document.getElementById('editMentorPhone'),
   editStars: document.getElementById('editStars'),
   editAttendedSessions: document.getElementById('editAttendedSessions'),
   editTotalSessions: document.getElementById('editTotalSessions'),
@@ -478,7 +535,9 @@ function updateThemeButtonIcon(mode) {
   const name = { light: 'sun', dark: 'moon', system: 'monitor' }[mode] || 'monitor';
   if (label) label.textContent = { light: 'Sáng', dark: 'Tối', system: 'Hệ thống' }[mode] || 'Giao diện';
   if (icon) icon.setAttribute('href', `#theme-icon-${name}`);
-  elements.themeToggleBtn.setAttribute('aria-label', `Chế độ giao diện: ${label ? label.textContent : mode}`);
+  const titleText = `Chế độ giao diện: ${{ light: 'Sáng', dark: 'Tối', system: 'Theo Hệ thống' }[mode] || 'Hệ thống'}`;
+  elements.themeToggleBtn.setAttribute('aria-label', titleText);
+  elements.themeToggleBtn.setAttribute('title', titleText);
 }
 
 function updateThemeDropdownUI(mode) {
@@ -500,6 +559,7 @@ function toggleThemeDropdown(show) {
   const willShow = (typeof show === 'boolean') ? show : !isShowing;
 
   if (willShow) {
+    if (window.closeNotificationDropdown) window.closeNotificationDropdown();
     elements.themeDropdownMenu.classList.add('show');
     if (elements.themeToggleBtn) {
       elements.themeToggleBtn.setAttribute('aria-expanded', 'true');
@@ -512,11 +572,39 @@ function toggleThemeDropdown(show) {
   }
 }
 
+function applySidebarCollapsed(isCollapsed) {
+  state.isSidebarCollapsed = Boolean(isCollapsed);
+  if (elements.sidebar) {
+    elements.sidebar.classList.toggle('collapsed', state.isSidebarCollapsed);
+  }
+  if (elements.collapseSidebarBtn) {
+    const iconSvg = state.isSidebarCollapsed
+      ? '<svg class="collapse-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg>'
+      : '<svg class="collapse-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg>';
+    const textHtml = state.isSidebarCollapsed ? '' : '<span class="collapse-text">Thu gọn</span>';
+    elements.collapseSidebarBtn.innerHTML = `${iconSvg}${textHtml}`;
+    elements.collapseSidebarBtn.setAttribute('aria-expanded', String(!state.isSidebarCollapsed));
+    elements.collapseSidebarBtn.title = state.isSidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu';
+  }
+}
+
 function toggleSidebar() {
-  state.isSidebarCollapsed = !state.isSidebarCollapsed;
-  elements.sidebar.classList.toggle('collapsed', state.isSidebarCollapsed);
-  elements.collapseSidebarBtn.textContent = state.isSidebarCollapsed ? 'Mở' : 'Thu gọn';
-  elements.collapseSidebarBtn.setAttribute('aria-expanded', String(!state.isSidebarCollapsed));
+  const next = !state.isSidebarCollapsed;
+  applySidebarCollapsed(next);
+  try {
+    localStorage.setItem('uit_portal_sidebar_collapsed', String(next));
+  } catch (e) {}
+}
+
+function initSidebarCollapse() {
+  try {
+    const saved = localStorage.getItem('uit_portal_sidebar_collapsed');
+    applySidebarCollapsed(saved === 'true');
+  } catch (e) {
+    applySidebarCollapsed(false);
+  } finally {
+    document.documentElement.classList.remove('preload-sidebar-collapsed');
+  }
 }
 
 
@@ -720,6 +808,8 @@ window.getSavedThemeMode = getSavedThemeMode;
 window.setThemeMode = setThemeMode;
 window.applyThemeMode = applyThemeMode;
 window.initTheme = initTheme;
+window.initSidebarCollapse = initSidebarCollapse;
+window.applySidebarCollapsed = applySidebarCollapsed;
 window.toggleSidebar = toggleSidebar;
 window.checkDbStatus = loadDatabaseStatus;
 window.loadDatabaseStatus = loadDatabaseStatus;

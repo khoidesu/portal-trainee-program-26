@@ -14,36 +14,76 @@
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Khởi tạo xác thực & giao diện
-  const isAuthed = await initAuth();
+  // 1. Kích hoạt tab đích NGAY LẬP TỨC (đồng bộ) để chống giật trang / không bị chớp Thời khóa biểu 1s
+  const validTabs = ['schedule', 'assignments', 'leaderboard', 'grades', 'leave', 'questions', 'profile', 'admin'];
+  const initialHash = window.location.hash.replace('#', '');
+  const savedTab = (() => {
+    try { return sessionStorage.getItem('uit_portal_active_tab'); } catch (e) { return null; }
+  })();
+
+  let activeInitialTab = 'schedule';
+  if (initialHash && validTabs.includes(initialHash)) {
+    activeInitialTab = initialHash;
+  } else if (savedTab && validTabs.includes(savedTab)) {
+    activeInitialTab = savedTab;
+  }
+
+  // Khởi tạo theme & sự kiện điều hướng trước
   initTheme();
+  if (window.initSidebarCollapse) window.initSidebarCollapse();
   setupEventListeners();
 
-  // 2. Tải dữ liệu ban đầu từ DB
+  // Khởi tạo schedule module sớm (trước switchTab) để ScheduleManager sẵn sàng render
+  if (window.initScheduleModule) window.initScheduleModule();
+
+  // Đối với các tab công khai, chuyển ngay lập tức để không bị giật trang 1s.
+  // Riêng các tab yêu cầu quyền ('admin', 'profile', 'assignments'), cần xác thực phiên đăng nhập trước để tránh reload / redirect loop.
+  if (activeInitialTab !== 'admin' && activeInitialTab !== 'profile' && activeInitialTab !== 'assignments') {
+    switchTab(activeInitialTab);
+  }
+
+  // 2. Khởi tạo xác thực & nạp session từ backend
+  const isAuthed = await initAuth();
+  if (window.setupAuthSessionSync) window.setupAuthSessionSync();
+  if (activeInitialTab === 'admin') {
+    if (checkAdminAuth()) {
+      switchTab('admin');
+    } else {
+      switchTab('schedule');
+    }
+  } else if (activeInitialTab === 'profile') {
+    if (state.currentUser?.role === 'trainee') {
+      switchTab('profile');
+    } else {
+      switchTab('schedule');
+    }
+  } else if (activeInitialTab === 'assignments') {
+    if (state.currentUser) {
+      switchTab('assignments');
+    } else {
+      switchTab('schedule');
+    }
+  } else if (state.activeTab === 'admin' && !checkAdminAuth()) {
+    switchTab('schedule');
+  }
+
+  // 3. Tải dữ liệu ban đầu từ DB (MongoDB Atlas)
   await checkDbStatus();
   await loadTrainees();
   await loadCurrentTrainee();
   await loadAnnouncements();
 
-  // 3. Khởi tạo các module nghiệp vụ
-  if (window.initScheduleModule) window.initScheduleModule();
+  // Sau khi data load xong, re-render schedule nếu đang ở tab schedule
+  if (state.activeTab === 'schedule' && window.renderScheduleView) {
+    await window.renderScheduleView();
+  }
+
+  // 4. Khởi tạo các module nghiệp vụ (bỏ initScheduleModule vì đã gọi sớm hơn)
   if (window.initDuolingoModule) window.initDuolingoModule();
   if (window.initGradesModule) window.initGradesModule();
   if (window.initLeaveModule) window.initLeaveModule();
   if (window.initQaModule) window.initQaModule();
   if (window.setupAdminAwardStarsSection) window.setupAdminAwardStarsSection();
-
-  // 4. Kích hoạt tab ban đầu theo URL hash hoặc mặc định
-  const initialHash = window.location.hash.replace('#', '');
-  if (initialHash && ['schedule', 'assignments', 'leaderboard', 'grades', 'leave', 'questions', 'admin'].includes(initialHash)) {
-    if (initialHash === 'admin' && !checkAdminAuth()) {
-      switchTab('schedule');
-    } else {
-      switchTab(initialHash);
-    }
-  } else {
-    switchTab('schedule');
-  }
 
   // 5. Lắng nghe thay đổi URL Hash
   window.addEventListener('hashchange', () => {

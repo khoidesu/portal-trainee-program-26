@@ -359,6 +359,15 @@ class DuolingoManager {
           const cd = this.getCountdownInfo(item.deadline);
           el.className = `duo-step-timer ${cd.badgeClass}`;
           el.textContent = cd.shortText;
+
+          const stepEl = el.closest('.duo-path-step');
+          if (stepEl) {
+            const statusEl = stepEl.querySelector('.duo-step-status');
+            if (statusEl && item.status === 'active') {
+              statusEl.className = `duo-step-status ${cd.isExpired ? 'expired-status' : ''}`;
+              statusEl.textContent = cd.isExpired ? 'Đã hết hạn' : 'Đang mở';
+            }
+          }
         }
       });
 
@@ -486,7 +495,7 @@ class DuolingoManager {
             ${pulseRingHtml}
             <span class="duo-node-number">${itemId}</span>
           </button>
-          <span class="duo-step-status">${item.status === 'closed' ? 'Đã đóng' : item.status === 'active' ? 'Đang mở' : 'Chưa mở'}</span>
+          <span class="duo-step-status ${countdown.isExpired ? 'expired-status' : ''}">${item.status === 'closed' ? 'Đã đóng' : (item.status === 'active' ? (countdown.isExpired ? 'Đã hết hạn' : 'Đang mở') : 'Chưa mở')}</span>
           <!-- Đếm thời gian còn lại ở dưới mỗi bài tập trong 11 bài -->
           <div class="duo-step-timer ${countdown.badgeClass}" data-id="${itemId}" title="Hạn nộp: ${countdown.formattedDeadline}">
             <span>${countdown.shortText}</span>
@@ -498,7 +507,12 @@ class DuolingoManager {
       stepEl.style.cursor = locked ? 'default' : 'pointer';
       stepEl.addEventListener('click', () => {
         if (locked) return;
-        this.openAssignmentModal(item);
+        if (window.state && !window.state.currentUser) {
+          if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem bài tập!', 'info');
+          if (typeof window.openLoginModal === 'function') window.openLoginModal();
+          return;
+        }
+        this.openAssignmentModal(item, stepEl);
       });
 
       container.appendChild(stepEl);
@@ -508,18 +522,39 @@ class DuolingoManager {
   // ==========================================
   // MODAL CHI TIẾT BÀI TẬP & ADMIN SET THỜI GIAN
   // ==========================================
-  openAssignmentModal(item) {
+  closeAssignmentModal() {
+    const modal = document.getElementById('duoAssignmentModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    if (this.previousActiveElement && typeof this.previousActiveElement.focus === 'function') {
+      try { this.previousActiveElement.focus(); } catch (e) {}
+      this.previousActiveElement = null;
+    }
+  }
+
+  openAssignmentModal(item, triggerEl = null) {
+    if (window.state && !window.state.currentUser) {
+      if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem bài tập!', 'info');
+      if (typeof window.openLoginModal === 'function') window.openLoginModal();
+      this.selectedAssignment = null;
+      this.closeAssignmentModal();
+      return;
+    }
+    this.previousActiveElement = triggerEl || document.activeElement;
     const itemId = item.assignmentId || item.id;
     const currentItem = this.assignments.find(a => (a.assignmentId || a.id) === itemId);
     if (!currentItem || (currentItem.status === 'locked' && !window.canManage?.('assignments:manage'))) {
       this.selectedAssignment = null;
-      document.getElementById('duoAssignmentModal')?.classList.remove('active');
+      this.closeAssignmentModal();
       return;
     }
     this.selectedAssignment = currentItem;
 
     const modal = document.getElementById('duoAssignmentModal');
     if (!modal) return;
+
+    const isAdmin = Boolean(window.canManage?.('assignments:manage'));
+    const cd = this.getCountdownInfo(currentItem.deadline);
 
     const badgeEl = document.getElementById('duoModalBadge');
     const titleEl = document.getElementById('duoModalTitle');
@@ -537,8 +572,13 @@ class DuolingoManager {
         badgeEl.className = 'duo-modal-badge gold';
         badgeEl.textContent = ' ĐÃ ĐÓNG';
       } else if (currentItem.status === 'active') {
-        badgeEl.className = 'duo-modal-badge green';
-        badgeEl.textContent = ' ĐANG MỞ';
+        if (cd.isExpired) {
+          badgeEl.className = 'duo-modal-badge grey expired-badge';
+          badgeEl.textContent = ' ĐÃ HẾT HẠN';
+        } else {
+          badgeEl.className = 'duo-modal-badge green';
+          badgeEl.textContent = ' ĐANG MỞ';
+        }
       } else {
         badgeEl.className = 'duo-modal-badge grey';
         badgeEl.textContent = ' CHƯA MỞ KHÓA';
@@ -555,20 +595,36 @@ class DuolingoManager {
     // Hiển thị đường link do Admin đã gán (kiểm tra an toàn chống javascript:...)
     const safeLink = sanitizeUrlDuo(currentItem.link);
     const hasRealLink = Boolean(safeLink && safeLink !== '#');
+    const isExpired = Boolean(cd.isExpired);
+
+    // Khi bài tập đã quá hạn và không phải Admin: ẨN hoàn toàn khung đường link
+    const linkShowcase = document.getElementById('duoAssignmentLinkShowcase');
+    if (linkShowcase) {
+      if (isExpired && !isAdmin) {
+        linkShowcase.style.display = 'none';
+      } else {
+        linkShowcase.style.display = 'block';
+      }
+    }
 
     if (displayInput) {
       if (hasRealLink) {
         displayInput.value = safeLink;
         displayInput.style.color = 'var(--primary-blue)';
       } else {
-        displayInput.value = 'Chưa có link bài tập (Admin chưa gán link)';
+        displayInput.value = isExpired ? 'Cổng nộp bài đã đóng' : 'Chưa có link bài tập (Admin chưa gán link)';
         displayInput.style.color = 'var(--text-muted)';
       }
     }
 
     if (officialBadge) {
-      officialBadge.textContent = hasRealLink ? 'Link Chính Thức Từ Admin' : 'Chưa Gán Link';
-      officialBadge.className = hasRealLink ? 'badge badge-success' : 'badge badge-warning';
+      if (isExpired && !isAdmin) {
+        officialBadge.textContent = 'Đã Đóng Cổng Nộp';
+        officialBadge.className = 'badge badge-danger';
+      } else {
+        officialBadge.textContent = hasRealLink ? '' : '';
+        officialBadge.className = hasRealLink ? 'badge badge-success' : 'badge badge-warning';
+      }
     }
 
     // Cấu hình Nút Mở Link Bài Tập
@@ -577,17 +633,23 @@ class DuolingoManager {
         launchBtn.href = 'javascript:void(0)';
         launchBtn.target = '_self';
         launchBtn.className = 'duo-btn-launch disabled';
-        launchBtn.innerHTML = `<span> Bài tập chưa mở khóa</span>`;
+        launchBtn.innerHTML = `<span><i class="fas fa-lock"></i> Bài tập chưa mở khóa</span>`;
+      } else if (isExpired && !isAdmin) {
+        // Ưu tiên cao nhất khi bài đã hết hạn: Đóng form nộp bài
+        launchBtn.href = 'javascript:void(0)';
+        launchBtn.target = '_self';
+        launchBtn.className = 'duo-btn-launch disabled expired';
+        launchBtn.innerHTML = `<span><i class="fas fa-calendar-xmark"></i> Cổng nộp bài đã đóng</span>`;
+      } else if (currentItem.status === 'closed') {
+        launchBtn.href = safeLink || 'javascript:void(0)';
+        launchBtn.target = safeLink ? '_blank' : '_self';
+        launchBtn.className = 'duo-btn-launch gold';
+        launchBtn.innerHTML = `<span><i class="fas fa-folder-closed"></i> Bài tập đã đóng</span>`;
       } else if (!hasRealLink) {
         launchBtn.href = 'javascript:void(0)';
         launchBtn.target = '_self';
         launchBtn.className = 'duo-btn-launch disabled';
-        launchBtn.innerHTML = `<span> Chưa có link (Admin chưa gán)</span>`;
-      } else if (currentItem.status === 'closed') {
-        launchBtn.href = safeLink;
-        launchBtn.target = '_blank';
-        launchBtn.className = 'duo-btn-launch gold';
-        launchBtn.innerHTML = `<span> Xem hướng dẫn bài đã đóng</span>`;
+        launchBtn.innerHTML = `<span> Chưa có link </span>`;
       } else {
         launchBtn.href = safeLink;
         launchBtn.target = '_blank';
@@ -602,6 +664,12 @@ class DuolingoManager {
           return;
         }
 
+        if (isExpired && !isAdmin) {
+          e.preventDefault();
+          if (window.showToast) window.showToast('Cổng nộp bài tập đã đóng do kết thúc thời hạn nộp.', 'warning');
+          return;
+        }
+
         if (!hasRealLink) {
           e.preventDefault();
           if (window.showToast) window.showToast('Trainer / Admin chưa gán link cho bài tập này. Vui lòng quay lại sau!', 'info');
@@ -613,7 +681,6 @@ class DuolingoManager {
     }
 
     // Kiểm tra quyền Admin: Chỉ hiển thị khung chỉnh sửa nếu Admin đã đăng nhập
-    const isAdmin = window.canManage?.('assignments:manage') || false;
 
     if (adminBox) {
       if (isAdmin) {
@@ -644,13 +711,23 @@ class DuolingoManager {
     }
 
     modal.classList.add('active');
+    if (typeof setTimeout !== 'undefined') {
+      setTimeout(() => {
+        const closeBtn = document.getElementById('duoModalCloseBtn');
+        if (closeBtn) closeBtn.focus();
+        else {
+          const card = modal.querySelector('.duo-modal-card');
+          if (card) card.focus();
+        }
+      }, 50);
+    }
   }
 
   setupModalEvents() {
     const modal = document.getElementById('duoAssignmentModal');
     const closeBtn = document.getElementById('duoModalCloseBtn');
     const editDetails = document.getElementById('duoBtnEditDetails');
-    editDetails?.addEventListener('click', () => { if (this.selectedAssignment && window.canManage?.('assignments:manage')) { modal.classList.remove('active'); window.openAdminEditAssignmentModal?.(this.selectedAssignment); } });
+    editDetails?.addEventListener('click', () => { if (this.selectedAssignment && window.canManage?.('assignments:manage')) { this.closeAssignmentModal(); window.openAdminEditAssignmentModal?.(this.selectedAssignment); } });
     const saveLinkBtn = document.getElementById('duoBtnSaveLink');
     const saveDeadlineBtn = document.getElementById('duoBtnSaveDeadline');
     const clearDeadlineBtn = document.getElementById('duoBtnClearDeadline');
@@ -660,14 +737,50 @@ class DuolingoManager {
 
     if (closeBtn && modal) {
       closeBtn.addEventListener('click', () => {
-        modal.classList.remove('active');
+        this.closeAssignmentModal();
       });
     }
 
     if (modal) {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          modal.classList.remove('active');
+          this.closeAssignmentModal();
+        }
+      });
+    }
+
+    // Hỗ trợ phím Escape và giữ focus (Focus Trap) trong hộp modal
+    if (!this._hasModalA11yBound) {
+      this._hasModalA11yBound = true;
+      document.addEventListener('keydown', (e) => {
+        const m = document.getElementById('duoAssignmentModal');
+        if (!m || !m.classList.contains('active')) return;
+
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          this.closeAssignmentModal();
+          return;
+        }
+
+        if (e.key === 'Tab') {
+          const focusables = m.querySelectorAll('button:not([disabled]), [href]:not([href="javascript:void(0)"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+          const visible = Array.from(focusables).filter(el => el.offsetParent !== null);
+          if (visible.length === 0) return;
+
+          const first = visible[0];
+          const last = visible[visible.length - 1];
+
+          if (e.shiftKey) {
+            if (document.activeElement === first || !m.contains(document.activeElement)) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last || !m.contains(document.activeElement)) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
         }
       });
     }
@@ -848,6 +961,11 @@ class DuolingoManager {
   }
 
   openGuidebookModal() {
+    if (window.state && !window.state.currentUser) {
+      if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem sổ tay bài tập!', 'info');
+      if (typeof window.openLoginModal === 'function') window.openLoginModal();
+      return;
+    }
     alert(
       " HƯỚNG DẪN BÀI TẬP TRAINEE PROGRAM (GUIDEBOOK)\n\n" +
       "1. Mỗi ô tròn trên con đường tượng trưng cho một bài tập thực hành hoặc chuyên đề.\n" +
@@ -909,6 +1027,11 @@ class DuolingoManager {
     }).join('')}</ol>`;
     upcoming.querySelectorAll('[data-assignment-id]').forEach(button => {
       button.addEventListener('click', () => {
+        if (window.state && !window.state.currentUser) {
+          if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem bài tập!', 'info');
+          if (typeof window.openLoginModal === 'function') window.openLoginModal();
+          return;
+        }
         const item = this.assignments.find(value => String(value.assignmentId || value.id) === button.dataset.assignmentId);
         if (item) this.openAssignmentModal(item);
       });

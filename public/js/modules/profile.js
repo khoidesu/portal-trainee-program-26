@@ -1,92 +1,17 @@
 /**
  * ==============================================================================
- * COMPONENT: Profile Module (Hồ Sơ Cá Nhân & Quản Lý Tài Khoản)
- * CHỨC NĂNG CHÍNH: Hiển thị thông tin cá nhân, cập nhật họ tên/email, đổi mật khẩu
- *                  tài khoản và gửi yêu cầu cấp lại mật khẩu cho Admin.
- * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, public/js/api.js
- * NHIỆM VỤ CHI TIẾT:
- *   - renderProfileView: Điền dữ liệu người dùng vào form hồ sơ
- *   - Xử lý submit cập nhật thông tin cá nhân
- *   - openChangePasswordModal: Form đổi mật khẩu (bảo mật xác thực mật khẩu cũ)
- *   - openSupportRequestModal: Form gửi yêu cầu hỗ trợ quên mật khẩu
+ * COMPONENT: Profile Module (Hồ Sơ Cá Nhân & Quản Lý Tài Khoản Trainee)
+ * CHỨC NĂNG CHÍNH: Hiển thị và chỉnh sửa hồ sơ cá nhân, upload avatar an toàn (xóa ảnh cũ),
+ *                  đổi mật khẩu, xem thông tin chương trình đào tạo và lịch sử hoạt động.
+ * LIÊN KẾT & PHỤ THUỘC: public/js/modules/core.js, public/js/api.js, public/js/modules/auth.js
  * ==============================================================================
  */
 
+let pendingAvatarDataUrl = null;
+
 // ==========================================
-// CHANGE PASSWORD MODAL & ACTIONS
+// UTILITY HELPERS
 // ==========================================
-function openChangePasswordModal() {
-  if (!elements.changePasswordModal) return;
-  if (elements.changePasswordForm) elements.changePasswordForm.reset();
-  if (elements.changePassFeedback) {
-    elements.changePassFeedback.style.display = 'none';
-    elements.changePassFeedback.textContent = '';
-  }
-  elements.changePasswordModal.classList.add('open', 'show');
-  if (elements.changePassCurrent) elements.changePassCurrent.focus();
-}
-
-function closeChangePasswordModal() {
-  if (elements.changePasswordModal) {
-    elements.changePasswordModal.classList.remove('open', 'show');
-  }
-}
-
-async function handleChangePasswordSubmit(e) {
-  e.preventDefault();
-  const currentPass = elements.changePassCurrent ? elements.changePassCurrent.value : '';
-  const newPass = elements.changePassNew ? elements.changePassNew.value : '';
-  const confirmPass = elements.changePassConfirm ? elements.changePassConfirm.value : '';
-
-  if (newPass !== confirmPass) {
-    showChangePassFeedback('Mật khẩu xác nhận không khớp với mật khẩu mới!', 'danger');
-    return;
-  }
-
-  if (newPass.length < 4) {
-    showChangePassFeedback('Mật khẩu mới phải có tối thiểu 12 ký tự!', 'danger');
-    return;
-  }
-
-  const targetId = state.currentUser?.traineeId || state.currentUser?.username || 'admin';
-
-  try {
-    const res = await window.API.changePassword(targetId, currentPass, newPass);
-    if (res && res.success) {
-      closeChangePasswordModal();
-      if (window.showToast) {
-        window.showToast('Đổi mật khẩu thành công! Mật khẩu mới đã được lưu vào MongoDB Atlas.', 'success');
-      } else {
-        alert('Đổi mật khẩu thành công!');
-      }
-      state.currentUser = null;
-      renderAuthState();
-      window.location.href = '/login';
-    } else {
-      showChangePassFeedback(res?.message || 'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại!', 'danger');
-    }
-  } catch (err) {
-    console.error('Lỗi khi đổi mật khẩu:', err);
-    showChangePassFeedback('Lỗi hệ thống khi đổi mật khẩu: ' + err.message, 'danger');
-  }
-}
-
-function showChangePassFeedback(msg, type) {
-  if (!elements.changePassFeedback) return;
-  elements.changePassFeedback.textContent = msg;
-  elements.changePassFeedback.style.display = 'block';
-  if (type === 'danger') {
-    elements.changePassFeedback.style.background = 'rgba(239, 68, 68, 0.15)';
-    elements.changePassFeedback.style.color = '#ef4444';
-    elements.changePassFeedback.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-  } else {
-    elements.changePassFeedback.style.background = 'rgba(16, 185, 129, 0.15)';
-    elements.changePassFeedback.style.color = '#10b981';
-    elements.changePassFeedback.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-  }
-}
-
-// Utility: HTML escape
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)
@@ -97,78 +22,57 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-// ==========================================
-// HỒ SƠ CÁ NHÂN (USER PROFILE VIEW)
-// ==========================================
-
-function renderProfileView() {
-  const u = state.currentUser;
-  const isAdmin = Boolean(u && u.role === 'admin');
-
-  // Find active trainee data
-  let trainee = null;
-  if (isAdmin) {
-    trainee = {
-      fullName: u.fullName || 'Quản Trị Viên (Admin)',
-      email: u.email || 'admin@uit.edu.vn',
-      traineeId: 'ADMIN',
-      role: 'admin',
-      track: 'Ban Quản Trị Hệ Thống Trainee Program'
-    };
-  } else if (state.currentTrainee) {
-    trainee = state.currentTrainee;
-  } else if (state.trainees && state.trainees.length > 0) {
-    trainee = state.trainees[0];
-  } else {
-    trainee = {
-      fullName: 'Trainee',
-      traineeId: '25520918',
-      email: 'trainee@uit.edu.vn',
-      track: 'Khoa Khoa học Máy tính'
-    };
-  }
-
-  // Populate Input Fields
-  if (elements.profileInputFullName) {
-    elements.profileInputFullName.value = trainee.fullName || u.fullName || '';
-  }
-  if (elements.profileInputEmail) {
-    elements.profileInputEmail.value = trainee.email || u.email || '';
-  }
-  if (elements.profileInputId) {
-    elements.profileInputId.value = trainee.traineeId || u.traineeId || u.username || '';
-  }
-  if (elements.profileInputTrack) {
-    elements.profileInputTrack.value = trainee.track || trainee.department || 'Khoa Khoa học Máy tính';
-  }
-
-  // Populate Badges
-  if (elements.profileBadgeId) {
-    elements.profileBadgeId.textContent = trainee.traineeId || u.traineeId || u.username || '--';
-  }
-  if (elements.profileBadgeRole) {
-    elements.profileBadgeRole.textContent = u.role === 'admin' ? 'Quản trị viên' : 'Trainee UIT';
-    elements.profileBadgeRole.className = u.role === 'admin' ? 'badge badge-danger' : 'badge badge-success';
-  }
-  if (elements.profileBadgeBatch) {
-    elements.profileBadgeBatch.textContent = trainee.batch || 'Trainee 2026';
-  }
-  if (elements.profileBadgeTrack) {
-    elements.profileBadgeTrack.textContent = trainee.track || trainee.department || 'Khoa Khoa học Máy tính';
-  }
-
-  // Avatar Display với Dicebear
-  const avatarUrl = getTraineeDicebearAvatar(trainee);
-  if (elements.profileAvatarImg) {
-    elements.profileAvatarImg.src = avatarUrl;
-    elements.profileAvatarImg.style.display = 'block';
-  }
-  if (elements.profileAvatarInitials) {
-    elements.profileAvatarInitials.style.display = 'none';
+function formatDateTimeVN(isoStr) {
+  if (!isoStr) return '--';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    return d.toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return isoStr;
   }
 }
 
-function compressAndResizeImage(file, maxWidth = 300, maxHeight = 300, quality = 0.85) {
+function openChangePasswordModal() {
+  if (!elements.changePasswordModal) return;
+  elements.changePasswordForm?.reset();
+  elements.changePasswordModal.classList.add('open', 'show');
+  elements.changePassCurrent?.focus();
+}
+
+function closeChangePasswordModal() {
+  elements.changePasswordModal?.classList.remove('open', 'show');
+}
+
+async function handleChangePasswordSubmit(e) {
+  e.preventDefault();
+  const currentPass = elements.changePassCurrent?.value || '';
+  const newPass = elements.changePassNew?.value || '';
+  const confirmPass = elements.changePassConfirm?.value || '';
+  const minLen = state.currentUser?.role === 'trainee' ? 6 : 12;
+  const fail = message => window.showToast ? window.showToast(message, 'danger') : alert(message);
+
+  if (newPass !== confirmPass) return fail('Mật khẩu xác nhận không khớp với mật khẩu mới.');
+  if (newPass.length < minLen) return fail(`Mật khẩu mới cần tối thiểu ${minLen} ký tự.`);
+
+  const res = await window.API.changePassword(state.currentUser?.traineeId, currentPass, newPass);
+  if (!res?.success) return fail(res?.message || 'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.');
+
+  closeChangePasswordModal();
+  state.currentUser = null;
+  try { sessionStorage.removeItem('uit_auth_user_cache'); } catch {}
+  window.location.href = '/login';
+}
+
+// Nén và chuẩn hóa ảnh để tải lên nhanh và an toàn
+function compressAndResizeImage(file, maxWidth = 350, maxHeight = 350, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -193,7 +97,7 @@ function compressAndResizeImage(file, maxWidth = 300, maxHeight = 300, quality =
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
         resolve(dataUrl);
       };
-      img.onerror = () => reject(new Error('Không thể đọc dữ liệu hình ảnh!'));
+      img.onerror = () => reject(new Error('Không thể xử lý dữ liệu ảnh!'));
       img.src = event.target.result;
     };
     reader.onerror = () => reject(new Error('Lỗi khi đọc file ảnh từ thiết bị!'));
@@ -201,118 +105,261 @@ function compressAndResizeImage(file, maxWidth = 300, maxHeight = 300, quality =
   });
 }
 
-async function handleProfileAvatarChange(file) {
-  if (!file) return;
-
-  if (!file.type.startsWith('image/')) {
-    if (window.showToast) window.showToast('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, WebP)!', 'warning');
+// ==========================================
+// RENDER PROFILE VIEW
+// ==========================================
+async function renderProfileView(targetTraineeId) {
+  const u = state.currentUser;
+  if (!u) {
+    if (window.showToast) window.showToast('Vui lòng đăng nhập để xem hồ sơ cá nhân!', 'info');
+    window.location.href = '/login';
     return;
   }
 
   try {
-    if (window.showToast) window.showToast('Đang tối ưu và tải ảnh đại diện lên...', 'info');
+    const isManagedProfile = Boolean(targetTraineeId && canManage('trainees:manage'));
+    state.profileTargetId = isManagedProfile ? targetTraineeId : null;
+    const res = await API.getProfile(targetTraineeId);
+    if (!res || !res.success) {
+      throw new Error(res?.message || 'Không thể lấy dữ liệu hồ sơ cá nhân.');
+    }
 
-    // Nén và chuẩn hóa ảnh về 300x300 để nhẹ (20-30KB) và hiển thị tức thì cho tất cả mọi người
-    const base64Data = await compressAndResizeImage(file, 300, 300, 0.85);
+    const p = res.data;
+    const account = p.account || {};
 
-    // Immediate preview
+    // 1. Avatar Display
+    const avatarUrl = window.getTraineeDicebearAvatar ? getTraineeDicebearAvatar(p) : p.avatar || '';
     if (elements.profileAvatarImg) {
-      elements.profileAvatarImg.src = base64Data;
-      elements.profileAvatarImg.style.display = 'block';
-    }
-    if (elements.profileAvatarInitials) {
-      elements.profileAvatarInitials.style.display = 'none';
+      if (avatarUrl) {
+        elements.profileAvatarImg.src = avatarUrl;
+        elements.profileAvatarImg.style.display = 'block';
+        if (elements.profileAvatarInitials) elements.profileAvatarInitials.style.display = 'none';
+      } else {
+        elements.profileAvatarImg.style.display = 'none';
+        if (elements.profileAvatarInitials) {
+          elements.profileAvatarInitials.textContent = p.fullName ? getInitials(p.fullName) : 'SV';
+          elements.profileAvatarInitials.style.display = 'flex';
+        }
+      }
     }
 
-    const targetId = state.currentUser ? (state.currentUser.traineeId || state.currentUser.username) : state.currentTraineeId;
-    if (!targetId) return;
+    // Reset avatar preview box if any was open
+    resetAvatarPreview();
 
-    const res = await API.updateTrainee(targetId, { avatar: base64Data });
+    // 2. Badges & Program Info
+    const displayId = p.traineeId || p.username || '--';
+    if (elements.profileBadgeId) elements.profileBadgeId.textContent = displayId;
+    if (elements.profileBadgeRole) {
+      elements.profileBadgeRole.textContent = 'Trainee UIT';
+      elements.profileBadgeRole.className = 'badge badge-success';
+    }
+    if (elements.profileBadgeProgramStatus) {
+      const statusKey = String(p.status || '').toLowerCase();
+      const statusMap = { active: 'Đang học (Active)', 'đang học': 'Đang học (Active)', completed: 'Hoàn thành (Completed)', 'hoàn thành': 'Hoàn thành (Completed)', inactive: 'Ngừng học (Inactive)', 'ngừng học': 'Ngừng học (Inactive)' };
+      elements.profileBadgeProgramStatus.textContent = statusMap[statusKey] || p.status || 'Đang học (Active)';
+      elements.profileBadgeProgramStatus.className = ['completed', 'hoàn thành'].includes(statusKey) ? 'badge badge-success' : ['inactive', 'ngừng học'].includes(statusKey) ? 'badge badge-danger' : 'badge badge-primary';
+    }
+    if (elements.profileBadgeBatch) elements.profileBadgeBatch.textContent = p.batch || 'Trainee 2026';
+    if (elements.profileBadgeTrack) elements.profileBadgeTrack.textContent = p.track || p.department || 'Khoa học Máy tính';
+    if (elements.profileBadgeMentor) {
+      const mentorName = p.mentor?.name || (typeof p.mentor === 'string' ? p.mentor : '');
+      elements.profileBadgeMentor.textContent = mentorName || 'Chưa công bố';
+    }
+
+    // 3. Account Info & Security Summary
+    if (elements.profileAccountUsername) elements.profileAccountUsername.textContent = account.username || displayId;
+    if (elements.profileAccountStatusBadge) {
+      elements.profileAccountStatusBadge.textContent = account.active === false ? 'Đã khóa' : account.mustChangePassword ? 'Cần đổi mật khẩu' : 'Đang hoạt động';
+      elements.profileAccountStatusBadge.className = account.active === false ? 'badge badge-danger' : account.mustChangePassword ? 'badge badge-primary' : 'badge badge-success';
+    }
+    if (elements.profileAccountCreatedAt) elements.profileAccountCreatedAt.textContent = formatDateTimeVN(account.createdAt);
+    if (elements.profileAccountLastLogin) elements.profileAccountLastLogin.textContent = formatDateTimeVN(account.lastLoginAt);
+    if (elements.profileAccountLastPassChange) elements.profileAccountLastPassChange.textContent = account.lastPasswordChangeAt ? formatDateTimeVN(account.lastPasswordChangeAt) : 'Chưa thay đổi';
+
+    // 4. Form Fields
+    if (elements.profileInputFullName) elements.profileInputFullName.value = p.fullName || '';
+    if (elements.profileInputId) elements.profileInputId.value = displayId;
+    if (elements.profileInputEmail) elements.profileInputEmail.value = p.email || '';
+    if (elements.profileInputPhone) elements.profileInputPhone.value = p.phone || '';
+    if (elements.profileInputDob) elements.profileInputDob.value = p.dateOfBirth ? p.dateOfBirth.slice(0, 10) : '';
+    if (elements.profileSelectGender) elements.profileSelectGender.value = p.gender || '';
+    if (elements.profileInputAddress) elements.profileInputAddress.value = p.address || '';
+    if (elements.profileInputFacebook) elements.profileInputFacebook.value = p.facebookUrl || '';
+    if (elements.profileInputLinkedin) elements.profileInputLinkedin.value = p.linkedinUrl || '';
+    if (elements.profileTextareaBio) elements.profileTextareaBio.value = p.bio || '';
+
+    // Notification Preferences
+    const prefs = p.notificationPreferences || {};
+    if (elements.profilePrefSchedule) elements.profilePrefSchedule.checked = prefs.scheduleNotify !== false;
+    if (elements.profilePrefAssignments) elements.profilePrefAssignments.checked = prefs.assignmentNotify !== false;
+    if (elements.profilePrefQuestions) elements.profilePrefQuestions.checked = prefs.questionNotify !== false;
+
+    // 5. Training Program Stat Displays (Read-only)
+    if (elements.profileProgStatusDisplay) elements.profileProgStatusDisplay.textContent = p.status || 'Active';
+    if (elements.profileProgBatchDisplay) elements.profileProgBatchDisplay.textContent = `${p.batch || 'Trainee 2026'} · ${p.track || 'Khoa KHMT'}`;
+    if (elements.profileProgStarsDisplay) elements.profileProgStarsDisplay.textContent = `${p.accumulatedStars || 0} sao`;
+    if (elements.profileProgAttendanceDisplay) elements.profileProgAttendanceDisplay.textContent = `${p.attendedSessions || 0} / ${p.totalSessions || 0} buổi`;
+
+    const securityCard = document.getElementById('profileSecurityCard');
+    const forgotCard = document.getElementById('profileForgotCard');
+    if (securityCard) securityCard.style.display = isManagedProfile ? 'none' : '';
+    if (forgotCard) forgotCard.style.display = isManagedProfile ? 'none' : '';
+
+    const mentorGroup = document.getElementById('profileMentorGroup');
+    const inputMentorName = document.getElementById('profileInputMentorName');
+    const inputMentorEmail = document.getElementById('profileInputMentorEmail');
+    if (mentorGroup) {
+      mentorGroup.style.display = isManagedProfile ? 'block' : 'none';
+    }
+    if (inputMentorName) inputMentorName.value = p.mentor?.name || '';
+    if (inputMentorEmail) inputMentorEmail.value = p.mentor?.email || '';
+
+    // 6. Load Recent Activities
+    loadProfileActivities(isManagedProfile ? targetTraineeId : undefined);
+  } catch (err) {
+    console.error('Lỗi khi nạp hồ sơ cá nhân:', err);
+    if (window.showToast) window.showToast(err.message, 'danger');
+  }
+}
+
+// ==========================================
+// AVATAR UPLOAD, PREVIEW & DELETE
+// ==========================================
+function resetAvatarPreview() {
+  pendingAvatarDataUrl = null;
+  const box = document.getElementById('profileAvatarPreviewBox');
+  const normalActions = document.getElementById('avatarNormalActions');
+  const fileInput = document.getElementById('profileAvatarFileInput');
+  if (box) box.style.display = 'none';
+  if (normalActions) normalActions.style.display = 'flex';
+  if (fileInput) fileInput.value = '';
+}
+
+async function handleAvatarFileSelect(file) {
+  if (!file) return;
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!validTypes.includes(file.type)) {
+    if (window.showToast) window.showToast('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, WebP)!', 'warning');
+    return;
+  }
+
+  // Max 3MB
+  if (file.size > 3 * 1024 * 1024) {
+    if (window.showToast) window.showToast('Dung lượng ảnh vượt quá 3MB! Vui lòng chọn ảnh nhỏ hơn.', 'warning');
+    return;
+  }
+
+  try {
+    // Nén và chuẩn bị preview
+    const compressed = await compressAndResizeImage(file, 350, 350, 0.85);
+    pendingAvatarDataUrl = compressed;
+
+    const box = document.getElementById('profileAvatarPreviewBox');
+    const previewImg = document.getElementById('profileAvatarPreviewImg');
+    const normalActions = document.getElementById('avatarNormalActions');
+
+    if (previewImg) previewImg.src = compressed;
+    if (box) box.style.display = 'block';
+    if (normalActions) normalActions.style.display = 'none';
+  } catch (err) {
+    console.error('Lỗi khi tạo ảnh xem trước:', err);
+    if (window.showToast) window.showToast('Không thể đọc file ảnh: ' + err.message, 'danger');
+  }
+}
+
+async function handleConfirmUploadAvatar() {
+  if (!pendingAvatarDataUrl) return;
+
+  const btn = document.getElementById('btnConfirmUploadAvatar');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+  }
+
+  try {
+    const targetTraineeId = canManage('trainees:manage') ? state.profileTargetId : null;
+    const res = await API.uploadAvatar(pendingAvatarDataUrl, targetTraineeId);
     if (res && res.success) {
-      if (state.currentUser) {
-        state.currentUser.avatar = base64Data;
-        try {
-          localStorage.setItem('uit_trainee_auth_user', JSON.stringify(state.currentUser));
-        } catch (e) {
-          console.warn('LocalStorage quota warning:', e);
-        }
+      if (state.currentUser && !targetTraineeId) {
+        state.currentUser.avatar = res.avatarUrl || pendingAvatarDataUrl;
       }
-      if (state.currentTrainee && (state.currentTrainee.traineeId === targetId)) {
-        state.currentTrainee.avatar = base64Data;
+      const cachedTrainee = state.trainees.find(item => item.traineeId === (targetTraineeId || state.currentUser?.traineeId));
+      if (cachedTrainee) cachedTrainee.avatar = res.avatarUrl;
+
+      // Update current displayed avatar
+      if (elements.profileAvatarImg) {
+        elements.profileAvatarImg.src = res.avatarUrl || pendingAvatarDataUrl;
+        elements.profileAvatarImg.style.display = 'block';
+        if (elements.profileAvatarInitials) elements.profileAvatarInitials.style.display = 'none';
       }
-      const item = (state.trainees || []).find(t => t.traineeId === targetId);
-      if (item) item.avatar = base64Data;
 
-      // Cập nhật toàn bộ các nơi hiển thị để mọi người đều thấy ngay lập tức
-      renderAuthState();
-      if (state.currentTrainee && state.currentTrainee.traineeId === targetId) {
-        renderTraineeCard(state.currentTrainee);
-      }
-      renderPodium();
-      renderLeaderboardTable();
-      renderAdminTable();
-
-      // Đồng bộ ngầm lại danh sách Trainee
-      API.getTrainees().then(ts => {
-        if (ts && ts.length > 0) {
-          state.trainees = ts;
-          renderPodium();
-          renderLeaderboardTable();
-          renderAdminTable();
-        }
-      });
-
-      if (window.showToast) window.showToast('Cập nhật ảnh đại diện thành công và đã lưu trực tiếp vào MongoDB Atlas!', 'success');
+      resetAvatarPreview();
+      if (window.renderAuthState) renderAuthState();
+      if (window.showToast) window.showToast('Cập nhật ảnh đại diện thành công!', 'success');
     } else {
-      if (window.showToast) window.showToast((res && res.message) || 'Lỗi khi lưu ảnh đại diện!', 'danger');
+      if (window.showToast) window.showToast(res?.message || 'Lỗi khi tải ảnh đại diện!', 'danger');
     }
   } catch (err) {
-    console.error('Lỗi khi nén/upload avatar:', err);
-    if (window.showToast) window.showToast('Lỗi xử lý ảnh: ' + err.message, 'danger');
+    console.error('Lỗi upload avatar:', err);
+    if (window.showToast) window.showToast('Lỗi máy chủ: ' + err.message, 'danger');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Lưu ảnh này';
+    }
   }
 }
 
-async function handleRemoveProfileAvatar() {
-  const targetId = state.currentUser ? (state.currentUser.traineeId || state.currentUser.username) : state.currentTraineeId;
-  if (!targetId) return;
+async function handleRemoveAvatar() {
+  if (!confirm('Bạn có chắc chắn muốn gỡ ảnh đại diện tùy chỉnh và trở về avatar mặc định?')) return;
 
-  if (window.showToast) window.showToast('Đang gỡ ảnh đại diện trên MongoDB Atlas...', 'info');
+  const btn = elements.btnRemoveProfileAvatar;
+  if (btn) btn.disabled = true;
 
-  const res = await API.updateTrainee(targetId, { avatar: '' });
-  if (res && res.success) {
-    if (state.currentUser) {
-      state.currentUser.avatar = '';
-      try {
-        localStorage.setItem('uit_trainee_auth_user', JSON.stringify(state.currentUser));
-      } catch (e) {
-        console.warn('LocalStorage quota warning:', e);
+  try {
+    const targetTraineeId = canManage('trainees:manage') ? state.profileTargetId : null;
+    const res = await API.deleteAvatar(targetTraineeId);
+    if (res && res.success) {
+      if (state.currentUser && !targetTraineeId) state.currentUser.avatar = res.avatarUrl || '';
+      const cachedTrainee = state.trainees.find(item => item.traineeId === (targetTraineeId || state.currentUser?.traineeId));
+      if (cachedTrainee) cachedTrainee.avatar = res.avatarUrl;
+
+      if (elements.profileAvatarImg) {
+        elements.profileAvatarImg.src = res.avatarUrl || getTraineeDicebearAvatar(targetTraineeId || state.currentUser);
+        elements.profileAvatarImg.style.display = 'block';
       }
-    }
-    if (state.currentTrainee && (state.currentTrainee.traineeId === targetId)) {
-      state.currentTrainee.avatar = '';
-    }
-    const item = (state.trainees || []).find(t => t.traineeId === targetId);
-    if (item) item.avatar = '';
+      if (elements.profileAvatarInitials) {
+        elements.profileAvatarInitials.style.display = 'none';
+      }
 
-    renderProfileView();
-    renderAuthState();
-    if (state.currentTrainee && state.currentTrainee.traineeId === targetId) {
-      renderTraineeCard(state.currentTrainee);
+      resetAvatarPreview();
+      if (window.renderAuthState) renderAuthState();
+      if (window.showToast) window.showToast('Đã đặt lại ảnh đại diện về mặc định.', 'success');
+    } else {
+      if (window.showToast) window.showToast(res?.message || 'Lỗi khi gỡ ảnh đại diện!', 'danger');
     }
-    renderPodium();
-    renderLeaderboardTable();
-    renderAdminTable();
-
-    if (window.showToast) window.showToast('Đã gỡ ảnh đại diện thành công trên MongoDB Atlas!', 'success');
-  } else {
-    if (window.showToast) window.showToast((res && res.message) || 'Lỗi khi gỡ ảnh đại diện!', 'danger');
+  } catch (err) {
+    if (window.showToast) window.showToast('Lỗi máy chủ: ' + err.message, 'danger');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
-async function handleProfileInfoSave(e) {
+// ==========================================
+// PERSONAL INFO FORM SUBMIT
+// ==========================================
+async function handleProfileInfoSubmit(e) {
   e.preventDefault();
   const fullName = elements.profileInputFullName ? elements.profileInputFullName.value.trim() : '';
   const email = elements.profileInputEmail ? elements.profileInputEmail.value.trim() : '';
+  const phone = elements.profileInputPhone ? elements.profileInputPhone.value.trim() : '';
+  const dateOfBirth = elements.profileInputDob ? elements.profileInputDob.value : '';
+  const gender = elements.profileSelectGender ? elements.profileSelectGender.value : '';
+  const address = elements.profileInputAddress ? elements.profileInputAddress.value.trim() : '';
+  const facebookUrl = elements.profileInputFacebook ? elements.profileInputFacebook.value.trim() : '';
+  const linkedinUrl = elements.profileInputLinkedin ? elements.profileInputLinkedin.value.trim() : '';
+  const bio = elements.profileTextareaBio ? elements.profileTextareaBio.value.trim() : '';
 
   if (!fullName) {
     if (window.showToast) window.showToast('Họ và tên không được để trống!', 'warning');
@@ -323,92 +370,228 @@ async function handleProfileInfoSave(e) {
     return;
   }
 
-  const targetId = state.currentUser ? (state.currentUser.traineeId || state.currentUser.username) : state.currentTraineeId;
-  if (!targetId) return;
+  const notificationPreferences = {
+    scheduleNotify: elements.profilePrefSchedule ? elements.profilePrefSchedule.checked : true,
+    assignmentNotify: elements.profilePrefAssignments ? elements.profilePrefAssignments.checked : true,
+    questionNotify: elements.profilePrefQuestions ? elements.profilePrefQuestions.checked : true
+  };
+
+  const payload = {
+    fullName,
+    email,
+    phone,
+    dateOfBirth,
+    gender,
+    address,
+    facebookUrl,
+    linkedinUrl,
+    bio,
+    notificationPreferences
+  };
+
+  if (canManage('trainees:manage')) {
+    const inputMentorName = document.getElementById('profileInputMentorName');
+    const inputMentorEmail = document.getElementById('profileInputMentorEmail');
+    if (inputMentorName) {
+      const mName = inputMentorName.value.trim();
+      const mEmail = inputMentorEmail ? inputMentorEmail.value.trim() : '';
+      payload.mentor = mName ? {
+        name: mName,
+        email: mEmail,
+        role: 'Mentor Trainee Program',
+        phone: '',
+        avatarInitial: getInitials(mName)
+      } : null;
+    }
+  }
 
   const btn = elements.btnSaveProfileInfo;
-  if (btn) btn.disabled = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+  }
 
   try {
-    const res = await API.updateTrainee(targetId, { fullName, email });
+    const targetTraineeId = canManage('trainees:manage') ? state.profileTargetId : null;
+    const res = await API.updateProfile(payload, targetTraineeId);
     if (res && res.success) {
-      if (state.currentUser) {
+      if (state.currentUser && !targetTraineeId) {
         state.currentUser.fullName = fullName;
         state.currentUser.email = email;
-        try {
-          localStorage.setItem('uit_trainee_auth_user', JSON.stringify(state.currentUser));
-        } catch (e) {
-          console.warn('LocalStorage quota warning:', e);
-        }
       }
-      if (state.currentTrainee && (state.currentTrainee.traineeId === targetId)) {
-        state.currentTrainee.fullName = fullName;
-        state.currentTrainee.email = email;
+      if (targetTraineeId) {
+        await loadTrainees();
+        await renderProfileView();
       }
-      const item = (state.trainees || []).find(t => t.traineeId === targetId);
-      if (item) {
-        item.fullName = fullName;
-        item.email = email;
-      }
-
-      renderProfileView();
-      renderAuthState();
-      if (state.currentTrainee && state.currentTrainee.traineeId === targetId) {
-        renderTraineeCard(state.currentTrainee);
-      }
-      renderPodium();
-      renderLeaderboardTable();
-      renderAdminTable();
-
-      if (window.showToast) window.showToast('Cập nhật thông tin họ tên & email thành công trên MongoDB Atlas!', 'success');
+      if (window.renderAuthState) renderAuthState();
+      if (window.showToast) window.showToast('Đã Lưu thay đổi cá nhân thành công!', 'success');
     } else {
-      if (window.showToast) window.showToast((res && res.message) || 'Không thể cập nhật thông tin!', 'danger');
+      if (window.showToast) window.showToast(res?.message || 'Không thể lưu thông tin hồ sơ!', 'danger');
     }
   } catch (err) {
     if (window.showToast) window.showToast('Lỗi máy chủ: ' + err.message, 'danger');
   } finally {
-    if (btn) btn.disabled = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Lưu thay đổi';
+    }
   }
 }
 
-async function handleProfilePasswordChange(e) {
+// ==========================================
+// PASSWORD CHANGE FORM SUBMIT
+// ==========================================
+async function handleProfilePasswordSubmit(e) {
   e.preventDefault();
-  const oldPass = elements.profileOldPass ? elements.profileOldPass.value : '';
-  const newPass = elements.profileNewPass ? elements.profileNewPass.value : '';
-  const confirmPass = elements.profileConfirmPass ? elements.profileConfirmPass.value : '';
+  const currentPassword = elements.profileOldPass ? elements.profileOldPass.value : '';
+  const newPassword = elements.profileNewPass ? elements.profileNewPass.value : '';
+  const confirmPassword = elements.profileConfirmPass ? elements.profileConfirmPass.value : '';
 
-  if (!oldPass || !newPass) {
-    if (window.showToast) window.showToast('Vui lòng nhập mật khẩu hiện tại và mật khẩu mới!', 'warning');
+  if (!currentPassword || !newPassword) {
+    if (window.showToast) window.showToast('Vui lòng điền mật khẩu hiện tại và mật khẩu mới!', 'warning');
     return;
   }
-  if (newPass.length < 4) {
-    if (window.showToast) window.showToast('Mật khẩu mới phải có tối thiểu 4 ký tự!', 'warning');
+  if (newPassword.length < 6) {
+    if (window.showToast) window.showToast('Mật khẩu mới phải có tối thiểu 6 ký tự!', 'warning');
     return;
   }
-  if (newPass !== confirmPass) {
-    if (window.showToast) window.showToast('Xác nhận mật khẩu mới không trùng khớp!', 'danger');
+  if (newPassword !== confirmPassword) {
+    if (window.showToast) window.showToast('Xác nhận mật khẩu mới không khớp!', 'danger');
     return;
   }
 
-  const targetId = state.currentUser ? (state.currentUser.traineeId || state.currentUser.username) : state.currentTraineeId;
   const btn = elements.btnSaveNewPassword;
-  if (btn) btn.disabled = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Đang cập nhật...';
+  }
 
   try {
-    const res = await API.changePassword(targetId, oldPass, newPass);
+    const targetId = state.currentUser?.traineeId || state.currentUser?.username;
+    const res = await API.changePassword(targetId, currentPassword, newPassword);
     if (res && res.success) {
       if (elements.profileSecurityForm) elements.profileSecurityForm.reset();
-      if (window.showToast) window.showToast('Đổi mật khẩu thành công! Mật khẩu mới đã được lưu vào MongoDB Atlas.', 'success');
+      if (elements.profileAccountLastPassChange) elements.profileAccountLastPassChange.textContent = formatDateTimeVN(new Date());
+      if (window.showToast) window.showToast('Đổi mật khẩu thành công! Mật khẩu mới đã được lưu an toàn.', 'success');
+      setTimeout(() => { window.location.href = '/login'; }, 700);
     } else {
-      if (window.showToast) window.showToast((res && res.message) || 'Không thể đổi mật khẩu!', 'danger');
+      if (window.showToast) window.showToast(res?.message || 'Không thể đổi mật khẩu, vui lòng kiểm tra lại mật khẩu hiện tại!', 'danger');
     }
   } catch (err) {
     if (window.showToast) window.showToast('Lỗi hệ thống: ' + err.message, 'danger');
   } finally {
-    if (btn) btn.disabled = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Cập nhật mật khẩu';
+    }
   }
 }
 
+// ==========================================
+// RECENT ACTIVITIES TIMELINE
+// ==========================================
+async function loadProfileActivities(targetTraineeId) {
+  const container = document.getElementById('profileActivitiesContainer');
+  if (!container) return;
+
+  container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 18px;">Đang tải lịch sử hoạt động...</div>';
+
+  try {
+    const res = await API.getProfileActivities(targetTraineeId);
+    if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 18px; font-size: 0.88rem;">Chưa có hoạt động nào được ghi nhận.</div>';
+      return;
+    }
+
+    const typeMeta = {
+      login: {
+        color: 'var(--primary-blue, #2563eb)',
+        bg: 'rgba(37, 99, 235, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>'
+      },
+      assignment_submission: {
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>'
+      },
+      assignment_grade: {
+        color: '#059669',
+        bg: 'rgba(5, 150, 105, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+      },
+      leave_request: {
+        color: '#8b5cf6',
+        bg: 'rgba(139, 92, 246, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>'
+      },
+      leave: {
+        color: '#8b5cf6',
+        bg: 'rgba(139, 92, 246, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>'
+      },
+      question: {
+        color: '#0284c7',
+        bg: 'rgba(2, 132, 199, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>'
+      },
+      star_award: {
+        color: '#d97706',
+        bg: 'rgba(217, 119, 6, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      },
+      session: {
+        color: '#d97706',
+        bg: 'rgba(217, 119, 6, 0.1)',
+        svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>'
+      }
+    };
+
+    const defaultMeta = {
+      color: 'var(--text-secondary)',
+      bg: 'var(--bg-card-subtle)',
+      svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'
+    };
+
+    const statusBadgeClass = {
+      'Thành công': 'badge-success',
+      'Đã duyệt': 'badge-success',
+      'Đã trả lời': 'badge-success',
+      'Hoàn thành': 'badge-success',
+      'Chờ xử lý': 'badge-primary',
+      'Từ chối': 'badge-danger',
+      'Bị khóa': 'badge-danger'
+    };
+
+    container.innerHTML = res.data.map(item => {
+      const meta = typeMeta[item.type] || defaultMeta;
+      const statusText = item.statusLabel || item.status || '';
+      const badgeCls = statusBadgeClass[statusText] || 'badge-primary';
+
+      return `
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: ${meta.bg}; color: ${meta.color}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${meta.svg}
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px;">
+              <strong style="font-size: 0.9rem; color: var(--text-main);">${escapeHtml(item.title)}</strong>
+              ${statusText ? `<span class="badge ${badgeCls}" style="font-size: 0.72rem; padding: 2px 7px;">${escapeHtml(statusText)}</span>` : ''}
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">${escapeHtml(item.description)}</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;">${formatDateTimeVN(item.timestamp)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Lỗi khi nạp lịch sử hoạt động:', err);
+    container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 16px; font-size: 0.88rem;">Không thể tải lịch sử hoạt động.</div>';
+  }
+}
+
+// ==========================================
+// FORGOT PASSWORD MODAL (ADMIN SUPPORT)
+// ==========================================
 function openProfileForgotModal() {
   const u = state.currentUser;
   if (elements.profileForgotIdentifier) {
@@ -418,10 +601,10 @@ function openProfileForgotModal() {
     elements.profileForgotEmail.value = u ? (u.email || '') : '';
   }
   if (elements.profileForgotPhone) {
-    elements.profileForgotPhone.value = '';
+    elements.profileForgotPhone.value = u ? (u.phone || '') : '';
   }
   if (elements.profileForgotNote) {
-    elements.profileForgotNote.value = 'Em quên mật khẩu đăng nhập, nhờ Quản trị viên cấp lại mật khẩu giúp em.';
+    elements.profileForgotNote.value = 'Em quên mật khẩu đăng nhập, nhờ Quản trị viên reset mật khẩu về mặc định giúp em.';
   }
   if (elements.profileForgotModal) {
     elements.profileForgotModal.classList.add('active');
@@ -452,11 +635,9 @@ async function handleProfileForgotSubmit(e) {
   try {
     const res = await API.requestForgotPassword({ identifier, email, phone, note });
     closeProfileForgotModal();
-    // User requirement: "khi nhấn vào sẽ hiện thông báo 'đã gửi tới admin'"
     if (window.showToast) {
-      window.showToast('Đã gửi tới admin! Quản trị viên sẽ kiểm tra và cấp lại mật khẩu cho bạn.', 'success');
+      window.showToast('Đã gửi yêu cầu tới Admin! Quản trị viên sẽ kiểm tra và reset mật khẩu cho bạn.', 'success');
     }
-    alert('Đã gửi tới admin! Quản trị viên sẽ kiểm tra và cấp lại mật khẩu cho bạn.');
   } catch (err) {
     if (window.showToast) window.showToast('Lỗi gửi yêu cầu: ' + err.message, 'danger');
   } finally {
@@ -464,7 +645,84 @@ async function handleProfileForgotSubmit(e) {
   }
 }
 
+// ==========================================
+// INITIALIZE PROFILE EVENT LISTENERS
+// ==========================================
+function initProfileEvents() {
+  // 1. Avatar Actions
+  const btnUpload = document.getElementById('btnUploadProfileAvatar');
+  const fileInput = document.getElementById('profileAvatarFileInput');
+  const btnConfirmAvatar = document.getElementById('btnConfirmUploadAvatar');
+  const btnCancelAvatar = document.getElementById('btnCancelAvatarPreview');
+  const btnRemove = document.getElementById('btnRemoveProfileAvatar');
 
-// Expose to global window
+  if (btnUpload && fileInput && !btnUpload.dataset.bound) {
+    btnUpload.dataset.bound = 'true';
+    btnUpload.addEventListener('click', () => fileInput.click());
+  }
+
+  if (fileInput && !fileInput.dataset.bound) {
+    fileInput.dataset.bound = 'true';
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleAvatarFileSelect(file);
+    });
+  }
+
+  if (btnConfirmAvatar && !btnConfirmAvatar.dataset.bound) {
+    btnConfirmAvatar.dataset.bound = 'true';
+    btnConfirmAvatar.addEventListener('click', handleConfirmUploadAvatar);
+  }
+
+  if (btnCancelAvatar && !btnCancelAvatar.dataset.bound) {
+    btnCancelAvatar.dataset.bound = 'true';
+    btnCancelAvatar.addEventListener('click', resetAvatarPreview);
+  }
+
+  if (btnRemove && !btnRemove.dataset.bound) {
+    btnRemove.dataset.bound = 'true';
+    btnRemove.addEventListener('click', handleRemoveAvatar);
+  }
+
+  // 2. Profile Info Form
+  const infoForm = document.getElementById('profileInfoForm');
+  if (infoForm && !infoForm.dataset.bound) {
+    infoForm.dataset.bound = 'true';
+    infoForm.addEventListener('submit', handleProfileInfoSubmit);
+  }
+
+  // 3. Password Form
+  const passForm = document.getElementById('profileSecurityForm');
+  if (passForm && !passForm.dataset.bound) {
+    passForm.dataset.bound = 'true';
+    passForm.addEventListener('submit', handleProfilePasswordSubmit);
+  }
+
+  // 4. Forgot password button & modal
+  const btnForgot = document.getElementById('btnProfileSendForgotReq');
+  if (btnForgot && !btnForgot.dataset.bound) {
+    btnForgot.dataset.bound = 'true';
+    btnForgot.addEventListener('click', openProfileForgotModal);
+  }
+
+  const btnRefreshAct = document.getElementById('btnRefreshActivities');
+  if (btnRefreshAct && !btnRefreshAct.dataset.bound) {
+    btnRefreshAct.dataset.bound = 'true';
+    btnRefreshAct.addEventListener('click', () => {
+      loadProfileActivities(canManage('trainees:manage') ? state.profileTargetId : undefined);
+      if (window.showToast) window.showToast('Đã làm mới lịch sử hoạt động!', 'info');
+    });
+  }
+}
+
+// Run init events when DOM is loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initProfileEvents);
+} else {
+  initProfileEvents();
+}
+
+// Expose globally
 window.renderProfileView = renderProfileView;
-window.openChangePasswordModal = openChangePasswordModal;
+window.loadProfileActivities = loadProfileActivities;
+window.initProfileEvents = initProfileEvents;

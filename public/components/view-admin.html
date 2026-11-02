@@ -1,7 +1,7 @@
 <section class="tab-view" id="viewAdmin">
   <div class="context-header">
     <div><h2>Tài khoản và phân quyền</h2><p>Quản trị gốc tạo tài khoản, khóa truy cập và cấp quyền theo từng nghiệp vụ.</p></div>
-    <button type="button" class="btn btn-outline" id="btnReloadAccounts">Tải lại</button>
+    <button type="button" class="btn btn-outline" id="btnReloadAccounts">Làm mới</button>
   </div>
   <section class="portal-card account-editor">
     <h3 id="accountEditorTitle">Tạo tài khoản</h3>
@@ -14,8 +14,7 @@
         <label>Vai trò<select class="form-input" id="accountRole"><option value="trainer">Trainer</option><option value="admin">Quản trị nội dung</option></select></label>
       </div>
       <fieldset class="account-permissions" id="accountPermissions"><legend>Quyền chỉnh sửa</legend></fieldset>
-      <label><input type="checkbox" id="accountActive" checked> Cho phép đăng nhập</label>
-      <p class="form-help-text">Quản trị nội dung sửa tất cả nghiệp vụ. Trainer chỉ sửa các mục được chọn. Quyền quản lý tài khoản dành cho quản trị gốc; khóa tài khoản hoặc đổi quyền sẽ thu hồi phiên cũ.</p>
+      <p class="form-help-text">Admin chọn từng quyền cho Trainer hoặc Quản trị nội dung. Quyền quản lý tài khoản chỉ dành cho Quản trị gốc; khóa tài khoản hoặc đổi quyền sẽ thu hồi phiên cũ.</p>
       <div class="context-actions"><button class="btn btn-primary" type="submit" id="btnSaveAccount">Lưu tài khoản</button><button class="btn btn-outline" type="button" id="btnResetAccountForm">Tạo mới</button></div>
     </form>
     <p id="accountFeedback" role="status" aria-live="polite"></p>
@@ -26,5 +25,16 @@
       <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Quyền được cấp</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
       <tbody id="accountsTableBody"><tr><td colspan="5">Đang tải…</td></tr></tbody>
     </table></div>
+  </section>
+  <section class="portal-card account-list">
+    <div class="context-header">
+      <div><h3>Yêu cầu hỗ trợ tài khoản</h3><p>Xử lý yêu cầu quên mật khẩu bằng cơ chế reset an toàn; hệ thống không hiển thị mật khẩu.</p></div>
+      <div class="context-actions"><span class="badge badge-warning" id="adminSupportPendingBadge">0 chờ xử lý</span><button type="button" class="btn btn-outline" id="btnAdminRefreshSupport">Làm mới</button></div>
+    </div>
+    <div class="table-responsive"><table class="admin-table">
+      <thead><tr><th>STT</th><th>Loại</th><th>MSSV</th><th>Họ tên</th><th>Liên hệ</th><th>Nội dung</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <tbody id="adminSupportTableBody"><tr><td colspan="9">Đang tải…</td></tr></tbody>
+    </table></div>
+    <div class="empty-state" id="adminSupportEmptyState" style="display: none;">Chưa có yêu cầu hỗ trợ.</div>
   </section>
 </section>

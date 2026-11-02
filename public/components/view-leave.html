@@ -18,15 +18,9 @@
             <!-- Banner Header -->
             <div class="leave-header-card">
               <div class="leave-header-content">
-                <div class="leave-badge-pill">
-
-                  <span>THAM GIA CHƯƠNG TRÌNH</span>
-                  <span class="badge-dot">·</span>
-                  <span>TRAINEE PROGRAM 2026</span>
-                </div>
                 <h2 class="leave-main-title">Đơn Xin Nghỉ Học Trực Tuyến</h2>
                 <p class="leave-subtext">
-                  Dành cho Trainee trong chương trình Trainee Program UIT. Đơn được đăng công khai kèm thời gian gửi; bạn vui lòng gửi trước buổi học ít nhất 2 tiếng để Trainer và Ban Tổ chức Trainee Program nắm thông tin điểm danh.
+                  Đơn được đăng công khai kèm thời gian gửi; bạn vui lòng gửi trước buổi học ít nhất 2 tiếng để Trainer và Ban Tổ chức Trainee Program nắm thông tin điểm danh.
                 </p>
               </div>
               <div class="leave-header-stat">
@@ -85,7 +79,7 @@
                 <div class="leave-form-grid-2">
                   <div class="form-group">
                     <label for="leaveInputMssv" class="form-label">
-                      <span>1. Mã số Trainee (MSSV)</span>
+                      <span>1. Mã số sinh viên (MSSV)</span>
                       <span class="text-danger">*</span>
                     </label>
                     <div class="input-with-icon">
@@ -109,7 +103,7 @@
                 <!-- Row 2: Buổi học xin nghỉ (Dropdown from schedule database) -->
                 <div class="form-group" style="margin-top: 14px;">
                   <label for="leaveSelectSchedule" class="form-label">
-                    <span>3. Buổi học xin nghỉ (Lựa chọn từ cơ sở dữ liệu Lịch đào tạo)</span>
+                    <span>3. Buổi học xin nghỉ</span>
                     <span class="text-danger">*</span>
                   </label>
                   <div class="input-with-icon">
@@ -118,7 +112,6 @@
                       <option value="">-- Đang nạp danh sách lịch học từ cơ sở dữ liệu --</option>
                     </select>
                   </div>
-                  <span class="form-help-text">Dữ liệu được đồng bộ trực tiếp từ Lịch đào tạo trực tuyến của chương trình.</span>
 
                   <!-- Preview Selected Session Box -->
                   <div class="leave-schedule-preview" id="leaveSchedulePreview" style="display: none;">
@@ -156,19 +149,28 @@
                   <!-- Gợi ý lý do nhanh (Quick Chips) -->
                   <div class="leave-quick-chips">
                     <span class="chips-label">Gợi ý lý do nhanh:</span>
-                    <button type="button" class="leave-chip" data-reason="Trùng lịch thi / Kiểm tra học phần tại trường Đại học Công nghệ Thông tin (UIT).">
+                    <button type="button" class="leave-chip" data-reason="Trùng lịch thi / Kiểm tra học phần tại trường Đại học Công nghệ Thông tin (UIT). Em xin phép xem lại video recording và nộp bài tập bù đúng hạn.">
                        Trùng lịch thi UIT
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Lý do sức khỏe (bị ốm/sốt), cần nghỉ ngơi phục hồi và sẽ xem lại video sau.">
+                    <button type="button" class="leave-chip" data-reason="Trùng lịch học bù học phần chuyên ngành / Báo cáo đồ án tại trường Đại học Công nghệ Thông tin (UIT).">
+                       Trùng lịch học / Đồ án UIT
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Lý do sức khỏe cá nhân (bị ốm/sốt mệt), cần nghỉ ngơi phục hồi và sẽ xem lại video bài giảng sau.">
                        Lý do sức khỏe / Ốm
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Bận công việc cơ quan / Công tác đột xuất có giấy xác nhận.">
+                    <button type="button" class="leave-chip" data-reason="Bận lịch công tác / Công việc cơ quan đột xuất có giấy xác nhận.">
                        Bận công việc đột xuất
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Khu vực xảy ra sự cố mất điện / mất kết nối internet không thể vào MS Teams.">
+                    <button type="button" class="leave-chip" data-reason="Bận lịch làm ca tối / Trực kỹ thuật on-site tại công ty thực tập.">
+                       Thực tập / Doanh nghiệp
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Tham gia tổ chức hoạt động Đoàn - Hội / Sự kiện chính trị - tình nguyện cấp Trường.">
+                       Hoạt động Đoàn - Hội
+                    </button>
+                    <button type="button" class="leave-chip" data-reason="Khu vực lưu trú xảy ra sự cố mất điện / mất kết nối internet không thể tham gia phòng học MS Teams.">
                        Sự cố mạng / Mất điện
                     </button>
-                    <button type="button" class="leave-chip" data-reason="Có công việc gia đình đột xuất cần giải quyết.">
+                    <button type="button" class="leave-chip" data-reason="Có công việc gia đình đột xuất cần giải quyết gấp.">
                        Việc gia đình đột xuất
                     </button>
                   </div>
@@ -179,7 +181,7 @@
                   <label class="custom-checkbox-label">
                     <input type="checkbox" id="leaveCheckCommit" required>
                     <span class="checkbox-text">
-                      Tôi đồng ý công khai họ tên, MSSV, buổi xin nghỉ, lý do và thời gian gửi trên cổng thông tin. Tôi cam kết thông tin là trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
+                      Tôi đồng ý công khai họ tên, buổi xin nghỉ, lý do và thời gian gửi trên cổng thông tin (Mã Trainee/MSSV được bảo mật, chỉ Ban tổ chức/Admin xem được). Tôi cam kết thông tin là trung thực, có trách nhiệm tự giác xem lại Video ghi hình (Recording) trên Microsoft Teams và hoàn thành bài tập nộp đầy đủ đúng hạn.
                     </span>
                   </label>
                 </div>
@@ -207,17 +209,22 @@
             <div class="leave-history-card">
               <div class="leave-history-header">
                 <div class="leave-history-title-wrap">
-
-                <h3 class="leave-history-title">Bảng xin nghỉ công khai</h3>
+                  <h3 class="leave-history-title">Bảng xin nghỉ công khai</h3>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm" id="btnRefreshLeaveBoard">Tải lại</button><span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
+                <div class="leave-history-header-right">
+                  <span class="leave-history-count" id="leaveHistoryCountBadge">0 đơn</span>
+                  <button type="button" class="btn btn-secondary leave-refresh-btn" id="btnRefreshLeaveBoard" title="Tải lại danh sách đơn xin nghỉ">
+                    <i class="fas fa-rotate-right"></i>
+                    <span>Làm mới</span>
+                  </button>
+                </div>
               </div>
               <div class="table-responsive">
                 <table class="leave-table">
                   <thead>
                     <tr>
                       <th style="width: 50px;">STT</th>
-                      <th>MSSV</th>
+                      <th class="leave-col-mssv" id="leaveColMssv" style="display: none;">MSSV</th>
                       <th>Họ và tên</th>
                       <th>Buổi học xin nghỉ</th>
                       <th>Lý do</th>

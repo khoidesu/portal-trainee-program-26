@@ -28,10 +28,20 @@ const {
 
 
 function visibleAssignment(item, req) {
+  const isEditor = hasPermission(req.user, 'assignments:manage');
   const fields = ['assignmentId', 'title', 'unit', 'type', 'icon', 'isCurrent', 'deadline', 'offset'];
-  if (item.status !== 'locked' || hasPermission(req.user, 'assignments:manage')) fields.push('desc', 'details', 'link');
+  const isExpired = Boolean(item.deadline && Number.isFinite(new Date(item.deadline).getTime()) && new Date(item.deadline).getTime() <= Date.now());
+
+  if (item.status !== 'locked' || isEditor) {
+    fields.push('desc', 'details');
+    // Khóa liên kết form đối với người dùng thông thường khi bài tập đã hết hạn
+    if (!isExpired || isEditor) {
+      fields.push('link');
+    }
+  }
   return {
     ...Object.fromEntries(fields.filter(field => item[field] !== undefined).map(field => [field, item[field]])),
+    isExpired,
     status: item.status === 'completed' ? 'active' : item.status
   };
 }

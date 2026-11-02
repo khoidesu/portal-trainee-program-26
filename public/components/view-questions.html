@@ -33,7 +33,7 @@
               <div class="question-notice-body">
                 <h4 class="question-notice-title">Lưu ý</h4>
                 <ul class="question-notice-list">
-                  <li>Chọn <strong>Gửi ẩn danh</strong> để ẩn MSSV trên bảng câu hỏi công khai.</li>
+                  <li>Chọn <strong>Gửi ẩn danh</strong> nếu không muốn hiển thị tên sinh viên.</li>
                   <li>Tra cứu trước khi gửi; mô tả rõ vấn đề và đính kèm thông báo lỗi nếu có.</li>
                 </ul>
               </div>
@@ -74,14 +74,14 @@
                 <div class="question-form-grid-2">
                   <div class="form-group">
                     <label for="questionInputMssv" class="form-label">
-                      <span>1. Mã số Trainee (MSSV)</span>
+                      <span>1. Mã số sinh viên (MSSV)</span>
                       <span class="text-danger" id="questionMssvRequiredStar">*</span>
                     </label>
                     <div class="input-with-icon">
 
                       <input type="text" id="questionInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
                     </div>
-                    <span class="form-help-text" id="questionMssvHelpText">Mã số Trainee chính thức tại UIT của bạn.</span>
+                    <span class="form-help-text" id="questionMssvHelpText">Mã số Trainee chính thức tại UIT của bạn (Bảo mật, chỉ Admin xem được).</span>
                   </div>
 
                   <!-- Tùy chọn Ẩn Danh (Interactive Toggle Card) -->
@@ -93,11 +93,11 @@
                       <div class="anon-toggle-left">
                         <div class="anon-toggle-icon" id="anonToggleIcon"></div>
                         <div class="anon-toggle-info">
-                          <div class="anon-toggle-title" id="anonToggleTitle">Công khai MSSV</div>
-                          <div class="anon-toggle-desc" id="anonToggleDesc">MSSV hiển thị trên bảng câu hỏi.</div>
+                          <div class="anon-toggle-title" id="anonToggleTitle">Chế độ công khai</div>
+                          <div class="anon-toggle-desc" id="anonToggleDesc">Tên hiển thị công khai (MSSV bảo mật, chỉ Admin xem).</div>
                         </div>
                       </div>
-                      <label class="anon-switch" title="Bật/Tắt chế độ ẩn danh">
+                      <label class="anon-switch" for="questionCheckAnonymous" title="Bật/Tắt chế độ ẩn danh">
                         <input type="checkbox" id="questionCheckAnonymous">
                         <span class="anon-slider"></span>
                       </label>
@@ -205,7 +205,7 @@
               <div class="question-toolbar">
                 <div class="question-search-box">
 
-                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa, MSSV...">
+                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa...">
                 </div>
 
                 <div class="question-filter-pills" id="questionFilterPills">

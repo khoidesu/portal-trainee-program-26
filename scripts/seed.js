@@ -95,8 +95,45 @@ async function seed(args = process.argv.slice(2)) {
   }
 }
 
-module.exports = { validateDataset, seed };
-if (require.main === module) seed().catch(error => {
+async function seedAccounts(args = process.argv.slice(2)) {
+  require('dotenv').config({ quiet: true });
+  const input = path.resolve(__dirname, '../data/imports/trainees.json');
+  const trainees = validateDataset(JSON.parse(fs.readFileSync(input, 'utf8'))).filter(trainee => trainee.status !== 'Ngừng học');
+  if (!args.includes('--apply')) {
+    console.log(JSON.stringify({ mode: 'validate-only', accounts: trainees.length }));
+    return;
+  }
+  if (!process.env.MONGODB_URI?.trim()) {
+    console.log(JSON.stringify({ mode: 'local-data-only', accounts: trainees.length }));
+    return;
+  }
+  const Account = require('../models/Account');
+  const { hashPassword } = require('../utils/security');
+  const defaultPassword = process.env.TRAINEE_DEFAULT_PASSWORD || 'traineeprogram';
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000, maxPoolSize: 2 });
+    await Account.init();
+    const refs = new Map((await Trainee.find({ traineeId: { $in: trainees.map(trainee => trainee.traineeId) } }).select('_id traineeId').lean()).map(item => [item.traineeId, item._id]));
+    const operations = trainees.map(trainee => ({
+      updateOne: {
+        filter: { username: trainee.traineeId },
+        update: { $setOnInsert: {
+          fullName: trainee.fullName.trim(), password: hashPassword(defaultPassword), role: 'trainee', traineeId: trainee.traineeId,
+          permissions: [], active: true, sessionVersion: 0, mustChangePassword: true, loginHistory: [],
+          ...(refs.has(trainee.traineeId) ? { traineeRef: refs.get(trainee.traineeId) } : {})
+        } },
+        upsert: true
+      }
+    }));
+    const result = await Account.bulkWrite(operations, { ordered: false });
+    console.log(JSON.stringify({ mode: 'mongodb-accounts', requested: trainees.length, created: result.upsertedCount, alreadyExisted: result.matchedCount }));
+  } finally {
+    await mongoose.disconnect();
+  }
+}
+
+module.exports = { validateDataset, seed, seedAccounts };
+if (require.main === module) (process.argv.includes('--accounts') ? seedAccounts() : seed()).catch(error => {
   console.error(error.message);
   process.exitCode = 1;
 });

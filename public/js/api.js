@@ -8,10 +8,14 @@ const API = {
   baseUrl: '/api',
 
   async request(path, options = {}) {
-    const response = await fetch(this.baseUrl + path, { ...options, headers: this.getAuthHeaders(options.headers) });
+    const response = await fetch(this.baseUrl + path, {
+      credentials: 'same-origin',
+      ...options,
+      headers: this.getAuthHeaders(options.headers)
+    });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      if (response.status === 401 && window.state) {
+      if (response.status === 401 && window.state && path === '/auth/me') {
         window.state.currentUser = null;
         window.updateAuthUI?.();
       }
@@ -22,7 +26,20 @@ const API = {
 
   getAccounts() { return this.request('/auth/accounts'); },
   saveAccount(id, data) { return this.request('/auth/accounts' + (id ? '/' + encodeURIComponent(id) : ''), { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }); },
+  async deleteAccount(id) {
+    const response = await fetch(`${this.baseUrl}/auth/accounts/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: this.getAuthHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || 'Không xóa được tài khoản.');
+    return result;
+  },
   getPublicLeave() { return this.request('/requests/leave'); },
+  getNotifications() { return this.request('/notifications'); },
+  markNotificationRead(id) { return this.request('/notifications/' + encodeURIComponent(id) + '/read', { method: 'PUT', body: '{}' }); },
+  markAllNotificationsRead() { return this.request('/notifications/read-all', { method: 'PUT', body: '{}' }); },
   createAssignment(data) { return this.request('/assignments', { method: 'POST', body: JSON.stringify(data) }); },
   deleteAssignment(id) { return this.request('/assignments/' + encodeURIComponent(id), { method: 'DELETE' }); },
   saveAttendance(id, code, data) { return this.request('/admin/attendance/' + encodeURIComponent(id) + '/' + encodeURIComponent(code), { method: 'PUT', body: JSON.stringify(data) }); },
@@ -42,13 +59,17 @@ const API = {
       'Content-Type': 'application/json',
       ...extraHeaders
     };
+    const token = sessionStorage.getItem('uit_trainee_auth_token') || localStorage.getItem('uit_trainee_auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     return headers;
   },
 
   // Lấy trạng thái kết nối DB
   async getStatus() {
     try {
-      const res = await fetch(`${this.baseUrl}/status`);
+      const res = await fetch(`${this.baseUrl}/status`, { credentials: 'same-origin' });
       const data = await res.json();
       return data.data;
     } catch (err) {
@@ -58,14 +79,14 @@ const API = {
   },
 
   // Lấy danh sách Trainee cho Bảng Xếp Hạng
-  async getTrainees({ search = '', track = '', sort = 'rank' } = {}) {
+  async getTrainees({ search = '', track = '', sort = 'stars_desc' } = {}) {
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (track && track !== 'all') params.append('track', track);
       if (sort) params.append('sort', sort);
 
-      const res = await fetch(`${this.baseUrl}/trainees?${params.toString()}`);
+      const res = await fetch(`${this.baseUrl}/trainees?${params.toString()}`, { credentials: 'same-origin' });
       const json = await res.json();
       return (json.data || []).map(trainee => this.prepareTrainee(trainee));
     } catch (err) {
@@ -77,7 +98,7 @@ const API = {
   // Lấy chi tiết 1 Trainee cho Dashboard
   async getTraineeById(id) {
     try {
-      const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`);
+      const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
       const json = await res.json();
       return this.prepareTrainee(json.data);
     } catch (err) {
@@ -89,7 +110,7 @@ const API = {
   // Lấy danh sách thông báo
   async getAnnouncements() {
     try {
-      const res = await fetch(`${this.baseUrl}/announcements`);
+      const res = await fetch(`${this.baseUrl}/announcements`, { credentials: 'same-origin' });
       const json = await res.json();
       return json.data || [];
     } catch (err) {
@@ -103,6 +124,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/config/mongodb`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ uri })
       });
@@ -117,6 +139,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/auth/login`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
@@ -132,6 +155,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/auth/change-password`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ traineeId, currentPassword, newPassword })
       });
@@ -146,6 +170,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/trainees`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(traineeData)
       });
@@ -160,6 +185,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`, {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(updateData)
       });
@@ -174,6 +200,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       return await res.json();
@@ -187,6 +214,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/requests/forgot-password`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
@@ -203,6 +231,7 @@ const API = {
       if (type) params.append('type', type);
       if (status) params.append('status', status);
       const res = await fetch(`${this.baseUrl}/requests?${params.toString()}`, {
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       const json = await res.json();
@@ -215,12 +244,13 @@ const API = {
   },
 
   // Giải quyết yêu cầu và cấp lại mật khẩu (Admin - kèm Token)
-  async resolveSupportRequest(id, newPassword) {
+  async resolveSupportRequest(id) {
     try {
       const res = await fetch(`${this.baseUrl}/requests/${encodeURIComponent(id)}`, {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ newPassword })
+        body: JSON.stringify({})
       });
       return await res.json();
     } catch (err) {
@@ -230,7 +260,7 @@ const API = {
 
   async submitLeave(data) {
     const response = await fetch(`${this.baseUrl}/requests/leave`, {
-      method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(data)
+      method: 'POST', credentials: 'same-origin', headers: this.getAuthHeaders(), body: JSON.stringify(data)
     });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.message || 'Không gửi được đơn xin nghỉ.');
@@ -239,7 +269,7 @@ const API = {
 
   async updateLeave(id, status) {
     const response = await fetch(`${this.baseUrl}/requests/${encodeURIComponent(id)}`, {
-      method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ status })
+      method: 'PUT', credentials: 'same-origin', headers: this.getAuthHeaders(), body: JSON.stringify({ status })
     });
     return response.json();
   },
@@ -250,6 +280,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/requests/${id}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       return await res.json();
@@ -265,7 +296,7 @@ const API = {
   // Lấy chi tiết sao từng buổi học
   async getSessionStars(traineeId) {
     try {
-      const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(traineeId)}/session-stars`);
+      const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(traineeId)}/session-stars`, { credentials: 'same-origin' });
       const json = await res.json();
       return json.data || null;
     } catch (err) {
@@ -279,6 +310,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/admin/award-session-stars`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
@@ -293,12 +325,13 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/admin/batch-update-session-stars`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
       return await res.json();
     } catch (err) {
-      return { success: false, message: 'Lỗi khi cập nhật bảng điểm sao buổi học: ' + err.message };
+      return { success: false, message: 'Lỗi khi cập nhật bảng điểm sao từng buổi học: ' + err.message };
     }
   },
 
@@ -307,6 +340,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/admin/session-stars/${encodeURIComponent(traineeId)}/${encodeURIComponent(starLogId)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       return await res.json();
@@ -328,7 +362,7 @@ const API = {
       if (isAnonymous !== '') params.append('isAnonymous', isAnonymous);
       if (search) params.append('search', search);
 
-      const res = await fetch(`${this.baseUrl}/questions?${params.toString()}`);
+      const res = await fetch(`${this.baseUrl}/questions?${params.toString()}`, { credentials: 'same-origin' });
       const json = await res.json();
       if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error(json.message || 'Không tải được câu hỏi.');
       return json.data || [];
@@ -343,6 +377,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/questions`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
@@ -357,6 +392,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/questions/${encodeURIComponent(id)}/answer`, {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ answer, answeredBy, answeredRole })
       });
@@ -371,6 +407,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/questions/${encodeURIComponent(id)}/like`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
       });
@@ -385,6 +422,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/questions/${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       return await res.json();
@@ -396,9 +434,12 @@ const API = {
   // ==========================================
   // QUẢN LÝ LỊCH HỌC (SCHEDULE APIs)
   // ==========================================
-  async getSchedules({ month, year } = {}) {
+  async getSchedules({ month, year, all } = {}) {
     const today = getVietnamDateParts();
-    const res = await fetch(`${this.baseUrl}/schedules?month=${encodeURIComponent(month || today.month)}&year=${encodeURIComponent(year || today.year)}`);
+    const query = all ? 'all=true' : `month=${encodeURIComponent(month || today.month)}&year=${encodeURIComponent(year || today.year)}`;
+    const res = await fetch(`${this.baseUrl}/schedules?${query}`, {
+      credentials: 'same-origin'
+    });
     const json = await res.json();
     if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error('Không tải được lịch học.');
     return json.data;
@@ -408,6 +449,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/schedules`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
@@ -421,6 +463,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/schedules/${encodeURIComponent(id)}`, {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
@@ -434,6 +477,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/schedules/${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       return await res.json();
@@ -446,6 +490,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/schedules/reset`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
@@ -462,7 +507,7 @@ const API = {
   // Lấy danh sách 11 bài tập
   async getAssignments() {
     try {
-      const res = await fetch(`${this.baseUrl}/assignments`);
+      const res = await fetch(`${this.baseUrl}/assignments`, { credentials: 'same-origin' });
       const json = await res.json();
       if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error('Không tải được danh sách bài tập.');
       return json.data || [];
@@ -477,6 +522,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/assignments/${encodeURIComponent(id)}`, {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(updateData)
       });
@@ -491,6 +537,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/assignments/batch`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ assignments })
       });
@@ -502,7 +549,9 @@ const API = {
 
   // Khôi phục 11 bài tập về mặc định (Admin - kèm Token)
   async getAssignmentSubmissions(id) {
-    const response = await fetch(`${this.baseUrl}/assignments/${encodeURIComponent(id)}/submissions`);
+    const response = await fetch(`${this.baseUrl}/assignments/${encodeURIComponent(id)}/submissions`, {
+      credentials: 'same-origin'
+    });
     const result = await response.json();
     if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error(result.message || 'Không tải được phản hồi nộp bài.');
     return result.data;
@@ -510,7 +559,7 @@ const API = {
 
   async updateAssignmentSubmission(id, traineeId, data) {
     const response = await fetch(`${this.baseUrl}/assignments/${encodeURIComponent(id)}/submissions/${encodeURIComponent(traineeId)}`, {
-      method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(data)
+      method: 'PUT', credentials: 'same-origin', headers: this.getAuthHeaders(), body: JSON.stringify(data)
     });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.message || 'Không lưu được xác nhận.');
@@ -521,11 +570,115 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/assignments/reset`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: this.getAuthHeaders()
       });
       return await res.json();
     } catch (err) {
       return { success: false, message: 'Lỗi reset bài tập: ' + err.message };
+    }
+  },
+
+  // Profile APIs
+  async getProfile(traineeId) {
+    try {
+      const url = traineeId ? `${this.baseUrl}/profile/${encodeURIComponent(traineeId)}` : `${this.baseUrl}/profile`;
+      const res = await fetch(url, { credentials: 'same-origin', headers: this.getAuthHeaders() });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi tải hồ sơ: ' + err.message };
+    }
+  },
+
+  async updateProfile(profileData, traineeId) {
+    try {
+      const url = traineeId ? `${this.baseUrl}/profile/${encodeURIComponent(traineeId)}` : `${this.baseUrl}/profile`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(profileData)
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi cập nhật hồ sơ: ' + err.message };
+    }
+  },
+
+  async uploadAvatar(avatarBase64, traineeId) {
+    try {
+      const path = traineeId ? `/profile/${encodeURIComponent(traineeId)}/avatar` : '/profile/avatar';
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ avatarBase64 })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi upload ảnh đại diện: ' + err.message };
+    }
+  },
+
+  async deleteAvatar(traineeId) {
+    try {
+      const path = traineeId ? `/profile/${encodeURIComponent(traineeId)}/avatar` : '/profile/avatar';
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: this.getAuthHeaders()
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi gỡ ảnh đại diện: ' + err.message };
+    }
+  },
+
+  async getProfileActivities(traineeId) {
+    try {
+      const url = traineeId ? `${this.baseUrl}/profile/activities/${encodeURIComponent(traineeId)}` : `${this.baseUrl}/profile/activities`;
+      const res = await fetch(url, { credentials: 'same-origin', headers: this.getAuthHeaders() });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi tải lịch sử hoạt động: ' + err.message };
+    }
+  },
+
+  async adminResetPassword(identifier) {
+    try {
+      const res = await fetch(`${this.baseUrl}/auth/admin/reset-password`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ id: identifier })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi đặt lại mật khẩu: ' + err.message };
+    }
+  },
+
+  async adminRequirePasswordChange(identifier) {
+    const res = await fetch(`${this.baseUrl}/auth/admin/require-password-change`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ id: identifier })
+    });
+    return res.json();
+  },
+
+  async adminToggleAccountActive(id, active) {
+    try {
+      const res = await fetch(`${this.baseUrl}/auth/admin/toggle-active/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ active: Boolean(active) })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: 'Lỗi khóa/mở khóa tài khoản: ' + err.message };
     }
   }
 };

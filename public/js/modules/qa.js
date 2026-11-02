@@ -29,10 +29,9 @@ let questionsState = {
 
 async function renderQuestionsView() {
   const mssvInput = document.getElementById('questionInputMssv');
-  const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
-
-  if (mssvInput && !mssvInput.value) {
-    mssvInput.value = currentId;
+  const loggedInId = (state.currentUser?.role === 'trainee' && state.currentUser?.traineeId) ? state.currentUser.traineeId : '';
+  if (mssvInput && !mssvInput.value.trim() && loggedInId) {
+    mssvInput.value = loggedInId;
   }
 
   const requestId = ++questionsState.requestId;
@@ -71,7 +70,7 @@ function renderQuestionBoard() {
     return;
   }
 
-  const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
+  const currentId = (state.currentUser?.role === 'trainee' && state.currentUser?.traineeId) ? state.currentUser.traineeId : (document.getElementById('questionInputMssv')?.value || '').trim();
   let list = [...questionsState.questions];
 
   // 1. Filter by category / status / anonymous / mine
@@ -114,8 +113,10 @@ function renderQuestionBoard() {
   tbody.innerHTML = list.map((item, idx) => {
     let dateStr = '';
     try {
-      const d = new Date(item.createdAt || item.submittedAt || Date.now());
-      dateStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const cTime = (item.createdAt || item.submittedAt) ? new Date(item.createdAt || item.submittedAt).getTime() : NaN;
+      if (!Number.isFinite(cTime)) throw new Error('Thời gian không hợp lệ');
+      const d = new Date(cTime);
+      dateStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     } catch (e) {
       dateStr = 'Vừa xong';
     }
@@ -129,16 +130,28 @@ function renderQuestionBoard() {
     else if (cat.includes('Trainee')) catClass = 'cat-trainee';
 
     // Sender badge
+    const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
     let senderHtml = '';
     if (item.isAnonymous) {
-      senderHtml = `<span class="badge-anon" title="Người gửi chọn ẩn danh"> Ẩn danh</span>`;
+      if (showMssv && item.realMssv) {
+        senderHtml = `<span class="badge-anon" title="Gửi ẩn danh (Admin xem: MSSV ${escapeHtml(item.realMssv)})"> Ẩn danh <small style="opacity:0.75; font-size:10px;">(${escapeHtml(item.realMssv)})</small></span>`;
+      } else {
+        senderHtml = `<span class="badge-anon" title="Người gửi chọn ẩn danh"> Ẩn danh</span>`;
+      }
     } else {
-      senderHtml = `
-        <div class="badge-mssv">
-
-          <span>${escapeHtml(item.mssv || '25520918')}</span>
-        </div>
-      `;
+      if (showMssv && item.mssv) {
+        senderHtml = `
+          <div class="badge-mssv">
+            <span>${escapeHtml(item.mssv)}</span>
+          </div>
+        `;
+      } else {
+        senderHtml = `
+          <div class="badge-mssv" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);">
+            <span>${escapeHtml(item.fullName || 'Trainee')}</span>
+          </div>
+        `;
+      }
     }
 
     // Status
@@ -228,16 +241,23 @@ function openQuestionModal(id) {
   if (likeBadge) likeBadge.textContent = item.likesCount || 0;
 
   if (modalSender) {
+    const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
     if (item.isAnonymous) {
-      modalSender.innerHTML = `<span class="badge-anon"> Trainee ẩn danh</span>`;
+      modalSender.innerHTML = (showMssv && item.realMssv)
+        ? `<span class="badge-anon"> Trainee ẩn danh</span> <small style="color:var(--text-muted);">(Admin xem: MSSV <code>${escapeHtml(item.realMssv)}</code> · ${escapeHtml(item.fullName || 'Trainee')})</small>`
+        : `<span class="badge-anon"> Trainee ẩn danh</span>`;
     } else {
-      modalSender.innerHTML = `<strong>MSSV: ${escapeHtml(item.mssv)}</strong> (${escapeHtml(item.fullName || 'Trainee')})`;
+      modalSender.innerHTML = showMssv && item.mssv
+        ? `<strong>MSSV: ${escapeHtml(item.mssv)}</strong> (${escapeHtml(item.fullName || 'Trainee')})`
+        : `<strong>${escapeHtml(item.fullName || 'Trainee')}</strong>`;
     }
   }
 
   if (modalTime) {
     try {
-      const d = new Date(item.createdAt || Date.now());
+      const cTime = item.createdAt ? new Date(item.createdAt).getTime() : NaN;
+      if (!Number.isFinite(cTime)) throw new Error('Thời gian không hợp lệ');
+      const d = new Date(cTime);
       modalTime.textContent = `${d.toLocaleTimeString('vi-VN')} · ${d.toLocaleDateString('vi-VN')}`;
     } catch (e) {
       modalTime.textContent = 'Gần đây';
@@ -280,7 +300,7 @@ function openQuestionModal(id) {
 
 async function toggleLikeQuestionItem(id, event) {
   if (event) event.stopPropagation();
-  const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
+  const currentId = (state.currentUser?.role === 'trainee' && state.currentUser?.traineeId) ? state.currentUser.traineeId : (document.getElementById('questionInputMssv')?.value || '').trim() || 'guest';
 
   // Optimistic update
   const item = questionsState.questions.find(q => q._id === id || q.code === id);
@@ -334,8 +354,8 @@ function setupQuestionEvents() {
     if (isAnon) {
       if (anonBox) anonBox.classList.add('active');
       if (anonIcon) anonIcon.textContent = '';
-      if (anonTitle) anonTitle.textContent = 'Gửi Ẩn Danh ';
-      if (anonDesc) anonDesc.textContent = 'Không hiển thị MSSV trên bảng câu hỏi công khai.';
+      if (anonTitle) anonTitle.textContent = 'Gửi Ẩn Danh';
+      if (anonDesc) anonDesc.textContent = 'Không hiển thị họ tên trên bảng câu hỏi công khai.';
       if (mssvStar) mssvStar.style.display = 'none';
       if (mssvInput) {
         mssvInput.required = false;
@@ -345,14 +365,14 @@ function setupQuestionEvents() {
     } else {
       if (anonBox) anonBox.classList.remove('active');
       if (anonIcon) anonIcon.textContent = '';
-      if (anonTitle) anonTitle.textContent = 'Công khai MSSV';
-      if (anonDesc) anonDesc.textContent = 'MSSV hiển thị trên bảng câu hỏi.';
+      if (anonTitle) anonTitle.textContent = 'Chế độ công khai';
+      if (anonDesc) anonDesc.textContent = 'Họ tên hiển thị công khai (MSSV bảo mật, chỉ Admin xem).';
       if (mssvStar) mssvStar.style.display = 'inline';
       if (mssvInput) {
         mssvInput.required = true;
         mssvInput.placeholder = 'Ví dụ: 25520918';
       }
-      if (mssvHelp) mssvHelp.textContent = 'Mã số Trainee chính thức tại UIT của bạn.';
+      if (mssvHelp) mssvHelp.textContent = 'Mã số Trainee chính thức tại UIT của bạn (Bảo mật, chỉ Admin xem).';
     }
   }
 
@@ -364,11 +384,11 @@ function setupQuestionEvents() {
 
   if (anonBox) {
     anonBox.addEventListener('click', (e) => {
-      if (e.target.tagName !== 'INPUT') {
-        if (anonCheck) {
-          anonCheck.checked = !anonCheck.checked;
-          updateAnonUI(anonCheck.checked);
-        }
+      // Nếu click vào chính label/switch/slider, để trình duyệt tự kích hoạt change event tự nhiên
+      if (e.target.closest('.anon-switch')) return;
+      if (anonCheck) {
+        anonCheck.checked = !anonCheck.checked;
+        anonCheck.dispatchEvent(new Event('change'));
       }
     });
   }
@@ -400,9 +420,9 @@ function setupQuestionEvents() {
       updateAnonUI(false);
       if (successAlert) successAlert.style.display = 'none';
 
-      // Keep default MSSV
-      const currentId = state.currentTrainee ? state.currentTrainee.traineeId : (state.currentUser ? state.currentUser.traineeId : '25520918');
-      if (mssvInput) mssvInput.value = currentId;
+      // Giu lai MSSV neu da dang nhap
+      const loggedInId = (state.currentUser?.role === 'trainee' && state.currentUser?.traineeId) ? state.currentUser.traineeId : '';
+      if (mssvInput) mssvInput.value = loggedInId;
     });
   }
 
@@ -426,7 +446,7 @@ function setupQuestionEvents() {
 
       // Validation
       if (!isAnonymous && !mssv) {
-        if (window.showToast) window.showToast('Vui lòng nhập Mã số Trainee (MSSV) hoặc bật Chế độ ẩn danh !', 'warning');
+        if (window.showToast) window.showToast('Vui lòng nhập Mã số sinh viên (MSSV) hoặc bật Chế độ ẩn danh !', 'warning');
         mssvInput?.focus();
         return;
       }
@@ -441,7 +461,7 @@ function setupQuestionEvents() {
         return;
       }
 
-      const currentName = state.currentTrainee?.fullName || state.currentUser?.fullName || '';
+      const currentName = (state.currentUser?.role === 'trainee' && state.currentUser?.fullName) ? state.currentUser.fullName : '';
       let newQuestion;
       try {
         const result = await API.createQuestion({

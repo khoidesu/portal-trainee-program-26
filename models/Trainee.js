@@ -51,11 +51,11 @@ const SessionStarSchema = new mongoose.Schema({
 }, { _id: true });
 
 const MentorSchema = new mongoose.Schema({
-  name: { type: String, default: 'Võ Thị Xuân Quỳnh' },
-  role: { type: String, default: 'Trainer Trainee Program' },
-  email: { type: String, default: 'quynhvtx@uit.edu.vn' },
-  phone: { type: String, default: '0904607220' },
-  avatarInitial: { type: String, default: 'VQ' }
+  name: { type: String, default: '' },
+  role: { type: String, default: 'Mentor' },
+  email: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  avatarInitial: { type: String, default: '' }
 }, { _id: false });
 
 const TraineeSchema = new mongoose.Schema({
@@ -69,10 +69,22 @@ const TraineeSchema = new mongoose.Schema({
     }
   },
   email: { type: String, required: true },
+  phone: { type: String, default: '' },
+  dateOfBirth: { type: String, default: '' },
+  gender: { type: String, default: '' },
+  address: { type: String, default: '' },
+  facebookUrl: { type: String, default: '' },
+  linkedinUrl: { type: String, default: '' },
+  notificationPreferences: {
+    assignmentNotify: { type: Boolean, default: true },
+    scheduleNotify: { type: Boolean, default: true },
+    questionNotify: { type: Boolean, default: true }
+  },
+  accountRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', unique: true, sparse: true },
   batch: { type: String, default: '' },
   track: { type: String, default: '' },
   department: { type: String, default: '' },
-  status: { type: String, default: 'Đang học', enum: ['Đang học', 'Ngừng học', 'Hoàn thành'] }, // Đang học, Đang đào tạo, Tốt nghiệp
+  status: { type: String, default: 'Đang học', enum: ['Đang học', 'Ngừng học', 'Hoàn thành', 'Active', 'Completed', 'Inactive'] }, // Đang học, Đang đào tạo, Tốt nghiệp
   cohortYear: { type: String, default: '2025' },
   academicYear: { type: String, default: '2026-2027' },
   
