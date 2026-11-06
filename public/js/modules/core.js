@@ -650,15 +650,17 @@ async function loadTrainees() {
 // 3. Tải chi tiết Trainee hiện tại
 async function loadCurrentTrainee(id) {
   let targetId = id;
-  if (!targetId) {
-    if (state.currentTraineeId) {
+  if (!targetId || targetId === 'undefined' || targetId === 'null') {
+    if (state.currentTraineeId && state.currentTraineeId !== 'undefined' && state.currentTraineeId !== 'null') {
       targetId = state.currentTraineeId;
     } else if (state.trainees && state.trainees.length > 0) {
-      targetId = state.trainees[0].traineeId;
+      targetId = state.trainees[0]?.traineeId;
+    } else {
+      targetId = null;
     }
   }
 
-  if (!targetId) return;
+  if (!targetId || targetId === 'undefined' || targetId === 'null') return;
 
   const trainee = await window.API.getTraineeById(targetId);
   if (!trainee) return;
@@ -779,6 +781,32 @@ function printTable(options) {
 }
 
 
+function showToast(message, type = 'info') {
+  if (!message) return;
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    container.setAttribute('aria-live', 'polite');
+    container.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `uit-toast uit-toast-${type} ${type}`;
+  toast.textContent = String(message);
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 350);
+  }, 4000);
+}
+
 function setThemeMode(mode) {
   applyThemeMode(mode, true);
 }
@@ -800,6 +828,7 @@ window.initTheme = initTheme;
 window.initSidebarCollapse = initSidebarCollapse;
 window.applySidebarCollapsed = applySidebarCollapsed;
 window.toggleSidebar = toggleSidebar;
+window.showToast = showToast;
 window.checkDbStatus = loadDatabaseStatus;
 window.loadDatabaseStatus = loadDatabaseStatus;
 window.loadTrainees = loadTrainees;

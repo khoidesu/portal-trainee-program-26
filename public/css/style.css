@@ -714,11 +714,44 @@ html.preload-sidebar-collapsed .sidebar .brand-mark--trainee {
 
 .mobile-toggle-btn {
   display: none;
-  background: none;
+  background: transparent;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 6px);
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all var(--transition-fast, 0.2s ease);
+}
+
+.mobile-toggle-btn:hover,
+.mobile-toggle-btn:focus-visible {
+  color: var(--text-main);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.mobile-toggle-btn svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+}
+
+.mobile-nav-logo-link {
+  display: none;
+  align-items: center;
+  line-height: 1;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.mobile-nav-logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .page-title-box {
@@ -1281,7 +1314,8 @@ body.dark-theme .badge-tag.status-active {
   .app-layout .page-title-box { display: flex !important; min-width: 0; }
   .page-sub-breadcrumb { overflow-wrap: anywhere; }
   .top-nav-right { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
-  .mobile-toggle-btn { flex-shrink: 0; white-space: nowrap; }
+  .mobile-toggle-btn { display: flex; align-items: center; justify-content: center; flex-shrink: 0; white-space: nowrap; }
+  .mobile-nav-logo-link { display: inline-flex; }
 }
 
 .metric-icon-box.blue-bg {
@@ -2628,23 +2662,55 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* Ẩn tiêu đề "Cổng thông tin Sinh viên, Học viên - Chương trình Trainee Program 2026" trên điện thoại để tránh lỗi vỡ UI */
   .page-title-box {
-    display: none !important;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .page-main-title {
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .page-sub-breadcrumb {
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .sidebar {
     position: fixed;
+    top: 0;
     left: -100%;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    height: 100vh;
+    z-index: 1000;
+    background-color: var(--bg-sidebar);
     transition: left var(--transition-normal);
   }
 
   .sidebar.mobile-open {
     left: 0;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
   }
 
   .mobile-toggle-btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-logo-link {
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .top-navbar {
@@ -2656,7 +2722,9 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
   }
 
   .top-nav-left {
-    gap: 8px;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
   }
 
   .top-nav-right {
@@ -3410,6 +3478,19 @@ body.light-theme .timetable-course-card .btn-decuong {
   opacity: 0;
   transform: translateY(10px);
   transition: all 0.3s ease;
+}
+
+.uit-toast.success, .uit-toast-success {
+  border-left: 4px solid #10b981;
+}
+.uit-toast.warning, .uit-toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+.uit-toast.danger, .uit-toast-danger {
+  border-left: 4px solid #ef4444;
+}
+.uit-toast.info, .uit-toast-info {
+  border-left: 4px solid #3b82f6;
 }
 
 @keyframes slideInToast {
@@ -4494,11 +4575,20 @@ body.dark-theme .star-chip {
   flex-wrap: wrap;
 }
 
+/* Schedule Month Container */
+.schedule-month-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Monthly Sessions List */
 .monthly-sessions-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
 }
 
 .month-session-card {
@@ -4572,7 +4662,7 @@ body.dark-theme .star-chip {
 
 .session-card-body {
   flex: 1;
-  min-width: 250px;
+  min-width: 0;
 }
 
 .session-badges-row {
@@ -5007,6 +5097,144 @@ body.dark-theme .star-chip {
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Responsive Styles for Monthly Schedule on Mobile / Tablet */
+@media (max-width: 860px) {
+  .schedule-header-box {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .schedule-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .schedule-month-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .month-session-card {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px 14px;
+    padding: 16px 14px;
+    overflow: hidden;
+  }
+
+  .session-card-left {
+    flex-shrink: 0;
+  }
+
+  .session-date-box {
+    width: 68px;
+    height: 68px;
+  }
+
+  .session-date-box .date-day {
+    font-size: 1.35rem;
+  }
+
+  .session-card-body {
+    flex: 1 1 calc(100% - 84px);
+    min-width: 0;
+    max-width: calc(100% - 84px);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .session-details-row {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .session-card-actions {
+    width: 100%;
+    flex: 1 1 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: stretch;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  .btn-join-class {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .session-admin-controls {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .month-session-card {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+
+  .session-date-box {
+    width: 60px;
+    height: 60px;
+  }
+
+  .session-date-box .date-day {
+    font-size: 1.25rem;
+  }
+
+  .session-date-box .date-month {
+    font-size: 0.62rem;
+  }
+
+  .session-date-box .date-dow {
+    font-size: 0.66rem;
+  }
+
+  .session-card-body {
+    flex: 1 1 calc(100% - 72px);
+    max-width: calc(100% - 72px);
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .session-title {
+    font-size: 0.98rem;
+  }
+
+  .session-badges-row {
+    gap: 6px;
+  }
+
+  .session-card-actions {
+    width: 100%;
+    flex: 1 1 100%;
+    margin-top: 8px;
+    padding-top: 10px;
+  }
+
+  .btn-join-class {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+  }
 }
 
 /* Print Styles */

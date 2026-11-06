@@ -70,34 +70,34 @@
 
               <form id="questionSubmitForm" class="question-form-body" novalidate>
 
-                <!-- Row 1: MSSV & Lựa chọn Ẩn danh -->
+                <!-- Row 1: MSSV & Lựa chọn Hiển thị danh tính -->
                 <div class="question-form-grid-2">
                   <div class="form-group">
                     <label for="questionInputMssv" class="form-label">
                       <span>1. Mã số sinh viên (MSSV)</span>
-                      <span class="text-danger" id="questionMssvRequiredStar">*</span>
+                      <span class="text-danger" id="questionMssvRequiredStar" style="display: none;">*</span>
                     </label>
                     <div class="input-with-icon">
-
-                      <input type="text" id="questionInputMssv" class="form-input" inputmode="numeric" pattern="[0-9]{6,12}" minlength="6" maxlength="12" placeholder="Ví dụ: 25520918" required>
+                      <input type="text" id="questionInputMssv" class="form-input" inputmode="numeric" pattern="[0-9]{6,12}" minlength="6" maxlength="12" placeholder="(Tùy chọn khi gửi ẩn danh)">
                     </div>
+                    <span class="form-help-text" id="questionMssvHelpText" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; display: block;">Mặc định ẩn danh: không hiện MSSV ra diễn đàn.</span>
                   </div>
 
-                  <!-- Tùy chọn Ẩn Danh (Interactive Toggle Card) -->
+                  <!-- Tùy chọn Công khai / Ẩn Danh (Interactive Toggle Card) -->
                   <div class="form-group">
-                    <label class="form-label" for="questionCheckAnonymous">
-                      <span>2. Hiển thị danh tính</span>
+                    <label class="form-label" for="questionCheckPublic">
+                      <span>2. Chế độ hiển thị danh tính</span>
                     </label>
                     <div class="anon-toggle-card" id="anonToggleBox">
                       <div class="anon-toggle-left">
                         <div class="anon-toggle-icon" id="anonToggleIcon"></div>
                         <div class="anon-toggle-info">
-                          <div class="anon-toggle-title" id="anonToggleTitle">Chế độ công khai</div>
-                          <div class="anon-toggle-desc" id="anonToggleDesc">Tên hiển thị công khai (MSSV bảo mật, chỉ Admin xem).</div>
+                          <div class="anon-toggle-title" id="anonToggleTitle">Chế độ Ẩn danh</div>
+                          <div class="anon-toggle-desc" id="anonToggleDesc">Mặc định gửi ẩn danh. Gạt nút bên phải để bật công khai MSSV.</div>
                         </div>
                       </div>
-                      <label class="anon-switch" for="questionCheckAnonymous" title="Bật/Tắt chế độ ẩn danh" aria-label="Bật hoặc tắt chế độ ẩn danh">
-                        <input type="checkbox" id="questionCheckAnonymous" aria-label="Đăng câu hỏi ẩn danh" aria-describedby="anonToggleDesc">
+                      <label class="anon-switch" for="questionCheckPublic" title="Gạt lên để bật chế độ công khai MSSV" aria-label="Gạt lên để bật chế độ công khai MSSV">
+                        <input type="checkbox" id="questionCheckPublic" aria-label="Công khai MSSV trên diễn đàn" aria-describedby="anonToggleDesc">
                         <span class="anon-slider"></span>
                       </label>
                     </div>
@@ -137,14 +137,20 @@
 
                 <!-- Row 3: Nội dung chi tiết câu hỏi (Bảng câu hỏi) -->
                 <div class="form-group" style="margin-top: 14px;">
-                  <label for="questionInputContent" class="form-label">
-                    <span>5. Nội dung</span>
-                    <span class="text-danger">*</span>
-                  </label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label for="questionInputContent" class="form-label" style="margin-bottom: 0;">
+                      <span>5. Nội dung</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <span id="questionContentCharCount" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">0/10 ký tự tối thiểu</span>
+                  </div>
                   <textarea id="questionInputContent" class="form-input question-textarea" rows="5" minlength="10" maxlength="5000"
                     placeholder="Mô tả vấn đề, các bước đã thử và thông báo lỗi (ít nhất 10 ký tự)."
                     required></textarea>
                 </div>
+
+                <!-- Error feedback banner inside the form -->
+                <div id="questionFormFeedback" role="alert" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; line-height: 1.4;"></div>
 
                 <!-- Form Actions: Nút Gửi & Nhập lại -->
                 <div class="question-actions-row">

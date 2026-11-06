@@ -128,7 +128,15 @@ app.get('/sitemap.xml', (req, res) => {
 });
 
 // Phục vụ tài nguyên tĩnh từ thư mục public
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  }
+}));
 
 // ==========================================
 // 2. MOUNT CÁC ROUTER COMPONENTS

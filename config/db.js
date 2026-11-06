@@ -225,6 +225,12 @@ async function openDatabase(force = false) {
     connectionError = null;
     console.log('✅ [MongoDB] Kết nối cơ sở dữ liệu MongoDB Atlas THÀNH CÔNG!');
 
+    const count = await Trainee.countDocuments();
+    if (count === 0 && inMemoryTrainees.length > 0) {
+      console.log('🌱 [MongoDB] Khởi tạo dữ liệu Trainees ban đầu cho cơ sở dữ liệu mới...');
+      await Trainee.insertMany(inMemoryTrainees);
+    }
+
     await ensureTraineeAccountsInMongo();
     return true;
   } catch (err) {
@@ -2197,11 +2203,13 @@ async function createQuestion(data) {
   if (mssv && mssv !== 'Ẩn danh') {
     if (!/^\d{6,12}$/.test(mssv)) throw new Error('MSSV phải gồm 6–12 chữ số.');
     trainee = await getTraineeById(mssv);
-    if (!trainee) throw new Error('MSSV không tồn tại trong danh sách Trainee.');
-    mssv = trainee.traineeId;
+    if (trainee) {
+      mssv = trainee.traineeId;
+    }
   }
-  if (!isAnonymous && !trainee) throw new Error('Vui lòng nhập MSSV hợp lệ hoặc chọn chế độ Ẩn danh.');
-  const fullName = isAnonymous ? 'Trainee ẩn danh' : trainee.fullName;
+  if (!isAnonymous && !mssv) throw new Error('Vui lòng nhập MSSV hợp lệ hoặc chọn chế độ Ẩn danh.');
+  if (!isAnonymous && !/^\d{6,12}$/.test(mssv)) throw new Error('MSSV phải gồm 6–12 chữ số.');
+  const fullName = isAnonymous ? 'Trainee ẩn danh' : (trainee?.fullName || (data.fullName && data.fullName !== 'Trainee ẩn danh' ? String(data.fullName).trim() : `Sinh viên ${mssv}`));
 
   const title = String(data.title || '').trim();
   const content = String(data.content || '').trim();
@@ -2214,10 +2222,10 @@ async function createQuestion(data) {
 
   const newDoc = {
     code,
-    traineeId: linkedTraineeId,
+    traineeId: linkedTraineeId || (trainee ? trainee.traineeId : (isAnonymous ? '' : mssv)),
     mssv: isAnonymous ? 'Ẩn danh' : mssv,
-    realMssv: trainee?.traineeId || '',
-    fullName: isAnonymous ? 'Trainee ẩn danh' : fullName,
+    realMssv: trainee?.traineeId || (mssv && mssv !== 'Ẩn danh' ? mssv : ''),
+    fullName,
     isAnonymous,
     category: data.category || 'Kỹ thuật & Code',
     title,

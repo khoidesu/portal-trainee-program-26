@@ -223,7 +223,16 @@ SOFTWARE.
 </svg>
 
         <div class="top-nav-left">
-          <button class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Mở menu">Mở menu</button>
+          <button class="mobile-toggle-btn" id="mobileMenuBtn" aria-label="Mở menu" title="Mở menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <a href="#schedule" class="mobile-nav-logo-link" aria-label="Trang chủ Trainee Program">
+            <img src="assets/logo.png" class="mobile-nav-logo" width="36" height="26" alt="Logo UIT">
+          </a>
           <div class="page-title-box">
             <h2 class="page-main-title" id="pageMainTitle">Thời khóa biểu</h2>
             <span class="page-sub-breadcrumb" id="pageSubBreadcrumb">Lịch học và hoạt động của Trainee Program</span>
@@ -298,12 +307,8 @@ SOFTWARE.
 
       <main class="main-body" id="mainContent">
 
-        
-        
-        
         <section class="tab-view" id="viewDashboard" style="display: none !important;">
 
-          
           <div class="student-profile-card" id="studentProfileCard">
             <div class="profile-left">
               <div class="student-avatar-wrap">
@@ -335,7 +340,6 @@ SOFTWARE.
             </div>
           </div>
 
-          
           <div class="metrics-grid">
             
             <div class="metric-card" id="cardMetricStars">
@@ -359,7 +363,6 @@ SOFTWARE.
               </div>
             </div>
 
-            
             <div class="metric-card" id="cardMetricAttendance">
               <div class="metric-content">
                 <div class="metric-header-row">
@@ -382,7 +385,6 @@ SOFTWARE.
               </div>
             </div>
 
-            
             <div class="metric-card" id="cardMetricRank">
               <div class="metric-content">
                 <div class="metric-header-row">
@@ -402,13 +404,10 @@ SOFTWARE.
             </div>
           </div>
 
-          
           <div class="content-dashboard-grid">
 
-            
             <div class="grid-col left-col">
 
-              
               <div class="portal-card" id="cardSchedule">
                 <div class="card-header">
                   <div class="header-left">
@@ -426,7 +425,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="portal-card" id="cardPendingServices">
                 <div class="card-header">
                   <div class="header-left">
@@ -446,10 +444,8 @@ SOFTWARE.
 
             </div>
 
-            
             <div class="grid-col right-col">
 
-              
               <div class="portal-card" id="cardMentor">
                 <div class="card-header">
                   <div class="header-left">
@@ -480,7 +476,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="portal-card" id="cardGpaChart">
                 <div class="card-header">
                   <div class="header-left">
@@ -501,7 +496,6 @@ SOFTWARE.
                     <div class="chart-tooltip" id="chartTooltip"></div>
                   </div>
 
-                  
                   <div class="chart-legend">
                     <div class="legend-item">
                       <span class="legend-line solid-line" style="background:#3b82f6;"></span>
@@ -515,7 +509,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="portal-card" id="cardNews">
                 <div class="card-header">
                   <div class="header-left">
@@ -866,28 +859,28 @@ SOFTWARE.
                   <div class="form-group">
                     <label for="questionInputMssv" class="form-label">
                       <span>1. Mã số sinh viên (MSSV)</span>
-                      <span class="text-danger" id="questionMssvRequiredStar">*</span>
+                      <span class="text-danger" id="questionMssvRequiredStar" style="display: none;">*</span>
                     </label>
                     <div class="input-with-icon">
-
-                      <input type="text" id="questionInputMssv" class="form-input" inputmode="numeric" pattern="[0-9]{6,12}" minlength="6" maxlength="12" placeholder="Ví dụ: 25520918" required>
+                      <input type="text" id="questionInputMssv" class="form-input" inputmode="numeric" pattern="[0-9]{6,12}" minlength="6" maxlength="12" placeholder="(Tùy chọn khi gửi ẩn danh)">
                     </div>
+                    <span class="form-help-text" id="questionMssvHelpText" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; display: block;">Mặc định ẩn danh: không hiện MSSV ra diễn đàn.</span>
                   </div>
 
                   <div class="form-group">
-                    <label class="form-label" for="questionCheckAnonymous">
-                      <span>2. Hiển thị danh tính</span>
+                    <label class="form-label" for="questionCheckPublic">
+                      <span>2. Chế độ hiển thị danh tính</span>
                     </label>
                     <div class="anon-toggle-card" id="anonToggleBox">
                       <div class="anon-toggle-left">
                         <div class="anon-toggle-icon" id="anonToggleIcon"></div>
                         <div class="anon-toggle-info">
-                          <div class="anon-toggle-title" id="anonToggleTitle">Chế độ công khai</div>
-                          <div class="anon-toggle-desc" id="anonToggleDesc">Tên hiển thị công khai (MSSV bảo mật, chỉ Admin xem).</div>
+                          <div class="anon-toggle-title" id="anonToggleTitle">Chế độ Ẩn danh</div>
+                          <div class="anon-toggle-desc" id="anonToggleDesc">Mặc định gửi ẩn danh. Gạt nút bên phải để bật công khai MSSV.</div>
                         </div>
                       </div>
-                      <label class="anon-switch" for="questionCheckAnonymous" title="Bật/Tắt chế độ ẩn danh" aria-label="Bật hoặc tắt chế độ ẩn danh">
-                        <input type="checkbox" id="questionCheckAnonymous" aria-label="Đăng câu hỏi ẩn danh" aria-describedby="anonToggleDesc">
+                      <label class="anon-switch" for="questionCheckPublic" title="Gạt lên để bật chế độ công khai MSSV" aria-label="Gạt lên để bật chế độ công khai MSSV">
+                        <input type="checkbox" id="questionCheckPublic" aria-label="Công khai MSSV trên diễn đàn" aria-describedby="anonToggleDesc">
                         <span class="anon-slider"></span>
                       </label>
                     </div>
@@ -925,14 +918,19 @@ SOFTWARE.
                 </div>
 
                 <div class="form-group" style="margin-top: 14px;">
-                  <label for="questionInputContent" class="form-label">
-                    <span>5. Nội dung</span>
-                    <span class="text-danger">*</span>
-                  </label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label for="questionInputContent" class="form-label" style="margin-bottom: 0;">
+                      <span>5. Nội dung</span>
+                      <span class="text-danger">*</span>
+                    </label>
+                    <span id="questionContentCharCount" style="font-size: 0.78rem; color: var(--text-muted); font-weight: 500;">0/10 ký tự tối thiểu</span>
+                  </div>
                   <textarea id="questionInputContent" class="form-input question-textarea" rows="5" minlength="10" maxlength="5000"
                     placeholder="Mô tả vấn đề, các bước đã thử và thông báo lỗi (ít nhất 10 ký tự)."
                     required></textarea>
                 </div>
+
+                <div id="questionFormFeedback" role="alert" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; line-height: 1.4;"></div>
 
                 <div class="question-actions-row">
                   <button type="button" class="btn btn-secondary" id="btnResetQuestionForm">
@@ -1187,7 +1185,7 @@ SOFTWARE.
   <script src="js/modules/schedule.js"></script>
   <script src="js/modules/grades.js"></script>
   <script src="js/modules/leave.js"></script>
-  <script src="js/modules/qa.js"></script>
+  <script src="js/modules/qa.js?v=20261106_2"></script>
   <script src="js/modules/notifications.js"></script>
   <script src="js/app.js"></script>
 

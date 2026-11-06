@@ -26,18 +26,14 @@ function publicQuestion(question, allowMssv = false) {
   const { realMssv, likedBy, traineeId, ...visible } = question;
   if (visible.isAnonymous) {
     visible.mssv = 'Ẩn danh';
-    visible.fullName = 'Sinh viên ẩn danh';
-    if (allowMssv) {
-      visible.realMssv = realMssv;
-    }
+    visible.fullName = 'Trainee ẩn danh';
+    delete visible.realMssv;
     return visible;
   }
-  if (allowMssv) {
-    return visible;
+  // Câu hỏi công khai: giữ lại MSSV và họ tên để hiển thị công khai kèm câu hỏi
+  if (!allowMssv) {
+    delete visible.realMssv;
   }
-  // Trainee / Guest: bảo mật mã số sinh viên, không công khai
-  delete visible.mssv;
-  delete visible.realMssv;
   return visible;
 }
 
@@ -71,7 +67,7 @@ router.post('/', createRateLimiter(5, 60000), async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Đã gửi câu hỏi lên diễn đàn thành công!',
-      data: publicQuestion(newQ)
+      data: publicQuestion(newQ, canViewMssv(req.user))
     });
   } catch (err) {
     console.error('Lỗi API POST /api/questions:', err.message);

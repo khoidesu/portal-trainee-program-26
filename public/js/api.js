@@ -93,6 +93,7 @@ const API = {
 
   // Lấy chi tiết 1 Trainee cho Dashboard
   async getTraineeById(id) {
+    if (!id || id === 'undefined' || id === 'null') return null;
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
       const json = await res.json();
@@ -276,6 +277,7 @@ const API = {
 
   // Lấy chi tiết sao từng buổi học
   async getSessionStars(traineeId) {
+    if (!traineeId || traineeId === 'undefined' || traineeId === 'null') return null;
     try {
       const res = await fetch(`${this.baseUrl}/trainees/${encodeURIComponent(traineeId)}/session-stars`, { credentials: 'same-origin' });
       const json = await res.json();
