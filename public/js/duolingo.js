@@ -325,10 +325,10 @@ class DuolingoManager {
     // - Nếu còn trên 1 ngày (days >= 1): hiện "x ngày x h còn lại"
     // - Còn dưới 1 ngày (days < 1): hiện "x h x phút còn lại"
     if (days >= 1) {
-      shortText = `${days} ngày ${hours} h còn lại`;
+      shortText = `${days} ngày ${hours}h còn lại`;
       badgeClass = days > 2 ? 'timer-green' : 'timer-warning';
     } else {
-      shortText = `${hours} h ${minutes} phút còn lại`;
+      shortText = `${hours}h ${minutes} phút còn lại`;
       badgeClass = 'timer-urgent';
     }
 
@@ -461,7 +461,7 @@ class DuolingoManager {
         // Treasure Chest
         stepEl.innerHTML = `
           <button type="button" class="duo-chest-node" data-id="${itemId}" title="${safeTitle}" aria-label="${safeTitle}" ${locked ? 'disabled' : ''}>
-            <span class="duo-node-number">${itemId}</span>
+            <span class="duo-node-number">${index + 1}</span>
           </button>
           <!-- Đếm thời gian còn lại ở dưới bài tập -->
           <div class="duo-step-timer ${countdown.badgeClass}" data-id="${itemId}" title="Hạn nộp: ${countdown.formattedDeadline}">
@@ -493,7 +493,7 @@ class DuolingoManager {
           ${startBubbleHtml}
           <button type="button" class="duo-node-btn ${nodeColorClass}" data-id="${itemId}" title="${safeTitle}" aria-label="${safeTitle}" ${locked ? 'disabled' : ''}>
             ${pulseRingHtml}
-            <span class="duo-node-number">${itemId}</span>
+            <span class="duo-node-number">${index + 1}</span>
           </button>
           <span class="duo-step-status ${countdown.isExpired ? 'expired-status' : ''}">${item.status === 'closed' ? 'Đã đóng' : (item.status === 'active' ? (countdown.isExpired ? 'Đã hết hạn' : 'Đang mở') : 'Chưa mở')}</span>
           <!-- Đếm thời gian còn lại ở dưới mỗi bài tập trong 11 bài -->
@@ -509,7 +509,7 @@ class DuolingoManager {
         if (locked) return;
         if (window.state && !window.state.currentUser) {
           if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem bài tập!', 'info');
-          if (typeof window.openLoginModal === 'function') window.openLoginModal();
+          if (typeof window.openLoginModal === 'function') window.openLoginModal('assignments');
           return;
         }
         this.openAssignmentModal(item, stepEl);
@@ -535,7 +535,7 @@ class DuolingoManager {
   openAssignmentModal(item, triggerEl = null) {
     if (window.state && !window.state.currentUser) {
       if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem bài tập!', 'info');
-      if (typeof window.openLoginModal === 'function') window.openLoginModal();
+      if (typeof window.openLoginModal === 'function') window.openLoginModal('assignments');
       this.selectedAssignment = null;
       this.closeAssignmentModal();
       return;
@@ -612,7 +612,7 @@ class DuolingoManager {
         displayInput.value = safeLink;
         displayInput.style.color = 'var(--primary-blue)';
       } else {
-        displayInput.value = isExpired ? 'Cổng nộp bài đã đóng' : 'Chưa có link bài tập (Admin chưa gán link)';
+        displayInput.value = isExpired ? 'Cổng nộp bài đã đóng' : 'Chưa có link bài tập';
         displayInput.style.color = 'var(--text-muted)';
       }
     }
@@ -687,23 +687,59 @@ class DuolingoManager {
         adminBox.style.display = 'block';
         if (linkInput) linkInput.value = hasRealLink ? safeLink : '';
 
-        // Điền ngày giờ hạn nộp vào input datetime-local nếu có
-        if (deadlineInput) {
-          if (currentItem.deadline) {
-            try {
-              const d = new Date(new Date(currentItem.deadline).getTime() + 7 * 3600000);
-              const y = d.getUTCFullYear();
-              const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-              const day = String(d.getUTCDate()).padStart(2, '0');
-              const h = String(d.getUTCHours()).padStart(2, '0');
-              const min = String(d.getUTCMinutes()).padStart(2, '0');
-              deadlineInput.value = `${y}-${m}-${day}T${h}:${min}`;
-            } catch (err) {
-              deadlineInput.value = '';
+        // Điền ngày giờ hạn nộp vào input ngày và giờ nếu có
+        const deadlineDateEl = document.getElementById('duoDeadlineDate');
+        const deadlineTimeEl = document.getElementById('duoDeadlineTime');
+        if (currentItem.deadline) {
+          try {
+            const d = new Date(new Date(currentItem.deadline).getTime() + 7 * 3600000);
+            const y = d.getUTCFullYear();
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            const h = String(d.getUTCHours()).padStart(2, '0');
+            const min = String(d.getUTCMinutes()).padStart(2, '0');
+            if (deadlineInput) deadlineInput.value = `${y}-${m}-${day}T${h}:${min}`;
+            if (deadlineDateEl) {
+              deadlineDateEl.value = `${y}-${m}-${day}`;
+              deadlineDateEl.dispatchEvent(new Event('input', { bubbles: true }));
+              deadlineDateEl.dispatchEvent(new Event('change', { bubbles: true }));
             }
-          } else {
-            deadlineInput.value = '';
+            if (deadlineTimeEl) {
+              deadlineTimeEl.value = `${h}:${min}`;
+              deadlineTimeEl.dispatchEvent(new Event('input', { bubbles: true }));
+              deadlineTimeEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          } catch (err) {
+            if (deadlineInput) deadlineInput.value = '';
+            if (deadlineDateEl) {
+              deadlineDateEl.value = '';
+              deadlineDateEl.dispatchEvent(new Event('input', { bubbles: true }));
+              deadlineDateEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (deadlineTimeEl) {
+              deadlineTimeEl.value = '23:59';
+              deadlineTimeEl.dispatchEvent(new Event('input', { bubbles: true }));
+              deadlineTimeEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
           }
+        } else {
+          if (deadlineInput) deadlineInput.value = '';
+          if (deadlineDateEl) {
+            deadlineDateEl.value = '';
+            deadlineDateEl.dispatchEvent(new Event('input', { bubbles: true }));
+            deadlineDateEl.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          if (deadlineTimeEl) {
+            deadlineTimeEl.value = '23:59';
+            deadlineTimeEl.dispatchEvent(new Event('input', { bubbles: true }));
+            deadlineTimeEl.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+        if (typeof window.initCustomDatePickers === 'function') {
+          window.initCustomDatePickers(adminBox);
+        }
+        if (typeof window.initCustomTimePickers === 'function') {
+          window.initCustomTimePickers(adminBox);
         }
       } else {
         adminBox.style.display = 'none';
@@ -825,7 +861,7 @@ class DuolingoManager {
               this.openAssignmentModal(this.selectedAssignment);
 
               if (window.showToast) {
-                window.showToast(`Đã lưu link bài tập #${itemId} vào MongoDB Atlas!`, 'success');
+                window.showToast(`Đã lưu link bài tập #${itemId}!`, 'success');
               }
               if (window.renderAdminAssignmentsTable) {
                 window.renderAdminAssignmentsTable();
@@ -844,10 +880,30 @@ class DuolingoManager {
     }
 
     // Xử lý khi Admin set/lưu Thời hạn nộp bài (Deadline)
+    const deadlineDateEl = document.getElementById('duoDeadlineDate');
+    const deadlineTimeEl = document.getElementById('duoDeadlineTime');
+    const syncDeadlineToHidden = () => {
+      const dInput = document.getElementById('duoDeadlineInput');
+      const dDate = document.getElementById('duoDeadlineDate');
+      const dTime = document.getElementById('duoDeadlineTime');
+      if (!dInput) return;
+      if (dDate && dDate.value) {
+        const timeVal = (dTime && dTime.value) ? dTime.value : '23:59';
+        dInput.value = `${dDate.value}T${timeVal}`;
+      } else {
+        dInput.value = '';
+      }
+    };
+    deadlineDateEl?.addEventListener('input', syncDeadlineToHidden);
+    deadlineDateEl?.addEventListener('change', syncDeadlineToHidden);
+    deadlineTimeEl?.addEventListener('input', syncDeadlineToHidden);
+    deadlineTimeEl?.addEventListener('change', syncDeadlineToHidden);
+
     if (saveDeadlineBtn && deadlineInput && !saveDeadlineBtn.dataset.bound) {
       saveDeadlineBtn.dataset.bound = 'true';
       saveDeadlineBtn.addEventListener('click', async () => {
         if (!this.selectedAssignment) return;
+        syncDeadlineToHidden();
         const val = deadlineInput.value;
         if (!val) {
           if (window.showToast) window.showToast('Vui lòng chọn ngày và giờ hạn nộp bài!', 'warning');
@@ -908,6 +964,17 @@ class DuolingoManager {
               this.selectedAssignment.deadline = null;
               const target = this.assignments.find(a => (a.assignmentId || a.id) === itemId);
               if (target) target.deadline = null;
+              if (deadlineDateEl) {
+                deadlineDateEl.value = '';
+                deadlineDateEl.dispatchEvent(new Event('input', { bubbles: true }));
+                deadlineDateEl.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              if (deadlineTimeEl) {
+                deadlineTimeEl.value = '23:59';
+                deadlineTimeEl.dispatchEvent(new Event('input', { bubbles: true }));
+                deadlineTimeEl.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              if (deadlineInput) deadlineInput.value = '';
               this.saveAssignments();
               this.renderPath();
               this.openAssignmentModal(this.selectedAssignment);
@@ -939,12 +1006,23 @@ class DuolingoManager {
           const h = String(targetDate.getUTCHours()).padStart(2, '0');
           const min = String(targetDate.getUTCMinutes()).padStart(2, '0');
           const deadlineInputEl = document.getElementById('duoDeadlineInput');
+          const deadlineDateEl = document.getElementById('duoDeadlineDate');
+          const deadlineTimeEl = document.getElementById('duoDeadlineTime');
           if (deadlineInputEl) {
             deadlineInputEl.value = `${y}-${m}-${day}T${h}:${min}`;
-            deadlineInputEl.focus();
-            if (window.showToast) {
-              window.showToast(`Đã chọn hạn chót: +${hours} giờ. Bấm " Lưu Hạn" để áp dụng!`, 'info');
-            }
+          }
+          if (deadlineDateEl) {
+            deadlineDateEl.value = `${y}-${m}-${day}`;
+            deadlineDateEl.dispatchEvent(new Event('input', { bubbles: true }));
+            deadlineDateEl.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          if (deadlineTimeEl) {
+            deadlineTimeEl.value = `${h}:${min}`;
+            deadlineTimeEl.dispatchEvent(new Event('input', { bubbles: true }));
+            deadlineTimeEl.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          if (window.showToast) {
+            window.showToast(`Đã chọn hạn chót: +${hours} giờ. Bấm "Lưu Hạn" để áp dụng!`, 'info');
           }
         });
       }
@@ -963,7 +1041,7 @@ class DuolingoManager {
   openGuidebookModal() {
     if (window.state && !window.state.currentUser) {
       if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem sổ tay bài tập!', 'info');
-      if (typeof window.openLoginModal === 'function') window.openLoginModal();
+      if (typeof window.openLoginModal === 'function') window.openLoginModal('assignments');
       return;
     }
     alert(
@@ -1029,7 +1107,7 @@ class DuolingoManager {
       button.addEventListener('click', () => {
         if (window.state && !window.state.currentUser) {
           if (window.showToast) window.showToast('Vui lòng đăng nhập tài khoản để xem bài tập!', 'info');
-          if (typeof window.openLoginModal === 'function') window.openLoginModal();
+          if (typeof window.openLoginModal === 'function') window.openLoginModal('assignments');
           return;
         }
         const item = this.assignments.find(value => String(value.assignmentId || value.id) === button.dataset.assignmentId);

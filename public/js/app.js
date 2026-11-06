@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Khởi tạo theme & sự kiện điều hướng trước
   initTheme();
+  await bootstrapSession();
   if (window.initSidebarCollapse) window.initSidebarCollapse();
   setupEventListeners();
 
@@ -37,8 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.initScheduleModule) window.initScheduleModule();
 
   // Đối với các tab công khai, chuyển ngay lập tức để không bị giật trang 1s.
-  // Riêng các tab yêu cầu quyền ('admin', 'profile', 'assignments'), cần xác thực phiên đăng nhập trước để tránh reload / redirect loop.
-  if (activeInitialTab !== 'admin' && activeInitialTab !== 'profile' && activeInitialTab !== 'assignments') {
+  // Riêng các tab yêu cầu quyền ('admin', 'profile', 'assignments', 'leave'), cần xác thực phiên đăng nhập trước để tránh reload / redirect loop.
+  if (activeInitialTab !== 'admin' && activeInitialTab !== 'profile' && activeInitialTab !== 'assignments' && activeInitialTab !== 'leave') {
     switchTab(activeInitialTab);
   }
 
@@ -60,6 +61,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else if (activeInitialTab === 'assignments') {
     if (state.currentUser) {
       switchTab('assignments');
+    } else {
+      switchTab('schedule');
+    }
+  } else if (activeInitialTab === 'leave') {
+    if (state.currentUser && ['trainee', 'admin'].includes(state.currentUser.role)) {
+      switchTab('leave');
     } else {
       switchTab('schedule');
     }

@@ -1,0 +1,78 @@
+  <!-- ================= Modal: Chỉnh Sửa Chi Tiết Bài Tập (Admin) ================= -->
+  <div class="modal-overlay" id="adminEditAssignmentModal">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+
+          <div>
+            <h3 class="modal-title" id="editAssignmentModalTitle">Chỉnh sửa chi tiết bài tập</h3>
+            <span class="modal-subtitle" id="editAssignmentSubTitle">Cập nhật tiêu đề, mô tả và đường link bài tập</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeAdminEditAssignmentModalBtn">Đóng</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px;">
+        <form id="adminEditAssignmentForm">
+          <input type="hidden" id="editAssignmentIdHidden">
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentTitle">Tên bài tập <span class="required">*</span></label>
+            <input type="text" id="editAssignmentTitle" class="form-input" maxlength="240" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentDesc">Mô tả tóm tắt nội dung bài tập</label>
+            <textarea id="editAssignmentDesc" class="form-input" rows="3" maxlength="3000" style="resize: vertical;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editAssignmentDetails">Chi tiết bài tập</label>
+            <textarea id="editAssignmentDetails" class="form-input" rows="7" maxlength="12000" placeholder="Yêu cầu, nội dung cần nộp và tiêu chí hoàn thành"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentLink">Link nộp bài Microsoft Forms</label>
+            <input type="url" id="editAssignmentLink" class="form-input" maxlength="2048" placeholder="https://...">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentDeadlineDate">Thời hạn nộp bài (giờ Việt Nam, UTC+7)</label>
+            <div class="assignment-deadline-editor">
+              <div class="assignment-deadline-fields">
+                <div class="assignment-deadline-field">
+                  <span class="assignment-deadline-caption">Ngày</span>
+                  <input type="date" id="editAssignmentDeadlineDate" class="form-input" aria-label="Ngày hết hạn">
+                </div>
+                <div class="assignment-deadline-field assignment-deadline-time-field">
+                  <span class="assignment-deadline-caption">Giờ</span>
+                  <input type="time" id="editAssignmentDeadlineTime" class="form-input" value="23:59" aria-label="Giờ hết hạn">
+                </div>
+                <input type="hidden" id="editAssignmentDeadline">
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnClearEditDeadline" title="Xóa hạn chót (Không giới hạn)">Xóa hạn</button>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">
+              Hệ thống sẽ hiển thị đồng hồ đếm ngược thời gian còn lại ở dưới bài tập cho Trainee.
+            </span>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="editAssignmentStatus">Trạng thái</label>
+            <select id="editAssignmentStatus" class="form-input">
+              <option value="closed">Đã đóng</option>
+              <option value="active">Đang mở</option>
+              <option value="locked">Khóa</option>
+            </select>
+          </div>
+
+          <p id="assignmentEditorFeedback" role="status" aria-live="polite"></p>
+          <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button type="button" class="btn btn-secondary" id="cancelAdminEditAssignmentBtn">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitAdminEditAssignment">
+              <span> Lưu thay đổi</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>

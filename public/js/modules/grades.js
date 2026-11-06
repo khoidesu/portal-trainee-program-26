@@ -40,7 +40,7 @@ function extractUniqueSessions(trainees) {
           sessionCode: s.sessionCode || 'TP-M10.0X',
           sessionTitle: s.sessionTitle || 'Buổi học',
           sessionDate: s.sessionDate || '',
-          trainerName: s.trainerName || 'Võ Thị Xuân Quỳnh',
+          trainerName: s.trainerName || '',
           stage: s.stage || 'Giai đoạn 1',
           stageName: s.stageName || 'Training'
         });
@@ -59,23 +59,30 @@ function extractUniqueSessions(trainees) {
   return list;
 }
 
-// Buổi đã/đang diễn ra có mặt trong bảng điểm của admin ngay cả khi chưa ai được chấm
+// Buổi đã/đang diễn ra có mặt trong bảng điểm và đồng bộ thông tin từ Thời khóa biểu
 function mergeScheduleSessions(sessions, schedules) {
-  const known = new Set(sessions.map(s => s.sessionCode));
-  const merged = sessions.slice();
+  const map = new Map();
+  sessions.forEach(s => map.set(s.sessionCode, { ...s }));
   (schedules || []).forEach(sc => {
-    if (!sc.code || !sc.date || known.has(sc.code)) return;
+    if (!sc.code || !sc.date) return;
     if (sc.status !== 'completed' && sc.status !== 'live') return;
-    known.add(sc.code);
-    merged.push({
-      sessionCode: sc.code,
-      sessionTitle: sc.title || 'Buổi học',
-      sessionDate: sc.date,
-      trainerName: sc.instructor || '',
-      stage: 'Giai đoạn 1',
-      stageName: 'Vòng 1'
-    });
+    if (map.has(sc.code)) {
+      const existing = map.get(sc.code);
+      if (sc.title) existing.sessionTitle = sc.title;
+      if (sc.date) existing.sessionDate = sc.date;
+      if (sc.instructor) existing.trainerName = sc.instructor;
+    } else {
+      map.set(sc.code, {
+        sessionCode: sc.code,
+        sessionTitle: sc.title || 'Buổi học',
+        sessionDate: sc.date,
+        trainerName: sc.instructor || '',
+        stage: 'Giai đoạn 1',
+        stageName: 'Vòng 1'
+      });
+    }
   });
+  const merged = Array.from(map.values());
   merged.sort((a, b) => {
     if (a.sessionDate && b.sessionDate && a.sessionDate !== b.sessionDate) {
       return new Date(a.sessionDate) - new Date(b.sessionDate);
@@ -117,13 +124,11 @@ async function renderGradesView(reload = true) {
   const trainees = (state.trainees || []).slice().sort((a, b) => (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0));
   gradesState.traineesList = trainees;
   gradesState.uniqueSessions = extractUniqueSessions(trainees);
-  if (canManage('attendance:manage')) {
-    try {
-      const schedules = await API.getSchedules({ all: true });
-      gradesState.uniqueSessions = mergeScheduleSessions(gradesState.uniqueSessions, schedules);
-    } catch (err) {
-      console.warn('Không tải được lịch học để bổ sung buổi chưa chấm điểm:', err);
-    }
+  try {
+    const schedules = await API.getSchedules({ all: true });
+    gradesState.uniqueSessions = mergeScheduleSessions(gradesState.uniqueSessions, schedules);
+  } catch (err) {
+    console.warn('Không tải được lịch học để đồng bộ buổi học:', err);
   }
 
   // Cập nhật các thẻ KPI tóm tắt ở đầu trang
@@ -142,6 +147,7 @@ async function renderGradesView(reload = true) {
   renderGradesMatrixTable();
   renderSessionReferenceSection();
   if (canManage('attendance:manage')) setupAttendanceControls();
+  if (typeof window.initCustomSelects === 'function') setTimeout(window.initCustomSelects, 60);
 }
 
 function updateGradesKpis(trainees, sessions) {
@@ -159,14 +165,7 @@ function updateGradesKpis(trainees, sessions) {
   trainees.forEach(t => {
     totalStars += Number(t.accumulatedStars) || 0;
   });
-  if (elTotalStars) elTotalStars.textContent = trainees.some(trainee => Number.isFinite(trainee.accumulatedStars)) ? `${totalStars} ` : '—';
-
-  // Trainee dẫn đầu (Top 1)
-  if (elTopStudent) elTopStudent.textContent = 'Chưa xếp hạng';
-  if (trainees.length > 0 && elTopStudent && Number.isFinite(trainees[0].accumulatedStars)) {
-    const top = trainees[0];
-    elTopStudent.textContent = `${top.fullName} (${top.accumulatedStars || 0} )`;
-  }
+  if (elTotalStars) elTotalStars.textContent = trainees.some(trainee => Number.isFinite(trainee.accumulatedStars)) ? `${totalStars}` : '—';
 
   // Buổi học gần nhất
   if (sessions.length > 0 && elLatestDate) {
@@ -229,9 +228,7 @@ function setupGradesFilters() {
 
   if (btnPrint && !btnPrint.dataset.bound) {
     btnPrint.dataset.bound = 'true';
-    btnPrint.onclick = () => {
-      window.print();
-    };
+    btnPrint.onclick = printGradesTable;
   }
 
   // Modal đóng chi tiết sao
@@ -241,12 +238,21 @@ function setupGradesFilters() {
   const closeModal = () => {
     if (modal) modal.classList.remove('open', 'show');
   };
+  window.closeSessionStarDetailModal = closeModal;
+
   if (btnCloseModal) btnCloseModal.onclick = closeModal;
   if (btnCloseModal2) btnCloseModal2.onclick = closeModal;
   if (modal) {
     modal.onclick = (e) => {
       if (e.target === modal) closeModal();
     };
+    modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+      }
+    });
   }
 }
 
@@ -383,9 +389,9 @@ function renderSessionBoxesView() {
           const note = hasLog ? (item.sessionLog.note || '') : '';
           return `<tr data-trainee-id="${escapeHtml(t.traineeId)}" data-session-code="${escapeHtml(s.sessionCode)}" class="${hasLog ? '' : 'inline-grade-new'}">
             <td><div class="admin-user-cell"><div class="admin-user-avatar" style="padding:0;overflow:hidden;background:transparent;width:34px;height:34px;"><img src="${avatarUrl}" alt="${escapeHtml(t.fullName)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div><div class="admin-user-info"><span class="admin-user-name" style="font-weight:700;">${escapeHtml(t.fullName)}</span><span class="admin-user-meta">MSSV: <strong>${escapeHtml(t.traineeId)}</strong> · ${escapeHtml(t.track || 'Khoa KHMT')}</span></div></div></td>
-            <td style="text-align:center;"><input type="number" class="inline-grade-star" min="-20" max="100" value="${stars}" placeholder="—"></td>
-            <td><select class="inline-grade-status"><option value="present"${status === 'present' ? ' selected' : ''}>Có mặt</option><option value="absent_excused"${status === 'absent_excused' ? ' selected' : ''}>Vắng CP</option><option value="absent_unexcused"${status === 'absent_unexcused' ? ' selected' : ''}>Vắng KP</option><option value="not_recorded"${status === 'not_recorded' ? ' selected' : ''}>Chưa ghi</option></select></td>
-            <td><input type="text" class="inline-grade-note" value="${escapeHtml(note)}" placeholder="Nhận xét ngắn…" maxlength="1000"></td>
+            <td style="text-align:center;"><input type="number" class="inline-grade-star" min="-20" max="100" value="${stars}" data-initial="${stars}" placeholder="—"></td>
+            <td><select class="inline-grade-status" data-initial="${status}"><option value="present"${status === 'present' ? ' selected' : ''}>Có mặt</option><option value="absent_excused"${status === 'absent_excused' ? ' selected' : ''}>Vắng CP</option><option value="absent_unexcused"${status === 'absent_unexcused' ? ' selected' : ''}>Vắng KP</option><option value="not_recorded"${status === 'not_recorded' ? ' selected' : ''}>Chưa ghi</option></select></td>
+            <td><input type="text" class="inline-grade-note" value="${escapeHtml(note)}" data-initial="${escapeHtml(note)}" placeholder="Nhận xét ngắn…" maxlength="1000"></td>
             <td style="text-align:center;font-weight:700;color:var(--text-main);font-size:0.9rem;">${item.cumulativeStars}</td>
             <td style="text-align:center;"><button type="button" class="btn btn-outline btn-xs btn-open-session-detail" data-trainee-id="${escapeHtml(t.traineeId)}" data-session-code="${escapeHtml(s.sessionCode)}" title="Xem chi tiết"><span>Chi tiết</span></button></td></tr>`;
         }
@@ -422,11 +428,11 @@ function renderSessionBoxesView() {
         </div>` : '';
 
     const theadHtml = isAdmin
-      ? `<th scope="col">Trainee</th><th scope="col" style="width:90px">Sao</th><th scope="col" style="width:120px">Điểm danh</th><th scope="col">Ghi chú</th><th scope="col" style="width:80px">Lũy kế</th><th scope="col" style="width:80px">Chi tiết</th>`
-      : `<th scope="col">Hạng</th><th scope="col">Trainee</th><th scope="col">Ban / Lớp</th><th scope="col">Điểm sao / Điểm danh</th><th scope="col">Lũy kế sau buổi</th><th scope="col">Ghi chú</th><th scope="col">Thao tác</th>`;
+      ? `<th scope="col">Trainee</th><th scope="col" style="width:85px; text-align:center;">Sao</th><th scope="col" style="width:130px; text-align:center;">Điểm danh</th><th scope="col">Ghi chú</th><th scope="col" style="width:90px; text-align:center;">Lũy kế</th><th scope="col" style="width:110px; text-align:center; white-space:nowrap;">Chi tiết</th>`
+      : `<th scope="col">Hạng</th><th scope="col">Trainee</th><th scope="col">Ban / Lớp</th><th scope="col">Điểm sao / Điểm danh</th><th scope="col">Lũy kế sau buổi</th><th scope="col">Ghi chú</th><th scope="col" style="width:110px; text-align:center; white-space:nowrap;">Thao tác</th>`;
 
     const colgroupHtml = isAdmin
-      ? `<colgroup><col style="min-width:220px"><col style="width:90px"><col style="width:120px"><col style="min-width:160px"><col style="width:80px"><col style="width:80px"></colgroup>`
+      ? `<colgroup><col style="min-width:200px"><col style="width:85px"><col style="width:130px"><col style="min-width:140px"><col style="width:90px"><col style="width:110px"></colgroup>`
       : `<colgroup><col class="session-col-rank"><col class="session-col-trainee"><col class="session-col-group"><col class="session-col-points"><col class="session-col-total"><col class="session-col-note"><col class="session-col-actions"></colgroup>`;
 
     const isGuest = Boolean(window.state ? !window.state.currentUser : false);
@@ -455,7 +461,7 @@ function renderSessionBoxesView() {
               <div class="session-box-trainer">
                 <span>Phụ trách: ${isGuest
                   ? '<strong style="color: var(--text-muted); font-style: italic;">Đăng nhập để xem</strong>'
-                  : `<strong>${escapeHtml(s.trainerName || 'Ban Hậu cần')}</strong>`
+                  : `<strong>${escapeHtml(s.trainerName || 'Chưa cập nhật')}</strong>`
                 }</span>
               </div>
             </div>
@@ -477,7 +483,8 @@ function renderSessionBoxesView() {
         </div>
 ${adminToolbarHtml}
         <div class="session-box-body">
-          <div class="table-responsive">
+          <p class="table-scroll-hint">Vuốt hoặc dùng phím mũi tên để xem các cột bên phải.</p>
+          <div class="table-responsive" role="region" aria-label="Bảng điểm ${escapeHtml(isGuest ? `buổi ${displayNum}` : (s.sessionTitle || s.sessionCode))}" tabindex="0">
             <table class="session-box-table">${colgroupHtml}
               <thead>
                 <tr>${theadHtml}</tr>
@@ -513,7 +520,10 @@ ${adminToolbarHtml}
       btn.onclick = () => {
         const session = btn.getAttribute('data-session');
         const box = document.getElementById('session-box-' + session);
-        if (box) box.querySelectorAll('.inline-grade-status').forEach(sel => { sel.value = 'present'; });
+        if (box) box.querySelectorAll('.inline-grade-status').forEach(sel => {
+          sel.value = 'present';
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        });
       };
     });
     container.querySelectorAll('.btn-inline-save').forEach(btn => {
@@ -582,17 +592,9 @@ async function saveInlineSessionGrades(btn) {
   renderGradesView(false);
 }
 
-function renderGradesMatrixTable() {
-  const thead = document.getElementById('gradesMatrixThead');
-  const tbody = document.getElementById('gradesMatrixTbody');
-  const tfoot = document.getElementById('gradesMatrixTfoot');
-  const countBadge = document.getElementById('gradesCountBadge');
-  if (!thead || !tbody) return;
-
-  const sessions = gradesState.uniqueSessions || [];
+function getFilteredGradesTrainees() {
   let trainees = gradesState.traineesList || [];
 
-  // Lọc theo searchFilter
   if (gradesState.searchFilter) {
     const q = gradesState.searchFilter;
     trainees = trainees.filter(t =>
@@ -602,14 +604,69 @@ function renderGradesMatrixTable() {
     );
   }
 
-  // Lọc theo trackFilter
   if (gradesState.trackFilter && gradesState.trackFilter !== 'all') {
-    const trk = gradesState.trackFilter;
+    const trk = gradesState.trackFilter.toLowerCase();
     trainees = trainees.filter(t =>
-      (t.track && t.track.toLowerCase().includes(trk.toLowerCase())) ||
-      (t.department && t.department.toLowerCase().includes(trk.toLowerCase()))
+      (t.track && t.track.toLowerCase().includes(trk)) ||
+      (t.department && t.department.toLowerCase().includes(trk))
     );
   }
+  return trainees;
+}
+
+function printGradesTable() {
+  const sessions = gradesState.uniqueSessions || [];
+  const trainees = getFilteredGradesTrainees();
+  if (!trainees.length) {
+    if (window.showToast) window.showToast('Không có Trainee nào để in theo bộ lọc hiện tại.', 'info');
+    return;
+  }
+  const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
+  const starOf = (trainee, session) => {
+    const log = (trainee.sessionStars || []).find(item => item.sessionCode && item.sessionCode === session.sessionCode);
+    return log && Number.isFinite(log.starsAwarded) ? log.starsAwarded : null;
+  };
+  const columns = [
+    { label: 'Hạng', align: 'center' }, { label: 'Trainee' },
+    ...(showMssv ? [{ label: 'MSSV' }] : []),
+    { label: 'Khoa / Lớp' },
+    ...sessions.map((session, idx) => ({ label: `B${idx + 1}${session.sessionDate ? ' · ' + formatDateShort(session.sessionDate) : ''}`, align: 'center' })),
+    { label: 'Tổng sao', align: 'center' }, { label: 'Xếp loại', align: 'center' }
+  ];
+  const rows = trainees.map((trainee, index) => [
+    index + 1, trainee.fullName || '',
+    ...(showMssv ? [trainee.traineeId || ''] : []),
+    [trainee.batch || 'KHMT2026.2', trainee.track || 'Khoa KHMT'].join(' · '),
+    ...sessions.map(session => { const stars = starOf(trainee, session); return stars === null ? '—' : formatStarDelta(stars); }),
+    trainee.accumulatedStars || 0, trainee.starClassification || 'Hạng Vàng'
+  ]);
+  const leading = columns.length - sessions.length - 2;
+  const footerRows = sessions.length ? [[
+    'Tổng', ...Array(leading - 1).fill(''),
+    ...sessions.map(session => formatStarDelta(trainees.reduce((sum, trainee) => sum + (starOf(trainee, session) || 0), 0))),
+    trainees.reduce((sum, trainee) => sum + (Number(trainee.accumulatedStars) || 0), 0), ''
+  ]] : [];
+  const filters = [];
+  if (gradesState.searchFilter) filters.push(`Từ khóa: ${gradesState.searchFilter}`);
+  if (gradesState.trackFilter && gradesState.trackFilter !== 'all') filters.push(`Lớp/Khoa: ${gradesState.trackFilter}`);
+  window.printTable({
+    title: 'Bảng điểm sao theo từng buổi học',
+    subtitle: 'Điểm sao cộng thêm sau mỗi buổi học của Trainee',
+    meta: [`${trainees.length} Trainee`, `${sessions.length} buổi học`, ...filters],
+    landscape: true,
+    columns, rows, footerRows
+  });
+}
+
+function renderGradesMatrixTable() {
+  const thead = document.getElementById('gradesMatrixThead');
+  const tbody = document.getElementById('gradesMatrixTbody');
+  const tfoot = document.getElementById('gradesMatrixTfoot');
+  const countBadge = document.getElementById('gradesCountBadge');
+  if (!thead || !tbody) return;
+
+  const sessions = gradesState.uniqueSessions || [];
+  const trainees = getFilteredGradesTrainees();
 
   if (countBadge) {
     countBadge.textContent = `${trainees.length} Trainee · ${sessions.length} buổi học`;
@@ -674,6 +731,7 @@ function renderGradesMatrixTable() {
             <button type="button" class="session-star-pill ${isHigh ? 'high-star' : ''}"
               data-trainee-id="${escapeHtml(t.traineeId)}"
               data-session-code="${escapeHtml(s.sessionCode)}"
+              aria-label="Xem chi tiết ${formatStarDelta(stars)} sao của ${escapeHtml(t.fullName)} ở buổi ${sIdx + 1}"
               title="${isGuest ? `Buổi ${sIdx + 1}` : `Buổi ${sIdx + 1}: ${escapeHtml(studentSession.sessionTitle || s.sessionTitle)}`}&#10;Điểm sao: ${formatStarDelta(stars)}  · Lũy kế: ${studentSession.cumulativeStars ?? t.accumulatedStars} &#10;Lý do: ${escapeHtml(studentSession.note || 'Hoàn thành buổi học')}">
               ${formatStarDelta(stars)}
             </button>
@@ -822,7 +880,7 @@ function openSessionStarDetailModal(traineeId, sessionCode) {
       }
     }
     if (elSessionDate) elSessionDate.textContent = displayLog.sessionDate ? formatDateVN(displayLog.sessionDate) : '—';
-    if (elTrainer) elTrainer.textContent = isGuest ? 'Đăng nhập để xem' : (displayLog.trainerName || 'Võ Thị Xuân Quỳnh');
+    if (elTrainer) elTrainer.textContent = isGuest ? 'Đăng nhập để xem' : (displayLog.trainerName || 'Chưa cập nhật');
     if (elNote) elNote.textContent = displayLog.note || 'Điểm danh đúng giờ, tham gia tích cực và hoàn thành xuất sắc yêu cầu buổi học.';
   }
 
@@ -853,7 +911,7 @@ function renderSessionReferenceSection() {
 
   container.innerHTML = sessions.map((s, idx) => {
     return `
-      <div class="session-reference-item">
+      <div class="session-reference-item clickable-session-ref" role="button" tabindex="0" title="Nhấp để xem buổi học này trong Thời khóa biểu" data-date="${escapeHtml(s.sessionDate || '')}" data-code="${escapeHtml(s.sessionCode || '')}">
         <div class="session-ref-header">
           <span class="session-ref-code">${escapeHtml(s.sessionCode || `Buổi ${idx + 1}`)}</span>
           <span class="session-ref-date"> ${s.sessionDate ? formatDateVN(s.sessionDate) : 'Chưa xếp ngày'}</span>
@@ -861,11 +919,37 @@ function renderSessionReferenceSection() {
         <h5 class="session-ref-title">${escapeHtml(s.sessionTitle)}</h5>
         <div class="session-ref-stage">
           <span>${escapeHtml(s.stage || 'Giai đoạn 1')}</span> ·
-          <span>Trainer: <strong>${escapeHtml(s.trainerName || 'Võ Thị Xuân Quỳnh')}</strong></span>
+          <span>Trainer: ${!state.currentUser ? '<strong style="font-style: italic;">Đăng nhập để xem</strong>' : `<strong>${escapeHtml(s.trainerName || 'Chưa cập nhật')}</strong>`}</span>
         </div>
       </div>
     `;
   }).join('');
+
+  container.querySelectorAll('.clickable-session-ref').forEach(card => {
+    const navigateToSchedule = () => {
+      const dateStr = card.dataset.date;
+      if (dateStr && /^\d{4}-\d{2}/.test(dateStr)) {
+        const [y, m] = dateStr.split('-').map(Number);
+        if (window.ScheduleManager) {
+          window.ScheduleManager.selectedYear = y;
+          window.ScheduleManager.selectedMonth = m;
+          const monthInput = document.getElementById('filterScheduleMonth');
+          if (monthInput) monthInput.value = `${y}-${String(m).padStart(2, '0')}`;
+        }
+      }
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('schedule');
+      }
+    };
+
+    card.addEventListener('click', navigateToSchedule);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        navigateToSchedule();
+      }
+    });
+  });
 }
 
 
@@ -943,8 +1027,23 @@ function openStarDetailModal(traineeId, sessionCode) {
   openSessionStarDetailModal(traineeId, sessionCode);
 }
 
+function hasUnsavedGradeChanges() {
+  const container = document.getElementById('gradesSessionsList');
+  if (!container) return false;
+  const gradeInputs = container.querySelectorAll('.inline-grade-star, .inline-grade-status, .inline-grade-note');
+  for (const el of gradeInputs) {
+    const initial = el.getAttribute('data-initial') ?? '';
+    const current = el.value ?? '';
+    if (String(current).trim() !== String(initial).trim()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Expose to global window
 window.gradesState = gradesState;
 window.initGradesModule = initGradesModule;
 window.renderGradesView = renderGradesView;
 window.openStarDetailModal = openStarDetailModal;
+window.hasUnsavedGradeChanges = hasUnsavedGradeChanges;

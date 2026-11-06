@@ -10,8 +10,8 @@
 
 const NOTIFICATION_POLL_MS = 5 * 60 * 1000;
 const NOTIFICATION_STALE_MS = 60 * 1000;
-const NOTIFICATION_TABS = ['schedule', 'assignments', 'questions'];
-const NOTIFICATION_TYPE_LABELS = { schedule: 'Lịch học', assignment: 'Bài tập', question: 'Q&A' };
+const NOTIFICATION_TABS = ['schedule', 'assignments', 'questions', 'leave'];
+const NOTIFICATION_TYPE_LABELS = { schedule: 'Lịch học', assignment: 'Bài tập', question: 'Q&A', leave: 'Xin nghỉ' };
 
 const notificationState = {
   items: [],
@@ -20,7 +20,7 @@ const notificationState = {
   loadError: '',
   requestId: 0,
   loadedAt: 0,
-  traineeId: '',
+  recipientKey: '',
   timer: null,
   bound: false
 };
@@ -132,7 +132,11 @@ function toggleNotificationDropdown(show) {
   dropdown.classList.toggle('show', willShow);
   if (button) button.setAttribute('aria-expanded', String(willShow));
   if (willShow) {
-    toggleThemeDropdown(false);
+    if (typeof window.closeAllDropdowns === 'function') {
+      window.closeAllDropdowns(document.getElementById('notificationWrapper'));
+    } else {
+      toggleThemeDropdown(false);
+    }
     renderNotifications();
     loadNotifications({ silent: true });
   }
@@ -177,7 +181,7 @@ function bindNotificationEvents() {
     if (event.key === 'Escape') toggleNotificationDropdown(false);
   });
   document.addEventListener('visibilitychange', () => {
-    if (notificationState.traineeId && document.visibilityState === 'visible' && Date.now() - notificationState.loadedAt > NOTIFICATION_STALE_MS) {
+    if (notificationState.recipientKey && document.visibilityState === 'visible' && Date.now() - notificationState.loadedAt > NOTIFICATION_STALE_MS) {
       loadNotifications({ silent: true });
     }
   });
@@ -188,11 +192,13 @@ function syncNotificationBell() {
   if (!wrapper) return;
   bindNotificationEvents();
   const user = state.currentUser;
-  const traineeId = user?.role === 'trainee' && user.traineeId ? user.traineeId : '';
-  wrapper.style.display = traineeId ? 'inline-flex' : 'none';
-  if (traineeId === notificationState.traineeId) return;
+  const recipientKey = user?.role === 'trainee' && user.traineeId
+    ? user.traineeId
+    : user?.role === 'admin' && user.id ? `account:${user.id}` : '';
+  wrapper.style.display = recipientKey ? 'inline-flex' : 'none';
+  if (recipientKey === notificationState.recipientKey) return;
 
-  notificationState.traineeId = traineeId;
+  notificationState.recipientKey = recipientKey;
   notificationState.requestId++;
   notificationState.items = [];
   notificationState.unread = 0;
@@ -202,7 +208,7 @@ function syncNotificationBell() {
   notificationState.timer = null;
   toggleNotificationDropdown(false);
   renderNotifications();
-  if (!traineeId) return;
+  if (!recipientKey) return;
   loadNotifications();
   notificationState.timer = setInterval(() => loadNotifications({ silent: true }), NOTIFICATION_POLL_MS);
 }

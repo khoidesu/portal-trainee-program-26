@@ -7,7 +7,7 @@
  *   - Breadcrumb và tiêu đề trang thay đổi động theo tab
  *   - Dropdown chuyển đổi chế độ giao diện: Sáng, Tối, Hệ thống
  *   - Badge trạng thái tài khoản: Guest, Trainee hoặc Quản trị viên (Admin)
- *   - Nút Đăng xuất và nút mở modal đổi mật khẩu / cấu hình MongoDB
+ *   - Nút Đăng xuất và nút mở modal đổi mật khẩu
  * ============================================================================== -->
 
       <!-- Top Navbar -->
@@ -81,7 +81,7 @@ SOFTWARE.
 
         <div class="top-nav-right">
           <!-- Hidden helper select to preserve JS compatibility -->
-          <select id="traineeSelect" style="display: none;"></select>
+          <select id="traineeSelect" aria-label="Chọn Trainee" style="display: none;"></select>
 
           <div class="notification-wrapper" id="notificationWrapper" style="display: none;">
             <button type="button" class="header-action-btn theme-toggle-btn notification-btn" id="notificationBtn"
@@ -138,14 +138,8 @@ SOFTWARE.
 
           <!-- Trạng thái khi người dùng đã đăng nhập (Admin hoặc Trainee) -->
           <div id="headerUserStatus" style="display: none; align-items: center; gap: 8px;">
-            <a href="#admin" id="headerAdminStatus" class="admin-only-element" data-permission="accounts:manage"
-              style="display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
-              <span> Ban Tổ chức</span>
-            </a>
-            <a href="#profile" id="headerTraineeBadge"
-              style="display: none; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(37,99,235,0.12); color: var(--primary-blue); border: 1px solid rgba(37,99,235,0.3); border-radius: 8px; font-weight: 700; font-size: 13px; text-decoration: none;">
-              <span id="headerTraineeBadgeName">Hồ sơ Trainee</span>
-            </a>
+            <template data-private-slot="header-admin-badge"></template>
+            <template data-private-slot="header-trainee-badge"></template>
             <button type="button" class="header-action-btn logout-header-btn" id="headerLogoutBtn"
               title="Đăng xuất khỏi tài khoản"
               style="padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer;">

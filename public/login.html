@@ -439,13 +439,13 @@
       <p class="login-subtitle">Cổng thông tin Trainee Program UIT</p>
 
       <!-- Feedback Alert -->
-      <div id="loginAlert" class="login-alert" style="display: none;">
+      <div id="loginAlert" class="login-alert" role="alert" aria-live="assertive" aria-atomic="true" style="display: none;">
 
         <span id="alertMessage"></span>
       </div>
 
       <!-- Login Form -->
-      <form id="loginForm" autocomplete="on">
+      <form id="loginForm" method="post" action="/api/auth/login" autocomplete="on">
         <!-- Field 1: Tài khoản -->
         <div class="form-group">
           <label for="username" class="form-label">Tài khoản</label>
@@ -495,8 +495,7 @@
 
         <!-- Nút Quay lại Cổng thông tin -->
         <div style="margin-top: 20px; text-align: center;">
-          <a href="/" style="display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #475569; font-size: 13.5px; font-weight: 500; text-decoration: none; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s;">
-
+          <a href="/" id="btnBackToPortal" style="display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: #475569; font-size: 13.5px; font-weight: 500; text-decoration: none; padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s;">
             <span>Quay lại Cổng thông tin</span>
           </a>
         </div>
@@ -617,6 +616,14 @@
       });
     }
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        if (forgotModal && forgotModal.classList.contains('show')) {
+          closeForgotModal();
+        }
+      }
+    });
+
     forgotForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const targetUser = forgotUsername.value.trim();
@@ -652,6 +659,38 @@
         btnSubmitForgot.textContent = 'Gửi tới Admin';
       }
     });
+
+    // Lấy thông tin trang chuyển hướng (fromTab / returnUrl)
+    const urlParams = new URLSearchParams(window.location.search);
+    let fromTab = urlParams.get('from') || urlParams.get('returnUrl') || '';
+    if (!fromTab) {
+      try {
+        fromTab = sessionStorage.getItem('uit_login_from_tab') || '';
+      } catch (e) {}
+    }
+    if (fromTab) {
+      fromTab = fromTab.replace(/^[#/]+/, '');
+    }
+
+    // Xử lý nút "Quay lại Cổng thông tin" (cho Guest)
+    const btnBackToPortal = document.getElementById('btnBackToPortal');
+    if (btnBackToPortal) {
+      btnBackToPortal.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Riêng 2 page bài tập (assignments) và xin nghỉ (leave) tại chế độ guest:
+        // khi vào login bấm Quay lại cổng thông tin thì về lại thời khóa biểu.
+        // Còn các page khác (leaderboard, grades, questions...) thì về lại đúng page đó.
+        let targetTab = 'schedule';
+        if (fromTab && fromTab !== 'assignments' && fromTab !== 'leave' && fromTab !== 'admin' && fromTab !== 'profile') {
+          targetTab = fromTab;
+        }
+        try {
+          sessionStorage.setItem('uit_portal_active_tab', targetTab);
+          sessionStorage.removeItem('uit_login_from_tab');
+        } catch (err) {}
+        window.location.href = '/#' + targetTab;
+      });
+    }
 
     // Xử lý gửi biểu mẫu đăng nhập
     loginForm.addEventListener('submit', async (e) => {
@@ -692,16 +731,30 @@
 
         if (response.ok && data.success && data.user) {
           showToast(`Xin chào ${data.user.fullName || data.user.username}! Đang đăng nhập...`, 'success');
-          const token = data.sessionToken || data.token;
-          try {
-            sessionStorage.setItem('uit_auth_user_cache', JSON.stringify(data.user));
-            localStorage.setItem('uit_auth_user_cache', JSON.stringify(data.user));
-            if (token) {
-              sessionStorage.setItem('uit_trainee_auth_token', token);
-              localStorage.setItem('uit_trainee_auth_token', token);
+          const isAdmin = data.user.isOwner || data.user.role === 'admin';
+          const isTrainee = data.user.role === 'trainee';
+
+          let targetUrl = '/#schedule';
+          if (fromTab) {
+            if (isAdmin) {
+              targetUrl = '/#' + fromTab;
+            } else if (isTrainee) {
+              if (fromTab === 'admin') {
+                targetUrl = '/#profile';
+              } else {
+                targetUrl = '/#' + fromTab;
+              }
             }
-          } catch {}
-          const targetUrl = (data.user.isOwner || data.user.role === 'admin') ? '/#admin' : data.user.role === 'trainee' ? '/#profile' : '/#schedule';
+          } else {
+            targetUrl = isAdmin ? '/#admin' : isTrainee ? '/#profile' : '/#schedule';
+          }
+
+          try {
+            const cleanTab = targetUrl.replace('/#', '');
+            sessionStorage.setItem('uit_portal_active_tab', cleanTab);
+            sessionStorage.removeItem('uit_login_from_tab');
+          } catch (e) {}
+
           setTimeout(() => {
             window.location.replace(targetUrl);
           }, 300);

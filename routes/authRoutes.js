@@ -28,9 +28,11 @@ const { authenticateUser, getAccounts, saveAccount, deleteAccount, changeAccount
 
 // Giới hạn 5 lần đăng nhập sai trong 1 phút chống tấn công brute-force
 const loginLimiter = createRateLimiter(5, 60000);
+// Giới hạn theo tên đăng nhập (chống dò mật khẩu phân tán từ nhiều IP): 10 lần / 15 phút
+const accountLoginLimiter = createRateLimiter(10, 900000, req => 'u:' + String(req.body?.username || '').trim().toLowerCase().slice(0, 100));
 
 // Đăng nhập hệ thống (Cấp JWT Token an toàn & Rate Limiting)
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', loginLimiter, accountLoginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (typeof username !== 'string' || typeof password !== 'string' || !username || !password || username.length > 100 || password.length > 256) {
@@ -54,19 +56,15 @@ router.post('/login', loginLimiter, async (req, res) => {
       username: authResult.user.username,
       role: authResult.user.role,
       fullName: authResult.user.fullName,
-      root: authResult.user.isOwner === true,
-      accountId: authResult.user.id || (authResult.user.isOwner ? 'owner' : undefined),
+      accountId: authResult.user.id,
       traineeId: authResult.user.traineeId,
       sessionVersion: authResult.user.sessionVersion
     };
 
+    // Phiên chỉ nằm trong cookie HttpOnly; không trả token về JS để tránh bị đánh cắp qua XSS.
     setSession(res, sessionPayload);
-    const sessionToken = signToken(sessionPayload);
 
-    res.json({
-      ...authResult,
-      sessionToken
-    });
+    res.json(authResult);
   } catch (err) {
     console.error('Lỗi khi xử lý đăng nhập:', err.message);
     res.status(500).json({
@@ -92,7 +90,7 @@ router.get('/me', (req, res) => {
 // Đổi mật khẩu tài khoản người dùng (Xác thực mật khẩu cũ & Hash scrypt)
 router.post('/change-password', requireAuth, loginLimiter, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  const minLen = req.user?.role === 'trainee' ? 6 : 12;
+  const minLen = 8;
   if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length < minLen || newPassword.length > 256) {
     return res.status(400).json({ success: false, message: `Mật khẩu mới cần ${minLen}–256 ký tự.` });
   }

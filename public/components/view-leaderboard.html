@@ -1,10 +1,10 @@
 <!-- ==============================================================================
  * COMPONENT: TAB VIEW: LEADERBOARD (Bảng Xếp Hạng Trainee)
- * CHỨC NĂNG CHÍNH: Vinh danh Top 3 Trainee xuất sắc và hiển thị bảng xếp hạng toàn bộ Trainee.
+ * CHỨC NĂNG CHÍNH: Vinh danh nhóm Trainee dẫn đầu và hiển thị bảng xếp hạng toàn bộ Trainee.
  * LIÊN KẾT & PHỤ THUỘC: public/js/modules/leaderboard.js, public/css/style.css
  * NHIỆM VỤ CHI TIẾT:
  *   - Hero Banner thống kê tổng quan (tổng số Trainee, sao cao nhất, điểm trung bình)
- *   - Podium Top 3: Bục vinh danh Vàng - Bạc - Đồng tương tác đẹp mắt
+ *   - Khu vực vinh danh hiển thị đầy đủ các Trainee đồng hạng nhất
  *   - Thanh tìm kiếm theo MSSV/họ tên và bộ lọc chuyên ban (AI, Frontend, Backend, Data, etc.)
  *   - Bảng danh sách xếp hạng chi tiết, có nút bấm xem hồ sơ cá nhân từng Trainee
  * ============================================================================== -->
@@ -27,51 +27,7 @@
             </div>
           </div>
 
-          <!-- Podium Top 3 Trainees -->
-          <div class="podium-section" id="podiumSection">
-            <!-- 2nd Place -->
-            <div class="podium-card rank-2" id="podiumRank2">
-              <div class="podium-medal"> Hạng 2</div>
-              <div class="podium-avatar-wrap">
-                <img src="" alt="" class="podium-avatar-img" id="podium2Avatar">
-              </div>
-              <h4 class="podium-name" id="podium2Name">--</h4>
-              <div class="podium-meta" id="podium2Track">--</div>
-              <div class="podium-score-tag">
-                <span class="label"> Sao tích lũy:</span>
-                <span class="val" id="podium2Score">--</span>
-              </div>
-            </div>
-
-            <!-- 1st Place -->
-            <div class="podium-card rank-1" id="podiumRank1">
-              <div class="podium-crown"></div>
-              <div class="podium-medal"> Hạng 1</div>
-              <div class="podium-avatar-wrap">
-                <img src="" alt="" class="podium-avatar-img" id="podium1Avatar">
-              </div>
-              <h4 class="podium-name" id="podium1Name">--</h4>
-              <div class="podium-meta" id="podium1Track">--</div>
-              <div class="podium-score-tag">
-                <span class="label"> Sao tích lũy:</span>
-                <span class="val highlight" id="podium1Score">--</span>
-              </div>
-            </div>
-
-            <!-- 3rd Place -->
-            <div class="podium-card rank-3" id="podiumRank3">
-              <div class="podium-medal"> Hạng 3</div>
-              <div class="podium-avatar-wrap">
-                <img src="" alt="" class="podium-avatar-img" id="podium3Avatar">
-              </div>
-              <h4 class="podium-name" id="podium3Name">--</h4>
-              <div class="podium-meta" id="podium3Track">--</div>
-              <div class="podium-score-tag">
-                <span class="label"> Sao tích lũy:</span>
-                <span class="val" id="podium3Score">--</span>
-              </div>
-            </div>
-          </div>
+          <div class="podium-section" id="podiumSection" aria-label="Trainee dẫn đầu bảng xếp hạng"></div>
 
           <!-- Toolbar: Search, Filters, Sorting -->
           <div class="table-toolbar">
@@ -118,76 +74,6 @@
             </div>
           </div>
 
-        <section class="context-management portal-card" data-permission="trainees:manage" style="display:none">
-          <div class="context-header" style="margin-bottom: 14px;">
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Quản lý Trainee</h3>
-          </div>
-
-          <!-- Admin Toolbar: Thanh tìm kiếm, Bộ lọc và Nút Thêm Trainee trên cùng 1 hàng ngay ngắn -->
-          <div class="admin-toolbar-card" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
-            <div class="admin-search-box" style="flex: 1; min-width: 260px; position: relative;">
-              <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
-              <input type="text" id="adminSearchInput" class="admin-search-input"
-                placeholder="Tìm theo MSSV, Họ và tên, Email...">
-            </div>
-
-            <div class="admin-filter-group" style="min-width: 160px;">
-              <select id="adminTrackFilter" class="form-select admin-filter-select" style="height: 42px; width: 100%;">
-                <option value="all">Tất cả nhóm</option>
-              </select>
-            </div>
-
-            <div class="admin-filter-group" style="min-width: 140px;">
-              <select id="adminStatusFilter" class="form-select admin-filter-select" style="height: 42px; width: 100%;">
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Đang học / Active</option>
-                <option value="completed">Đã hoàn thành</option>
-                <option value="inactive">Đã khóa / Inactive</option>
-              </select>
-            </div>
-
-            <button type="button" class="btn btn-primary" id="btnOpenCreateUserModal" style="height: 42px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 600; padding: 0 18px;">
-              <i class="fas fa-user-plus"></i>
-              <span>Thêm Trainee</span>
-            </button>
-          </div>
-
-          <!-- Admin Trainees Data Table -->
-          <div class="portal-card admin-table-card">
-            <div class="admin-table-header">
-              <h3 class="admin-table-title">Danh Sách Người Dùng & Chỉ Số KPI</h3>
-              <span class="admin-table-count" id="adminTableCountBadge">— Trainee</span>
-            </div>
-
-            <div class="table-responsive">
-              <table class="admin-table" id="adminTraineesTable">
-                <thead>
-                  <tr>
-                    <th class="th-admin-user">Trainee</th>
-                    <th class="th-admin-track">Nhóm / Khóa</th>
-                    <th class="th-admin-stars" style="text-align: center;"> Số sao</th>
-                    <th class="th-admin-attendance" style="text-align: center;"> Buổi học</th>
-                    <th class="th-admin-excused" style="text-align: center;"> Vắng CP</th>
-                    <th class="th-admin-unexcused" style="text-align: center;"> Vắng KP</th>
-                    <th class="th-admin-score" style="text-align: center;"> Điểm bài tập</th>
-                    <th class="th-admin-rank" style="text-align: center;"> Thứ hạng</th>
-                    <th class="th-admin-actions" style="text-align: center;">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody id="adminTraineesTableBody">
-                  <!-- Populated by JavaScript -->
-                </tbody>
-              </table>
-            </div>
-
-            <div class="admin-empty-state" id="adminEmptyState" style="display: none;">
-
-              <h4>Không tìm thấy người dùng phù hợp</h4>
-              <p>Vui lòng thử tìm với từ khóa khác hoặc xóa bộ lọc.</p>
-            </div>
-          </div>
-
-
-</section>
+        <template data-private-slot="leaderboard-manage"></template>
 </section>
 

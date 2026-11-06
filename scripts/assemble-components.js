@@ -29,6 +29,8 @@ function assembleHtml() {
     }
   });
 
+  template = template.replace(/<!--[\s\S]*?-->/g, '').replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, '\n\n');
+
   fs.writeFileSync(outputPath, template, 'utf8');
   console.log(`[assemble] Successfully assembled public/index.html from components (${template.split('\n').length} lines)`);
 }

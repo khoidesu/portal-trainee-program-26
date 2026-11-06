@@ -1,0 +1,71 @@
+        <section class="context-management portal-card" data-permission="trainees:manage" style="display:none">
+          <div class="context-header" style="margin-bottom: 14px;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Quản lý Trainee</h3>
+          </div>
+
+          <!-- Admin Toolbar: Thanh tìm kiếm, Bộ lọc và Nút Thêm Trainee trên cùng 1 hàng ngay ngắn -->
+          <div class="admin-toolbar-card" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+            <div class="admin-search-box" style="flex: 1; min-width: 260px; position: relative;">
+              <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+              <input type="text" id="adminSearchInput" class="admin-search-input"
+                placeholder="Tìm theo MSSV, Họ và tên, Email...">
+            </div>
+
+            <div class="admin-filter-group" style="min-width: 160px;">
+              <select id="adminTrackFilter" class="form-select admin-filter-select" style="height: 42px; width: 100%;">
+                <option value="all">Tất cả nhóm</option>
+              </select>
+            </div>
+
+            <div class="admin-filter-group" style="min-width: 140px;">
+              <select id="adminStatusFilter" class="form-select admin-filter-select" style="height: 42px; width: 100%;">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang học / Active</option>
+                <option value="completed">Đã hoàn thành</option>
+                <option value="inactive">Đã khóa / Inactive</option>
+              </select>
+            </div>
+
+            <button type="button" class="btn btn-primary" id="btnOpenCreateUserModal" style="height: 42px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 600; padding: 0 18px;">
+              <i class="fas fa-user-plus"></i>
+              <span>Thêm Trainee</span>
+            </button>
+          </div>
+
+          <!-- Admin Trainees Data Table -->
+          <div class="portal-card admin-table-card">
+            <div class="admin-table-header">
+              <h3 class="admin-table-title">Danh Sách Người Dùng & Chỉ Số KPI</h3>
+              <span class="admin-table-count" id="adminTableCountBadge">— Trainee</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table" id="adminTraineesTable">
+                <thead>
+                  <tr>
+                    <th class="th-admin-user">Trainee</th>
+                    <th class="th-admin-track">Nhóm / Khóa</th>
+                    <th class="th-admin-stars" style="text-align: center;"> Số sao</th>
+                    <th class="th-admin-attendance" style="text-align: center;"> Buổi học</th>
+                    <th class="th-admin-excused" style="text-align: center;"> Vắng CP</th>
+                    <th class="th-admin-unexcused" style="text-align: center;"> Vắng KP</th>
+                    <th class="th-admin-score" style="text-align: center;"> Điểm bài tập</th>
+                    <th class="th-admin-rank" style="text-align: center;"> Thứ hạng</th>
+                    <th class="th-admin-actions" style="text-align: center;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="adminTraineesTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="admin-empty-state" id="adminEmptyState" style="display: none;">
+
+              <h4>Không tìm thấy người dùng phù hợp</h4>
+              <p>Vui lòng thử tìm với từ khóa khác hoặc xóa bộ lọc.</p>
+            </div>
+          </div>
+
+
+</section>

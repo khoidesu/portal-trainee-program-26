@@ -1,0 +1,168 @@
+  <!-- ==================== MODAL: SỬA CHỈ SỐ KPI / USER (ADMIN) ==================== -->
+  <div class="modal-overlay" id="editTraineeModal">
+    <div class="modal-card trainee-form-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+
+          <div>
+            <h3 class="modal-title">Cập Nhật Chỉ Số KPI & Thông Tin Người Dùng</h3>
+            <span class="modal-subtitle">Chỉnh sửa số sao, số buổi học, vắng, điểm bài tập</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeEditTraineeModalBtn">Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editTraineeForm" class="trainee-edit-form">
+          <input type="hidden" id="editTraineeIdHidden">
+
+          <div class="form-section-title">THÔNG TIN CƠ BẢN</div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editTraineeId" class="form-label">Mã Trainee (MSSV)</label>
+              <input type="text" id="editTraineeId" class="form-input" readonly disabled
+                style="background: var(--bg-card-subtle); opacity: 0.85;">
+            </div>
+            <div class="form-group">
+              <label for="editFullName" class="form-label">Họ và tên Trainee <span class="required">*</span></label>
+              <input type="text" id="editFullName" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editEmail" class="form-label">Email <span class="required">*</span></label>
+              <input type="email" id="editEmail" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="editTrack" class="form-label">Nhóm</label>
+              <input type="text" id="editTrack" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editBatch" class="form-label">Lớp / Khóa học</label>
+              <input type="text" id="editBatch" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="editTotalSessions" class="form-label">Tổng số buổi quy định</label>
+              <input type="number" id="editTotalSessions" class="form-input" min="0" max="200">
+            </div>
+          </div>
+
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editProgramStatus" class="form-label">Trạng thái chương trình</label>
+              <select id="editProgramStatus" class="form-input">
+                <option value="Đang học">Active / Đang học</option>
+                <option value="Hoàn thành">Completed / Hoàn thành</option>
+                <option value="Ngừng học">Inactive / Ngừng học</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">&nbsp;</label>
+              <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; height: 38px;">
+                <i class="fas fa-info-circle" style="margin-right: 6px; color: var(--primary-blue);"></i> Thông tin Mentor phụ trách
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section-title">THÔNG TIN MENTOR PHỤ TRÁCH</div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editMentorName" class="form-label">Họ và tên Mentor</label>
+              <input type="text" id="editMentorName" class="form-input" maxlength="150" placeholder="Để trống nếu chưa công bố">
+            </div>
+            <div class="form-group">
+              <label for="editMentorEmail" class="form-label">Email Mentor</label>
+              <input type="email" id="editMentorEmail" class="form-input" maxlength="254" placeholder="mentor@uit.edu.vn">
+            </div>
+          </div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label for="editMentorRole" class="form-label">Vai trò / Lĩnh vực Mentor</label>
+              <input type="text" id="editMentorRole" class="form-input" maxlength="120" placeholder="VD: Mentor Kỹ thuật, Mentor Dự án...">
+            </div>
+            <div class="form-group">
+              <label for="editMentorPhone" class="form-label">Số điện thoại Mentor</label>
+              <input type="tel" id="editMentorPhone" class="form-input" maxlength="30" placeholder="VD: 0904607220">
+            </div>
+          </div>
+
+          <div class="form-section-title">CẬP NHẬT CHỈ SỐ KPI & BUỔI HỌC</div>
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="editStars" class="form-label" style="display: flex; justify-content: space-between;">
+                <span> Tổng sao tích lũy</span>
+                <span class="badge badge-success" style="font-size: 0.68rem; padding: 2px 6px;">Tự động tính theo buổi</span>
+              </label>
+              <input type="number" id="editStars" class="form-input" min="0" max="1000" readonly
+                style="background: rgba(245, 158, 11, 0.08); font-weight: 800; color: #d97706; border-color: rgba(245, 158, 11, 0.3); cursor: not-allowed;"
+                title="Tổng sao được tự động tính từ tổng số sao của các buổi học bên dưới">
+            </div>
+            <div class="form-group">
+              <label for="editAttendedSessions" class="form-label"> Số buổi đã học <span
+                  class="required">*</span></label>
+              <input type="number" id="editAttendedSessions" class="form-input" min="0" max="200" required>
+            </div>
+            <div class="form-group">
+              <label for="editAssignmentScore" class="form-label"> Điểm bài tập (thang 10)</label>
+              <input type="number" id="editAssignmentScore" class="form-input" min="0" max="10" step="0.1">
+            </div>
+          </div>
+
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label for="editAbsentExcused" class="form-label"> Buổi vắng CÓ PHÉP</label>
+              <input type="number" id="editAbsentExcused" class="form-input" min="0" max="50">
+            </div>
+            <div class="form-group">
+              <label for="editAbsentUnexcused" class="form-label"> Buổi vắng KHÔNG PHÉP</label>
+              <input type="number" id="editAbsentUnexcused" class="form-input" min="0" max="50">
+            </div>
+          </div>
+
+          <!-- RÀNG BUỘC CẬP NHẬT SAO THEO TỪNG BUỔI HỌC CỦA Trainee -->
+          <div class="form-section-title" style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span> CỘNG SAO THEO TỪNG BUỔI HỌC (RÀNG BUỘC BUỔI)</span>
+              <span class="badge badge-primary" style="font-size: 0.68rem;">Khớp bảng điểm</span>
+            </div>
+            <button type="button" class="btn btn-outline btn-xs" id="btnAddSessionToStudentBtn" style="font-size: 0.76rem; padding: 4px 10px;">
+              + Thêm buổi mới
+            </button>
+          </div>
+
+          <div class="edit-student-sessions-wrapper">
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 10px 0;">
+              Admin cập nhật số sao cộng (+) và nhận xét chi tiết của Trainee cho từng buổi học. Tổng số sao  ở trên sẽ tự động cộng dồn tức thì.
+            </p>
+            <div class="edit-trainee-sessions-list" id="editTraineeSessionsContainer">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+
+          <div class="form-info-hint" style="background: rgba(37, 99, 235, 0.06); border: 1px dashed rgba(37, 99, 235, 0.25); padding: 12px 16px; border-radius: 8px; font-size: 0.84rem; color: var(--text-secondary); margin-top: 14px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.2rem;"></span>
+            <span>Tổng sao và Thứ hạng (Rank) sẽ <strong>tự động tính &amp; đồng bộ</strong> toàn hệ thống sau khi lưu.</span>
+          </div>
+
+          <div class="modal-form-actions"
+            style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <button type="button" class="btn btn-danger" id="btnDeleteFromEditModal"
+              style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 6px;">
+
+              <span>Xóa người dùng này</span>
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn btn-secondary" id="cancelEditTraineeBtn">Hủy</button>
+              <button type="submit" class="btn btn-primary" id="btnSubmitEditTrainee">
+                <span> Lưu thay đổi</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>

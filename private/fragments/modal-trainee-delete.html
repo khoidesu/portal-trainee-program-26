@@ -1,0 +1,21 @@
+  <!-- ==================== MODAL: XÁC NHẬN XÓA USER (ADMIN) ==================== -->
+  <div class="modal-overlay" id="deleteTraineeConfirmModal">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 28px 24px;">
+      <div style="font-size: 3rem; margin-bottom: 12px; line-height: 1;"></div>
+      <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Xác Nhận Xóa Tài
+        Khoản</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 22px;"
+        id="deleteConfirmMessage">
+        Bạn có chắc chắn muốn xóa Trainee này khỏi hệ thống? Dữ liệu sẽ bị xóa hoàn toàn và không thể khôi phục.
+      </p>
+      <input type="hidden" id="deleteTargetTraineeId">
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteTraineeBtn" style="min-width: 110px;">Hủy
+          Bỏ</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteTraineeBtn"
+          style="background-color: #ef4444; color: white; min-width: 140px;">
+          <span> Xóa Vĩnh Viễn</span>
+        </button>
+      </div>
+    </div>
+  </div>

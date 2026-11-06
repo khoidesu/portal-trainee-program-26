@@ -36,7 +36,7 @@ const API = {
     if (!response.ok || !result.success) throw new Error(result.message || 'Không xóa được tài khoản.');
     return result;
   },
-  getPublicLeave() { return this.request('/requests/leave'); },
+  getLeaveRequests() { return this.request('/requests/leave'); },
   getNotifications() { return this.request('/notifications'); },
   markNotificationRead(id) { return this.request('/notifications/' + encodeURIComponent(id) + '/read', { method: 'PUT', body: '{}' }); },
   markAllNotificationsRead() { return this.request('/notifications/read-all', { method: 'PUT', body: '{}' }); },
@@ -59,11 +59,7 @@ const API = {
       'Content-Type': 'application/json',
       ...extraHeaders
     };
-    const token = sessionStorage.getItem('uit_trainee_auth_token') || localStorage.getItem('uit_trainee_auth_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
+    return headers; // Phiên đi qua cookie HttpOnly (credentials: 'same-origin')
   },
 
   // Lấy trạng thái kết nối DB
@@ -71,7 +67,7 @@ const API = {
     try {
       const res = await fetch(`${this.baseUrl}/status`, { credentials: 'same-origin' });
       const data = await res.json();
-      return data.data;
+      return data.data || { ok: data.ok === true };
     } catch (err) {
       console.warn('Lỗi khi lấy status API:', err);
       return { activeDatabaseType: 'mock', isMongoDBConnected: false };
@@ -116,21 +112,6 @@ const API = {
     } catch (err) {
       console.error('Lỗi khi fetch thông báo:', err);
       return [];
-    }
-  },
-
-  // Cấu hình URI MongoDB trực tiếp (Yêu cầu quyền Admin)
-  async saveMongoUri(uri) {
-    try {
-      const res = await fetch(`${this.baseUrl}/config/mongodb`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ uri })
-      });
-      return await res.json();
-    } catch (err) {
-      return { success: false, message: err.message };
     }
   },
 

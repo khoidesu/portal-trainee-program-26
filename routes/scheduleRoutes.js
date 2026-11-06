@@ -16,7 +16,7 @@
 const express = require('express');
 const router = express.Router();
 const Schedule = require('../models/Schedule');
-const { requirePermission } = require('../utils/security');
+const { requirePermission, maskScheduleForGuest } = require('../utils/security');
 const {
   getAllSchedules,
   createSchedule,
@@ -27,13 +27,28 @@ const {
 
 // Lấy toàn bộ lịch học / thời khóa biểu
 router.get('/', async (req, res) => {
+  const isAll = req.query.all === 'true' || req.query.all === '1';
+  if (!isAll && (req.query.month !== undefined || req.query.year !== undefined)) {
+    const month = Number(req.query.month);
+    const year = Number(req.query.year);
+    if (!/^\d{1,2}$/.test(String(req.query.month ?? '')) || !/^\d{4}$/.test(String(req.query.year ?? '')) ||
+        !Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tháng hoặc năm không hợp lệ.'
+      });
+    }
+  }
   try {
     const schedules = await getAllSchedules(req.query);
     res.json({
       success: true,
       count: schedules.length,
       serverTime: new Date().toISOString(),
-      data: schedules.map(item => ({ ...item, ...Schedule.getTiming(item) }))
+      data: schedules.map((item, index) => {
+        const timed = { ...item, ...Schedule.getTiming(item) };
+        return req.user ? timed : maskScheduleForGuest(timed, index);
+      })
     });
   } catch (err) {
     console.error('Lỗi API /api/schedules:', err.message);

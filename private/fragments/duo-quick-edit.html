@@ -1,0 +1,47 @@
+      <!-- Quick Link & Deadline Editor (Dành riêng cho Admin chỉnh sửa link & thời hạn nộp) -->
+      <div class="duo-admin-config-card" id="duoAdminQuickEditBox" style="display: none;">
+        <div class="duo-admin-config-header">
+          <span class="duo-admin-config-title">
+            <i class="fas fa-sliders-h"></i> CẤU HÌNH BÀI TẬP 
+          </span>
+        </div>
+
+        <div class="duo-admin-field-group">
+          <label for="duoLinkInput" class="duo-admin-field-label">
+            Đường link bài tập:
+          </label>
+          <div class="duo-admin-input-row">
+            <input type="url" id="duoLinkInput" class="form-input duo-admin-link-input"
+              placeholder="https://forms.office.com/... hoặc https://github.com/...">
+            <button type="button" id="duoBtnSaveLink" class="btn btn-primary btn-sm duo-admin-btn-save">Lưu Link</button>
+          </div>
+        </div>
+
+        <div class="duo-admin-field-group">
+          <label for="duoDeadlineDate" class="duo-admin-field-label">
+            Thời hạn nộp bài (Deadline):
+          </label>
+          <div class="duo-admin-deadline-row">
+            <div class="duo-admin-date-col">
+              <input type="date" id="duoDeadlineDate" class="form-input duo-admin-date-input">
+            </div>
+            <div class="duo-admin-time-col">
+              <input type="time" id="duoDeadlineTime" class="form-input duo-admin-time-input" value="23:59">
+            </div>
+            <button type="button" id="duoBtnSaveDeadline" class="btn btn-danger btn-sm duo-admin-btn-deadline">Lưu Hạn</button>
+            <button type="button" id="duoBtnClearDeadline" class="btn btn-outline btn-sm duo-admin-btn-clear" title="Xóa hạn chót (Không giới hạn)">Xóa</button>
+          </div>
+          <!-- Giữ input ẩn duoDeadlineInput để tương thích tuyệt đối toàn bộ script -->
+          <input type="hidden" id="duoDeadlineInput">
+        </div>
+
+        <div class="duo-admin-quick-row">
+          <span class="duo-admin-quick-label">Gán nhanh:</span>
+          <div class="duo-admin-quick-pills">
+            <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="12" title="Cài hạn 12 giờ sau">+12h (&lt;1 ngày)</button>
+            <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="24" title="Cài hạn 24 giờ sau">+1 ngày</button>
+            <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="72" title="Cài hạn 3 ngày sau">+3 ngày (&gt;1 ngày)</button>
+            <button type="button" class="btn btn-xs btn-outline btn-quick-set-deadline" data-hours="168" title="Cài hạn 7 ngày sau">+7 ngày</button>
+          </div>
+        </div>
+      </div>

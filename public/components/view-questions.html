@@ -79,14 +79,13 @@
                     </label>
                     <div class="input-with-icon">
 
-                      <input type="text" id="questionInputMssv" class="form-input" placeholder="Ví dụ: 25520918" required>
+                      <input type="text" id="questionInputMssv" class="form-input" inputmode="numeric" pattern="[0-9]{6,12}" minlength="6" maxlength="12" placeholder="Ví dụ: 25520918" required>
                     </div>
-                    <span class="form-help-text" id="questionMssvHelpText">Mã số Trainee chính thức tại UIT của bạn (Bảo mật, chỉ Admin xem được).</span>
                   </div>
 
                   <!-- Tùy chọn Ẩn Danh (Interactive Toggle Card) -->
                   <div class="form-group">
-                    <label class="form-label">
+                    <label class="form-label" for="questionCheckAnonymous">
                       <span>2. Hiển thị danh tính</span>
                     </label>
                     <div class="anon-toggle-card" id="anonToggleBox">
@@ -97,8 +96,8 @@
                           <div class="anon-toggle-desc" id="anonToggleDesc">Tên hiển thị công khai (MSSV bảo mật, chỉ Admin xem).</div>
                         </div>
                       </div>
-                      <label class="anon-switch" for="questionCheckAnonymous" title="Bật/Tắt chế độ ẩn danh">
-                        <input type="checkbox" id="questionCheckAnonymous">
+                      <label class="anon-switch" for="questionCheckAnonymous" title="Bật/Tắt chế độ ẩn danh" aria-label="Bật hoặc tắt chế độ ẩn danh">
+                        <input type="checkbox" id="questionCheckAnonymous" aria-label="Đăng câu hỏi ẩn danh" aria-describedby="anonToggleDesc">
                         <span class="anon-slider"></span>
                       </label>
                     </div>
@@ -131,7 +130,7 @@
                     </label>
                     <div class="input-with-icon">
 
-                      <input type="text" id="questionInputTitle" class="form-input" placeholder="Ví dụ: Không biết khi nào mới gặp được Cá Doi" required>
+                      <input type="text" id="questionInputTitle" class="form-input" maxlength="200" placeholder="Ví dụ: Không biết khi nào mới gặp được Cá Doi" required>
                     </div>
                   </div>
                 </div>
@@ -142,26 +141,9 @@
                     <span>5. Nội dung</span>
                     <span class="text-danger">*</span>
                   </label>
-                  <textarea id="questionInputContent" class="form-input question-textarea" rows="5"
+                  <textarea id="questionInputContent" class="form-input question-textarea" rows="5" minlength="10" maxlength="5000"
                     placeholder="Mô tả vấn đề, các bước đã thử và thông báo lỗi (ít nhất 10 ký tự)."
                     required></textarea>
-
-                  <!-- Gợi ý câu hỏi nhanh (Quick Prompts) -->
-                  <div class="question-quick-chips">
-                    <span class="chips-label">Gợi ý:</span>
-                    <button type="button" class="question-chip" data-category="Kỹ thuật & Code" data-title="Lỗi kết nối MongoDB Atlas từ Node.js" data-content="Em chạy ứng dụng Node.js thì gặp lỗi MongooseServerSelectionError không kết nối được MongoDB Atlas. Thầy cô và Trainer cho em hỏi cách khắc phục lỗi IP Whitelist ạ?">
-                       Lỗi MongoDB Atlas
-                    </button>
-                    <button type="button" class="question-chip" data-category="Bài tập & Đồ án" data-title="Thời hạn nộp bài tập Tuần và hình thức nộp" data-content="Thầy cô cho em hỏi thời hạn chót nộp bài tập tuần này là mấy giờ, và khi nộp thì gửi link GitHub repository hay nộp file nén ạ?">
-                       Deadline nộp bài tập
-                    </button>
-                    <button type="button" class="question-chip" data-category="Lịch học & Điểm danh" data-title="Link xem lại video Recording buổi học" data-content="Buổi học vừa qua em có đơn xin nghỉ phép. Thầy cô cho em hỏi có thể xem lại video ghi hình buổi học trực tuyến ở kênh Teams nào ạ?">
-                       Xem lại Recording buổi học
-                    </button>
-                    <button type="button" class="question-chip" data-category="Chương trình Trainee" data-title="Cơ chế cộng sao rèn luyện trên Bảng xếp hạng" data-content="Thầy cô cho em hỏi quy chế cộng sao rèn luyện  cho Trainee: bài tập làm thêm và phát biểu trong buổi học được cộng bao nhiêu sao ạ?">
-                       Tiêu chí cộng sao Trainee
-                    </button>
-                  </div>
                 </div>
 
                 <!-- Form Actions: Nút Gửi & Nhập lại -->
@@ -205,7 +187,7 @@
               <div class="question-toolbar">
                 <div class="question-search-box">
 
-                  <input type="text" id="questionSearchInput" class="question-search-input" placeholder="Tìm kiếm câu hỏi, từ khóa...">
+                  <input type="text" id="questionSearchInput" class="question-search-input" aria-label="Tìm kiếm câu hỏi" placeholder="Tìm kiếm câu hỏi, từ khóa...">
                 </div>
 
                 <div class="question-filter-pills" id="questionFilterPills">
@@ -218,7 +200,8 @@
               </div>
 
               <!-- Question Table -->
-              <div class="table-responsive">
+              <p class="table-scroll-hint" id="questionTableScrollHint">Vuốt hoặc dùng phím mũi tên để xem các cột bên phải.</p>
+              <div class="table-responsive" role="region" aria-label="Bảng câu hỏi và giải đáp" aria-describedby="questionTableScrollHint" tabindex="0">
                 <table class="question-table">
                   <thead>
                     <tr>

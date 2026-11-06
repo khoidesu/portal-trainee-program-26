@@ -1,0 +1,44 @@
+  <!-- ==================== MODAL: QUÊN MẬT KHẨU / HỖ TRỢ ==================== -->
+  <div class="modal-overlay" id="profileForgotModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+
+          <div>
+            <h3 class="modal-title">Yêu Cầu Cấp Lại Mật Khẩu</h3>
+            <span class="modal-subtitle">Gửi thông báo tới Quản trị viên để đặt lại mật khẩu</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeProfileForgotModalBtn">Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="profileForgotForm">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="profileForgotIdentifier" class="form-label">Mã số sinh viên (MSSV) / Tài khoản <span
+                class="text-danger">*</span></label>
+            <input type="text" id="profileForgotIdentifier" class="form-input" placeholder="Nhập MSSV" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="profileForgotEmail" class="form-label">Email liên hệ nhận hỗ trợ</label>
+            <input type="email" id="profileForgotEmail" class="form-input" placeholder="Nhập email">
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label for="profileForgotPhone" class="form-label">Số điện thoại liên hệ (tùy chọn)</label>
+            <input type="tel" id="profileForgotPhone" class="form-input" placeholder="Nhập số điện thoại">
+          </div>
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="profileForgotNote" class="form-label">Lý do / Lời nhắn tới Admin</label>
+            <textarea id="profileForgotNote" class="form-input" rows="3"
+              placeholder="Em bị quên mật khẩu, nhờ Admin cấp lại giúp em..."></textarea>
+          </div>
+          <div class="modal-form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-secondary" id="cancelProfileForgotBtn">Hủy</button>
+            <button type="submit" class="btn btn-danger" id="submitProfileForgotBtn">
+              <span> Gửi Yêu Cầu Tới Admin</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>

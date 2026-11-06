@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { requirePermission, requireAuth, hasPermission, canViewMssv, createRateLimiter, isProduction } = require('../utils/security');
+const { requirePermission, requireAuth, hasPermission, createRateLimiter } = require('../utils/security');
 const {
-  getSupportRequests, getPublicLeaveRequests, getSupportRequest, createSupportRequest, createLeaveRequest,
+  getSupportRequests, getLeaveRequests, getSupportRequest, createSupportRequest, createLeaveRequest,
   updateLeaveRequest, resolveSupportRequest, deleteSupportRequest
 } = require('../config/db');
 
@@ -32,16 +32,14 @@ async function verifyLeaveChallenge(req, res, next) {
   }
 }
 
-router.get('/leave', async (req, res) => {
+router.get('/leave', requireAuth, async (req, res) => {
   try {
-    const list = await getPublicLeaveRequests();
-    const allowMssv = canViewMssv(req.user);
-    const data = list.map(item => {
-      if (allowMssv) return item;
-      const { traineeId, ...safe } = item;
-      return safe;
-    });
-    res.json({ success: true, count: data.length, data });
+    const canManageLeave = req.user.role === 'admin' || hasPermission(req.user, 'leave:manage');
+    if (!canManageLeave && (req.user.role !== 'trainee' || !req.user.traineeId)) {
+      return res.status(403).json({ success: false, message: 'Tài khoản không có quyền xem đơn xin nghỉ.' });
+    }
+    const list = await getLeaveRequests(canManageLeave ? null : req.user.traineeId);
+    res.json({ success: true, count: list.length, data: list });
   } catch {
     res.status(503).json({ success: false, message: 'Không tải được bảng xin nghỉ.' });
   }
@@ -56,13 +54,16 @@ router.get('/', requirePermission('accounts:manage'), async (req, res) => {
   }
 });
 
-router.post('/leave', publicLimiter, verifyLeaveChallenge, async (req, res) => {
+router.post('/leave', requireAuth, publicLimiter, verifyLeaveChallenge, async (req, res) => {
+  if (req.user.role !== 'trainee' || !req.user.traineeId) {
+    return res.status(403).json({ success: false, message: 'Chỉ tài khoản Trainee mới có thể gửi đơn xin nghỉ.' });
+  }
   try {
-    const request = await createLeaveRequest(req.body);
+    const request = await createLeaveRequest(req.body, req.user.traineeId);
 
     res.status(201).json({ success: true, data: {
-      id: String(request._id), status: request.status, publicVisible: request.publicVisible, submittedAt: request.createdAt
-    }, message: request.publicVisible ? 'Đã đăng đơn xin nghỉ lên bảng công khai. Đơn đang chờ xem xét.' : 'Đơn đã được gửi trước đây và được giữ riêng theo lựa chọn khi gửi.' });
+      id: String(request._id), status: request.status, submittedAt: request.createdAt
+    }, message: 'Đơn xin nghỉ đã được gửi tới Ban Tổ chức và đang chờ xem xét.' });
   } catch (err) {
     const validationError = /^(Vui lòng|MSSV|Buổi học|Bộ nhớ)/.test(err.message || '');
     res.status(validationError ? 400 : 503).json({ success: false, message: validationError ? err.message : 'Chưa thể hoàn tất việc tiếp nhận đơn. Vui lòng thử lại sau.' });
@@ -91,13 +92,14 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (!request) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu.' });
     let updated;
     if (request.type === 'leave') {
-      if (!hasPermission(req.user, 'leave:manage')) return res.status(403).json({ success: false, message: 'Chưa có quyền xử lý đơn xin nghỉ.' });
+      const canManageLeave = req.user.role === 'admin' || hasPermission(req.user, 'leave:manage');
+      if (!canManageLeave) return res.status(403).json({ success: false, message: 'Chỉ Admin hoặc tài khoản có quyền Duyệt xin nghỉ mới được xử lý đơn.' });
       if (!['resolved', 'rejected'].includes(req.body.status)) return res.status(400).json({ success: false, message: 'Trạng thái xử lý không hợp lệ.' });
       updated = await updateLeaveRequest(req.params.id, { status: req.body.status, resolvedBy: req.user.username, resolvedAt: new Date() });
     } else if (request.type === 'forgot_password') {
       if (!hasPermission(req.user, 'accounts:manage')) return res.status(403).json({ success: false, message: 'Chưa có quyền quản lý tài khoản.' });
       const password = req.body.newPassword;
-      if (password !== undefined && (typeof password !== 'string' || password.length < 6 || password.length > 256)) return res.status(400).json({ success: false, message: 'Mật khẩu tạm thời cần 6–256 ký tự.' });
+      if (password !== undefined && (typeof password !== 'string' || password.length < 8 || password.length > 256)) return res.status(400).json({ success: false, message: 'Mật khẩu tạm thời cần 8–256 ký tự.' });
       updated = await resolveSupportRequest(req.params.id, password, req.user.username);
     } else {
       return res.status(400).json({ success: false, message: 'Loại yêu cầu này không hỗ trợ đặt lại mật khẩu.' });

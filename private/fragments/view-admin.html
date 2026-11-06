@@ -1,0 +1,46 @@
+<section class="tab-view" id="viewAdmin">
+  <div class="context-header">
+    <div><h2>Tài khoản và phân quyền</h2><p>Quản trị gốc tạo tài khoản, khóa truy cập và cấp quyền theo từng nghiệp vụ.</p></div>
+    <button type="button" class="btn btn-outline" id="btnReloadAccounts">Làm mới</button>
+  </div>
+  <section class="portal-card account-editor">
+    <h3 id="accountEditorTitle">Tạo tài khoản</h3>
+    <form id="accountEditorForm">
+      <input type="hidden" id="accountEditId">
+      <div class="account-fields">
+        <label>Tên đăng nhập<input class="form-input" id="accountUsername" required pattern="[a-z0-9][a-z0-9_.-]{2,79}" autocomplete="off"></label>
+        <label>Họ tên<input class="form-input" id="accountFullName" required maxlength="150"></label>
+        <label>Mật khẩu mới<input class="form-input" type="password" id="accountPassword" minlength="8" maxlength="256" autocomplete="new-password"><small>Ít nhất 8 ký tự. Khi sửa, để trống để giữ mật khẩu.</small></label>
+        <label>Vai trò<select class="form-input" id="accountRole"><option value="trainer">Trainer</option><option value="admin">Quản trị nội dung</option></select></label>
+      </div>
+      <fieldset class="account-permissions" id="accountPermissions"><legend>Quyền chỉnh sửa</legend></fieldset>
+      <p class="form-help-text">Admin chọn từng quyền cho Trainer hoặc Quản trị nội dung. Quyền quản lý tài khoản chỉ dành cho Quản trị gốc; khóa tài khoản hoặc đổi quyền sẽ thu hồi phiên cũ.</p>
+      <div class="context-actions"><button class="btn btn-primary" type="submit" id="btnSaveAccount">Lưu tài khoản</button><button class="btn btn-outline" type="button" id="btnResetAccountForm">Tạo mới</button></div>
+    </form>
+    <p id="accountFeedback" role="status" aria-live="polite"></p>
+  </section>
+  <section class="portal-card account-list">
+    <h3>Danh sách tài khoản</h3>
+    <div class="table-responsive"><table class="admin-table">
+      <thead><tr><th>Tài khoản</th><th class="text-center">Vai trò</th><th class="text-center">Quyền được cấp</th><th class="text-center">Trạng thái</th><th>Thao tác</th></tr></thead>
+      <tbody id="accountsTableBody"><tr><td colspan="5">Đang tải…</td></tr></tbody>
+    </table></div>
+  </section>
+  <section class="portal-card account-list" style="margin-top: 24px;">
+    <div class="context-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+      <div>
+        <h3 style="margin-bottom: 4px;">Yêu cầu hỗ trợ tài khoản</h3>
+        <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Xử lý yêu cầu quên mật khẩu bằng cơ chế reset an toàn; hệ thống không hiển thị mật khẩu.</p>
+      </div>
+      <div class="context-actions" style="display: inline-flex; align-items: center; gap: 10px;">
+        <span class="badge badge-warning" id="adminSupportPendingBadge">0 chờ xử lý</span>
+        <button type="button" class="btn btn-outline btn-sm" id="btnAdminRefreshSupport"><i class="fas fa-sync-alt"></i> Làm mới</button>
+      </div>
+    </div>
+    <div class="table-responsive"><table class="admin-table">
+      <thead><tr><th class="text-center" style="width: 50px;">STT</th><th class="text-center" style="width: 100px;">Loại</th><th class="text-center" style="width: 110px;">MSSV</th><th>Họ tên</th><th>Liên hệ</th><th>Nội dung</th><th class="text-center" style="width: 140px;">Ngày gửi</th><th class="text-center" style="width: 110px;">Trạng thái</th><th class="text-center" style="width: 140px;">Thao tác</th></tr></thead>
+      <tbody id="adminSupportTableBody"><tr><td colspan="9" class="text-center" style="padding: 24px; color: var(--text-muted);">Đang tải…</td></tr></tbody>
+    </table></div>
+    <div class="empty-state" id="adminSupportEmptyState" style="display: none;"></div>
+  </section>
+</section>

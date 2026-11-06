@@ -195,7 +195,7 @@ function renderQuestionBoard() {
         </td>
         <td style="text-align: center;">
           <div class="q-action-cell">
-            <button type="button" class="q-like-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikeQuestionItem('${escapeHtml(item._id || item.code)}', event)" title="Thích / Hữu ích">
+            <button type="button" class="q-like-btn ${isLiked ? 'liked' : ''}" onclick="toggleLikeQuestionItem('${escapeHtml(item._id || item.code)}', event)" title="Thích / Hữu ích" aria-label="Đánh dấu câu hỏi hữu ích, hiện có ${likes} lượt thích">
 
               <span>${likes}</span>
             </button>
@@ -206,15 +206,18 @@ function renderQuestionBoard() {
     `;
   }).join('');
   tbody.querySelectorAll('.question-row').forEach(row => {
-    row.querySelector('.q-title-cell')?.addEventListener('click', () => openQuestionModal(row.dataset.id));
-    row.querySelector('.q-view-btn')?.addEventListener('click', () => openQuestionModal(row.dataset.id));
+    row.querySelector('.q-title-cell')?.addEventListener('click', (e) => openQuestionModal(row.dataset.id, e?.currentTarget));
+    row.querySelector('.q-view-btn')?.addEventListener('click', (e) => openQuestionModal(row.dataset.id, e?.currentTarget));
   });
 }
 
-function openQuestionModal(id) {
+let lastFocusedElementBeforeQuestionModal = null;
+
+function openQuestionModal(id, triggerEl = null) {
   const item = questionsState.questions.find(q => q._id === id || q.code === id);
   if (!item) return;
 
+  lastFocusedElementBeforeQuestionModal = triggerEl || document.activeElement;
   questionsState.selectedQuestion = item;
 
   const modal = document.getElementById('questionDetailModal');
@@ -267,7 +270,7 @@ function openQuestionModal(id) {
   // Answer
   if (item.status === 'answered' && item.answer) {
     if (answerBox) answerBox.style.display = 'block';
-    if (teacherEl) teacherEl.textContent = item.answeredBy || 'TS. Dương Việt Hằng';
+    if (teacherEl) teacherEl.textContent = item.answeredBy || 'Trainer';
     if (teacherRole) teacherRole.textContent = 'Trainer';
     if (answerBody) answerBody.textContent = item.answer;
     if (answerTime) {
@@ -295,7 +298,19 @@ function openQuestionModal(id) {
     if (replyBox) replyBox.style.display = 'none';
   }
 
-  if (modal) modal.classList.add('open', 'show');
+  if (modal) {
+    modal.classList.add('open', 'show');
+    const closeBtn = document.getElementById('closeQuestionDetailModalBtn') || modal.querySelector('.modal-card');
+    if (closeBtn) {
+      if (typeof setTimeout === 'function') {
+        setTimeout(() => {
+          try { closeBtn.focus(); } catch (e) {}
+        }, 50);
+      } else if (typeof closeBtn.focus === 'function') {
+        try { closeBtn.focus(); } catch (e) {}
+      }
+    }
+  }
 }
 
 async function toggleLikeQuestionItem(id, event) {
@@ -445,8 +460,8 @@ function setupQuestionEvents() {
       const content = (document.getElementById('questionInputContent')?.value || '').trim();
 
       // Validation
-      if (!isAnonymous && !mssv) {
-        if (window.showToast) window.showToast('Vui lòng nhập Mã số sinh viên (MSSV) hoặc bật Chế độ ẩn danh !', 'warning');
+      if (!isAnonymous && !/^\d{6,12}$/.test(mssv)) {
+        if (window.showToast) window.showToast('MSSV phải gồm 6–12 chữ số hoặc bật Chế độ ẩn danh.', 'warning');
         mssvInput?.focus();
         return;
       }
@@ -543,12 +558,41 @@ function setupQuestionEvents() {
   function closeModal() {
     if (modal) modal.classList.remove('open', 'show');
     questionsState.selectedQuestion = null;
+    if (lastFocusedElementBeforeQuestionModal && typeof lastFocusedElementBeforeQuestionModal.focus === 'function') {
+      try {
+        lastFocusedElementBeforeQuestionModal.focus();
+      } catch (e) {}
+      lastFocusedElementBeforeQuestionModal = null;
+    }
   }
+  window.closeQuestionDetailModal = closeModal;
+
   if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
   if (btnCloseQModal) btnCloseQModal.addEventListener('click', closeModal);
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
+    });
+    modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     });
   }
 

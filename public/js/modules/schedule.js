@@ -239,6 +239,13 @@ function initScheduleModule() {
     elements.scheduleModal.addEventListener('click', (e) => {
       if (e.target === elements.scheduleModal) closeScheduleModal();
     });
+    elements.scheduleModal.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeScheduleModal();
+      }
+    });
   }
 
   // 7. Xử lý lưu buổi học (và lưu link MS Teams)
@@ -528,7 +535,7 @@ function openScheduleModal(course = null) {
     if (elements.coursePeriods) elements.coursePeriods.value = 'Tiết 1 - 4 (Tối)';
     if (elements.courseStatusSelect) elements.courseStatusSelect.value = 'upcoming';
     if (elements.courseTypeSelect) elements.courseTypeSelect.value = 'Online';
-    if (elements.courseInstructorInput) elements.courseInstructorInput.value = 'TS. Dương Việt Hằng';
+    if (elements.courseInstructorInput) elements.courseInstructorInput.value = '';
     if (elements.courseTeamsUrl) elements.courseTeamsUrl.value = '';
     if (elements.courseNoteInput) elements.courseNoteInput.value = '';
 
@@ -677,4 +684,5 @@ async function handleResetDefaultSchedule() {
 // Expose to global window
 window.initScheduleModule = initScheduleModule;
 window.openScheduleModal = openScheduleModal;
+window.closeScheduleModal = closeScheduleModal;
 window.renderScheduleView = renderScheduleView;

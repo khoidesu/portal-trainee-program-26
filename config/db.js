@@ -1,11 +1,5 @@
-const dns = require('dns');
 const fs = require('fs');
 const path = require('path');
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (e) {
-  // Ignore if cannot set servers
-}
 
 const mongoose = require('mongoose');
 const crypto = require('crypto');
@@ -21,7 +15,11 @@ const Assignment = require('../models/Assignment');
 const { mockTrainees, mockAnnouncements, schedules: importedSchedules = [] } = require('../data/mockData');
 
 const DEFAULT_TRAINEE_PASSWORD = process.env.TRAINEE_DEFAULT_PASSWORD || 'traineeprogram';
-const LEGACY_TRAINEE_PASSWORD = 'traineeprogram.';
+if (isProduction && (!process.env.TRAINEE_DEFAULT_PASSWORD || process.env.TRAINEE_DEFAULT_PASSWORD.length < 12)) {
+  // Cho phép dùng mật khẩu chung (vd. 'traineeprogram') vì mọi tài khoản dùng nó đều bị ép đổi mật khẩu
+  // ở lần đăng nhập đầu (mustChangePassword, được chặn ở server trong utils/security.js).
+  throw new Error('Production cần đặt TRAINEE_DEFAULT_PASSWORD (tối thiểu 12 ký tự) trong biến môi trường.');
+}
 
 let isMongoDBConnected = false;
 let connectionError = null;
@@ -85,11 +83,57 @@ function getPublicAvatar(trainee) {
 function compareTraineesForRank(a, b) {
   const starDiff = (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0);
   if (starDiff !== 0) return starDiff;
-  const scoreDiff = (Number(b.assignmentScore) || 0) - (Number(a.assignmentScore) || 0);
-  if (scoreDiff !== 0) return scoreDiff;
-  const attendanceDiff = (Number(b.attendedSessions) || 0) - (Number(a.attendedSessions) || 0);
-  if (attendanceDiff !== 0) return attendanceDiff;
   return String(a.traineeId || '').localeCompare(String(b.traineeId || ''));
+}
+
+function buildStarRankMap(trainees) {
+  const sorted = [...trainees].filter(item => Number.isFinite(item.accumulatedStars)).sort(compareTraineesForRank);
+  const ranks = new Map();
+  let previousStars;
+  let rank = 0;
+  sorted.forEach((trainee, index) => {
+    const stars = Number(trainee.accumulatedStars);
+    if (index === 0 || stars !== previousStars) rank = index + 1;
+    ranks.set(String(trainee.traineeId), rank);
+    previousStars = stars;
+  });
+  return ranks;
+}
+
+function buildStarCounts(trainees) {
+  return trainees.reduce((counts, trainee) => {
+    if (!Number.isFinite(trainee.accumulatedStars)) return counts;
+    const stars = Number(trainee.accumulatedStars);
+    counts.set(stars, (counts.get(stars) || 0) + 1);
+    return counts;
+  }, new Map());
+}
+
+function getRankClassification(rank) {
+  if (rank === 1) return '🥇 Quán quân Trainee';
+  if (rank === 2) return '🥈 Á quân Trainee';
+  if (rank === 3) return '🥉 Hạng 3 Trainee';
+  return `Top ${rank}`;
+}
+
+function applyStarRankMetadata(trainee, rankMap, starCounts, total) {
+  if (!Number.isFinite(trainee.accumulatedStars)) {
+    trainee.currentRank = null;
+    trainee.rank = null;
+    trainee.rankClassification = 'Chưa xếp hạng';
+    trainee.rankNote = 'Chưa có dữ liệu sao để xếp hạng';
+    trainee.totalStudentsInRank = total;
+    return trainee;
+  }
+  const stars = Number(trainee.accumulatedStars);
+  const rank = rankMap.get(String(trainee.traineeId));
+  const isTied = (starCounts.get(stars) || 0) > 1;
+  trainee.currentRank = rank;
+  trainee.rank = rank;
+  trainee.rankClassification = getRankClassification(rank);
+  trainee.rankNote = `${isTied ? 'Đồng hạng' : 'Hạng'} ${rank} / ${total} Trainee (Dựa trên số sao tích lũy)`;
+  trainee.totalStudentsInRank = total;
+  return trainee;
 }
 
 /**
@@ -98,26 +142,25 @@ function compareTraineesForRank(a, b) {
 async function syncRanksByStars() {
   if (!isMongoDBConnected) return;
   try {
-    const trainees = await Trainee.find().sort({ accumulatedStars: -1, assignmentScore: -1, attendedSessions: -1, traineeId: 1 }).select('_id accumulatedStars assignmentScore attendedSessions traineeId');
+    const trainees = await Trainee.find().sort({ accumulatedStars: -1, traineeId: 1 }).select('_id accumulatedStars assignmentScore traineeId');
     if (!trainees || trainees.length === 0) return;
 
-    const bulkOps = trainees.map((t, i) => {
-      const rank = i + 1;
-      let rankClass = `Top ${rank}`;
-      if (rank === 1) rankClass = '🥇 Quán quân Trainee';
-      else if (rank === 2) rankClass = '🥈 Á quân Trainee';
-      else if (rank === 3) rankClass = '🥉 Hạng 3 Trainee';
+    const rankMap = buildStarRankMap(trainees);
+    const starCounts = buildStarCounts(trainees);
+
+    const bulkOps = trainees.map(t => {
+      const metadata = applyStarRankMetadata(t, rankMap, starCounts, trainees.length);
 
       return {
         updateOne: {
           filter: { _id: t._id },
           update: {
             $set: {
-              currentRank: rank,
-              rank: rank,
-              rankClassification: rankClass,
-              rankNote: `Hạng ${rank} / ${trainees.length} Trainee (Dựa trên số sao tích lũy)`,
-              totalStudentsInRank: trainees.length,
+              currentRank: metadata.currentRank,
+              rank: metadata.rank,
+              rankClassification: metadata.rankClassification,
+              rankNote: metadata.rankNote,
+              totalStudentsInRank: metadata.totalStudentsInRank,
               assignmentClassification: computeAssignmentClassification(t.assignmentScore)
             }
           }
@@ -188,7 +231,12 @@ async function openDatabase(force = false) {
     connectionError = err.message;
     isMongoDBConnected = false;
     activeDatabaseType = 'in-memory-fallback';
-    console.warn('[MongoDB] Kết nối thất bại.');
+    const configuredUri = String(process.env.MONGODB_URI || '');
+    const safeMessage = String(err.message || 'Không rõ nguyên nhân')
+      .replace(configuredUri, '[MONGODB_URI đã ẩn]')
+      .replace(/mongodb(?:\+srv)?:\/\/[^@\s]+@/gi, 'mongodb+srv://[thông tin xác thực đã ẩn]@');
+    const errorCode = err.code ? `, mã ${err.code}` : '';
+    console.warn(`[MongoDB] Kết nối thất bại (${err.name || 'Error'}${errorCode}): ${safeMessage}`);
     return false;
   }
 }
@@ -225,27 +273,23 @@ async function getAllTrainees({ search = '', track = '', sort = 'stars_desc' } =
 
       const query = andClauses.length > 0 ? { $and: andClauses } : {};
 
-      let sortOption = { accumulatedStars: -1, assignmentScore: -1, attendedSessions: -1, traineeId: 1 };
-      if (sort === 'stars_desc') sortOption = { accumulatedStars: -1, assignmentScore: -1, attendedSessions: -1, traineeId: 1 };
-      else if (sort === 'stars_asc') sortOption = { accumulatedStars: 1, assignmentScore: 1, attendedSessions: 1, traineeId: 1 };
+      let sortOption = { accumulatedStars: -1, traineeId: 1 };
+      if (sort === 'stars_desc') sortOption = { accumulatedStars: -1, traineeId: 1 };
+      else if (sort === 'stars_asc') sortOption = { accumulatedStars: 1, traineeId: 1 };
       else if (sort === 'attended_desc') sortOption = { attendedSessions: -1, accumulatedStars: -1, assignmentScore: -1, traineeId: 1 };
       else if (sort === 'name_asc') sortOption = { fullName: 1, traineeId: 1 };
       else if (sort === 'gpa_desc') sortOption = { cumulativeGpa: -1, accumulatedStars: -1, traineeId: 1 };
-      else sortOption = { accumulatedStars: -1, assignmentScore: -1, attendedSessions: -1, traineeId: 1 };
+      else sortOption = { accumulatedStars: -1, traineeId: 1 };
 
       const trainees = await Trainee.find(query).select('-password').sort(sortOption).lean();
-      const ranked = andClauses.length
-        ? await Trainee.find().select('traineeId accumulatedStars assignmentScore attendedSessions').sort({ accumulatedStars: -1, assignmentScore: -1, attendedSessions: -1, traineeId: 1 }).lean()
-        : trainees;
-      const rankMap = new Map(ranked.filter(t => Number.isFinite(t.accumulatedStars)).map((t, index) => [String(t.traineeId), index + 1]));
+      const ranked = await Trainee.find().select('traineeId accumulatedStars').sort({ accumulatedStars: -1, traineeId: 1 }).lean();
+      const rankMap = buildStarRankMap(ranked);
+      const starCounts = buildStarCounts(ranked);
 
       return trainees.map((t) => {
         delete t.password;
         t.assignmentClassification = computeAssignmentClassification(t.assignmentScore);
-        if (Number.isFinite(t.accumulatedStars)) {
-          t.currentRank = rankMap.get(String(t.traineeId));
-          t.rank = t.currentRank;
-        }
+        applyStarRankMetadata(t, rankMap, starCounts, ranked.length);
         t.avatar = getPublicAvatar(t);
         return attachRealStarHistory(t);
       });
@@ -257,7 +301,9 @@ async function getAllTrainees({ search = '', track = '', sort = 'stars_desc' } =
 
   // Fallback InMemory khi DB chưa sẵn sàng / rớt mạng
   let list = inMemoryTrainees.map(t => ({ ...t }));
-  const rankMap = new Map([...list].filter(t => Number.isFinite(t.accumulatedStars)).sort(compareTraineesForRank).map((t, index) => [String(t.traineeId), index + 1]));
+  const rankMap = buildStarRankMap(list);
+  const starCounts = buildStarCounts(list);
+  const totalRankedTrainees = list.length;
   if (search && search.trim()) {
     const s = search.trim().toLowerCase();
     list = list.filter(t => 
@@ -288,10 +334,7 @@ async function getAllTrainees({ search = '', track = '', sort = 'stars_desc' } =
   return list.map((t, idx) => {
     delete t.password;
     t.assignmentClassification = computeAssignmentClassification(t.assignmentScore);
-    if (Number.isFinite(t.accumulatedStars)) {
-      t.currentRank = rankMap.get(String(t.traineeId));
-      t.rank = t.currentRank;
-    }
+    applyStarRankMetadata(t, rankMap, starCounts, totalRankedTrainees);
     t.avatar = getPublicAvatar(t);
     return attachRealStarHistory(t);
   });
@@ -762,20 +805,38 @@ function ensureTraineeAccountsInMemory() {
 }
 ensureTraineeAccountsInMemory();
 
-function ownerAccount() {
-  return {
-    id: 'owner',
-    username: (process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase(),
-    fullName: 'Quản trị hệ thống', role: 'admin', isOwner: true, active: true,
-    permissions: ['accounts:manage', ...CONTENT_PERMISSIONS]
+let dummyPasswordHash;
+function burnPasswordCheck(password) {
+  // Tốn thời gian tương đương khi tài khoản không tồn tại, tránh dò tên đăng nhập qua độ trễ.
+  dummyPasswordHash = dummyPasswordHash || hashPassword('timing-equalizer-not-a-real-password');
+  verifyPassword(password, dummyPasswordHash);
+}
+
+async function createOwnerAccount({ username, fullName = 'Quản trị hệ thống', password }) {
+  const clean = String(username || '').trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9_.-]{2,79}$/.test(clean)) throw new Error('Tên tài khoản không hợp lệ.');
+  if (typeof password !== 'string' || password.length < 8 || password.length > 256) throw new Error('Mật khẩu quản trị gốc cần 8–256 ký tự.');
+  const doc = {
+    username: clean, fullName, password: hashPassword(password), role: 'admin', isOwner: true,
+    permissions: [...CONTENT_PERMISSIONS], active: true, sessionVersion: 0, mustChangePassword: false, loginHistory: []
   };
+  if (isMongoDBConnected) {
+    await Account.init();
+    if (await Account.exists({ isOwner: true })) throw new Error('Đã có tài khoản quản trị gốc.');
+    return visibleAccount((await Account.create(doc)).toObject());
+  }
+  if ([...inMemoryAccounts.values()].some(account => account.isOwner)) throw new Error('Đã có tài khoản quản trị gốc.');
+  const account = { ...doc, _id: crypto.randomUUID(), createdAt: new Date() };
+  inMemoryAccounts.set(account._id, account);
+  return visibleAccount(account);
 }
 
 function visibleAccount(account, includeHistory = false) {
   const visible = {
     id: String(account._id), username: account.username, fullName: account.fullName,
     role: account.role, traineeId: account.traineeId || (account.role === 'trainee' ? account.username : null),
-    permissions: account.permissions || [], active: account.active !== false,
+    isOwner: account.isOwner === true,
+    permissions: account.isOwner === true ? ['accounts:manage', ...CONTENT_PERMISSIONS] : (account.permissions || []), active: account.active !== false,
     sessionVersion: account.sessionVersion || 0, createdAt: account.createdAt,
     lastLoginAt: account.lastLoginAt || null,
     lastPasswordChangeAt: account.lastPasswordChangeAt || null,
@@ -796,7 +857,7 @@ async function getAccounts() {
   ensureTraineeAccountsInMemory();
   if (isMongoDBConnected) await ensureTraineeAccountsInMongo();
   const list = isMongoDBConnected ? await Account.find().sort({ username: 1 }).lean() : [...inMemoryAccounts.values()];
-  return [ownerAccount(), ...list.map(account => visibleAccount(account, true))];
+  return list.map(account => visibleAccount(account, true));
 }
 
 async function saveAccount(id, data) {
@@ -805,7 +866,7 @@ async function saveAccount(id, data) {
       !['admin', 'trainer', 'trainee'].includes(data.role) || typeof data.active !== 'boolean' ||
       !Array.isArray(data.permissions) || data.permissions.some(permission => !CONTENT_PERMISSIONS.includes(permission))) throw new Error('Thông tin hoặc quyền tài khoản không hợp lệ.');
   const password = typeof data.password === 'string' ? data.password.trim() : data.password;
-  if ((!id || password) && data.role !== 'trainee' && (typeof password !== 'string' || password.length < 12 || password.length > 256)) throw new Error('Mật khẩu cần 12–256 ký tự.');
+  if ((!id || password) && data.role !== 'trainee' && (typeof password !== 'string' || password.length < 8 || password.length > 256)) throw new Error('Mật khẩu cần 8–256 ký tự.');
   let current;
   if (id) {
     current = isMongoDBConnected
@@ -814,7 +875,8 @@ async function saveAccount(id, data) {
     if (!current) throw new Error('Không tìm thấy tài khoản.');
   }
   const username = current?.username || (typeof data.username === 'string' ? data.username.trim().toLowerCase() : '');
-  if (!/^[a-z0-9][a-z0-9_.-]{2,79}$/.test(username) || username === ownerAccount().username) throw new Error('Tên tài khoản không hợp lệ hoặc đã dành cho quản trị gốc.');
+  if (!/^[a-z0-9][a-z0-9_.-]{2,79}$/.test(username)) throw new Error('Tên tài khoản không hợp lệ.');
+  if (current?.isOwner) throw new Error('Không sửa tài khoản Quản trị gốc qua giao diện; đổi mật khẩu bằng chức năng Đổi mật khẩu.');
   const passToUse = password || (data.role === 'trainee' && !id ? DEFAULT_TRAINEE_PASSWORD : null);
   const changes = {
     fullName: data.fullName.trim(), role: data.role, active: data.active,
@@ -838,9 +900,7 @@ async function saveAccount(id, data) {
 
 async function deleteAccount(id, actorUser) {
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
-  if (!id || id === 'owner' || id === ownerAccount().username) {
-    throw new Error('Không thể xóa tài khoản Quản trị gốc (Admin Owner).');
-  }
+  if (!id) throw new Error('Thiếu định danh tài khoản.');
   if (!isMongoDBConnected) await connectDB();
 
   let target = isMongoDBConnected
@@ -850,7 +910,7 @@ async function deleteAccount(id, actorUser) {
   if (!target) throw new Error('Không tìm thấy tài khoản để xóa.');
   if (target.role === 'trainee') throw new Error('Tài khoản Trainee được liên kết với hồ sơ; hãy khóa tài khoản thay vì xóa.');
 
-  if (target.username === ownerAccount().username) {
+  if (target.isOwner) {
     throw new Error('Không thể xóa tài khoản Quản trị gốc (Admin Owner).');
   }
 
@@ -863,11 +923,10 @@ async function deleteAccount(id, actorUser) {
   } else {
     inMemoryAccounts.delete(target._id);
   }
-  return { success: true, message: `Đã xóa tài khoản "${target.username}" thành công khỏi cơ sở dữ liệu MongoDB Atlas.` };
+  return { success: true, message: `Đã xóa tài khoản "${target.username}" thành công khỏi hệ thống.` };
 }
 
 async function resolveAccountSession(payload) {
-  if (payload.root === true && payload.username === ownerAccount().username) return ownerAccount();
   if (!payload.accountId) return null;
   if (!isMongoDBConnected) await connectDB();
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
@@ -907,21 +966,7 @@ async function resolveAccountSession(payload) {
 
 async function authenticateUser(username, password, clientInfo = {}) {
   const clean = String(username).trim().toLowerCase();
-  const owner = ownerAccount();
-  if (clean === owner.username) {
-    const adminPass = process.env.ADMIN_PASSWORD;
-    let isValid = false;
-    if (adminPass && verifyPassword(password, adminPass)) {
-      isValid = true;
-    } else if (!isProduction) {
-      const allowedDevPasses = ['admin@UIT2026!', 'admin', 'traineeprogram', 'traineeprogram.', 'admin123', 'KHMT@12345678'];
-      isValid = allowedDevPasses.some(p => verifyPassword(password, p));
-    }
-    if (isValid) {
-      return { success: true, user: owner };
-    }
-    return { success: false, message: 'Tài khoản hoặc mật khẩu không chính xác.' };
-  } else {
+  {
     if (!isMongoDBConnected) await connectDB();
     if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
     ensureTraineeAccountsInMemory();
@@ -932,6 +977,7 @@ async function authenticateUser(username, password, clientInfo = {}) {
       : [...inMemoryAccounts.values()].find(item => item.username === clean || String(item.traineeId || '').toLowerCase() === clean);
 
     if (!account) {
+      burnPasswordCheck(password);
       return { success: false, message: 'Tài khoản hoặc mật khẩu không chính xác.' };
     }
 
@@ -939,18 +985,14 @@ async function authenticateUser(username, password, clientInfo = {}) {
       return { success: false, message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin để được hỗ trợ mở khóa.' };
     }
 
-    let passwordValid = verifyPassword(password, account.password);
-    const migrateLegacyDefault = account.role === 'trainee' && account.mustChangePassword &&
-      (password === DEFAULT_TRAINEE_PASSWORD || password === LEGACY_TRAINEE_PASSWORD) &&
-      verifyPassword(LEGACY_TRAINEE_PASSWORD, account.password);
-    if (migrateLegacyDefault) passwordValid = true;
+    const passwordValid = verifyPassword(password, account.password);
 
     if (!passwordValid) {
       return { success: false, message: 'Tài khoản hoặc mật khẩu không chính xác.' };
     }
 
-    if (migrateLegacyDefault || !String(account.password).startsWith('scrypt$')) {
-      account.password = hashPassword(migrateLegacyDefault ? DEFAULT_TRAINEE_PASSWORD : password);
+    if (!String(account.password).startsWith('scrypt$')) {
+      account.password = hashPassword(password);
       if (isMongoDBConnected) await Account.updateOne({ _id: account._id }, { $set: { password: account.password } });
     }
 
@@ -1396,20 +1438,19 @@ async function getSupportRequests({ type, status } = {}) {
   return list;
 }
 
-async function createLeaveRequest(data) {
+async function createLeaveRequest(data, traineeId) {
   if (!isMongoDBConnected) {
     await connectDB();
   }
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
-  if (typeof data.traineeId !== 'string' || !/^\d{6,12}$/.test(data.traineeId) || typeof data.fullName !== 'string' || data.fullName.length > 150 ||
+  if (typeof traineeId !== 'string' || !/^\d{6,12}$/.test(traineeId) ||
       typeof data.scheduleCode !== 'string' || !/^[\w.-]{1,80}$/.test(data.scheduleCode) ||
       typeof data.scheduleDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.scheduleDate) ||
       typeof data.reason !== 'string' || data.reason.trim().length < 10 || data.reason.length > 3000 || data.commit !== true) {
-    throw new Error('Vui lòng kiểm tra MSSV, họ tên, buổi học, lý do (10–3000 ký tự) và cam kết.');
+    throw new Error('Vui lòng kiểm tra buổi học, lý do (10–3000 ký tự) và cam kết.');
   }
-  const trainee = await getTraineeById(data.traineeId);
-  const normalizeName = value => value.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi-VN');
-  if (!trainee || normalizeName(trainee.fullName) !== normalizeName(data.fullName)) throw new Error('MSSV và họ tên không khớp danh sách Trainee.');
+  const trainee = await getTraineeById(traineeId);
+  if (!trainee) throw new Error('Tài khoản không liên kết với hồ sơ Trainee.');
   const [year, month] = data.scheduleDate.split('-').map(Number);
   const schedules = await getAllSchedules({ month, year });
   let schedule = schedules.find(item => item.code === data.scheduleCode && item.date === data.scheduleDate);
@@ -1424,34 +1465,42 @@ async function createLeaveRequest(data) {
     email: trainee.email, message: data.reason.trim(), status: 'pending',
     scheduleCode: schedule.code, scheduleTitle: schedule.title, scheduleDate: schedule.date,
     scheduleTime: `${schedule.startTime} - ${schedule.endTime}`, submissionKey,
-    publicVisible: true, createdAt: new Date()
+    publicVisible: false, createdAt: new Date()
   };
+  let request;
   if (isMongoDBConnected) {
     await SupportRequest.init();
     try {
-      return await SupportRequest.findOneAndUpdate({ type: 'leave', submissionKey }, { $setOnInsert: doc }, { upsert: true, new: true, runValidators: true }).lean();
+      request = await SupportRequest.findOneAndUpdate({ type: 'leave', submissionKey }, { $setOnInsert: doc }, { upsert: true, new: true, runValidators: true }).lean();
     } catch (err) {
-      if (err.code === 11000) return await SupportRequest.findOne({ type: 'leave', submissionKey }).lean();
-      throw err;
+      if (err.code === 11000) request = await SupportRequest.findOne({ type: 'leave', submissionKey }).lean();
+      else throw err;
     }
+    await notifyAdminsOfLeave(request).catch(err => console.warn('Không tạo được thông báo đơn xin nghỉ:', err.message));
+    return request;
   }
-  const existing = inMemorySupportRequests.find(item => item.submissionKey === submissionKey);
-  if (existing) return existing;
-  if (inMemorySupportRequests.length >= 500) throw new Error('Bộ nhớ thử nghiệm đã đầy. Vui lòng cấu hình MongoDB.');
-  doc._id = 'req_' + crypto.randomUUID();
-  inMemorySupportRequests.unshift(doc);
-  return doc;
+  request = inMemorySupportRequests.find(item => item.submissionKey === submissionKey);
+  if (!request) {
+    if (inMemorySupportRequests.length >= 500) throw new Error('Hệ thống tạm thời chưa nhận thêm đơn. Vui lòng thử lại sau.');
+    doc._id = 'req_' + crypto.randomUUID();
+    inMemorySupportRequests.unshift(doc);
+    request = doc;
+  }
+  await notifyAdminsOfLeave(request).catch(err => console.warn('Không tạo được thông báo đơn xin nghỉ:', err.message));
+  return request;
 }
 
 
-async function getPublicLeaveRequests() {
+async function getLeaveRequests(traineeId = null) {
   if (!isMongoDBConnected) {
     await connectDB();
   }
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
+  const filter = { type: 'leave' };
+  if (traineeId) filter.traineeId = traineeId;
   const list = isMongoDBConnected
-    ? await SupportRequest.find({ type: 'leave', publicVisible: true }).sort({ createdAt: -1 }).limit(100).lean()
-    : inMemorySupportRequests.filter(item => item.type === 'leave' && item.publicVisible).slice(0, 100);
+    ? await SupportRequest.find(filter).sort({ createdAt: -1 }).limit(100).lean()
+    : inMemorySupportRequests.filter(item => item.type === 'leave' && (!traineeId || item.traineeId === traineeId)).slice(0, 100);
   return list.map(item => ({
     id: String(item._id), traineeId: item.traineeId, fullName: item.fullName,
     reason: item.message, scheduleCode: item.scheduleCode, scheduleTitle: item.scheduleTitle,
@@ -2142,39 +2191,32 @@ async function createQuestion(data) {
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const isAnonymous = data.isAnonymous === true || data.isAnonymous === 'true';
   let mssv = String(data.mssv || '').trim();
-  let fullName = String(data.fullName || '').trim();
-
-  if (isAnonymous) {
-    if (!mssv) mssv = 'Ẩn danh';
-    fullName = 'Trainee ẩn danh';
-  } else {
-    if (!mssv) {
-      throw new Error('Vui lòng nhập Mã số sinh viên (MSSV) hoặc chọn chế độ Ẩn danh!');
-    }
-    // Tra cứu tên Trainee nếu có
-    if (!fullName && isMongoDBConnected) {
-      try {
-        const trainee = await Trainee.findOne({ traineeId: mssv }).lean();
-        if (trainee) fullName = trainee.fullName;
-      } catch (e) {}
-    }
-    if (!fullName) fullName = `Trainee ${mssv}`;
+  const linkedTraineeId = String(data.traineeId || '').trim();
+  if (linkedTraineeId) mssv = linkedTraineeId;
+  let trainee = null;
+  if (mssv && mssv !== 'Ẩn danh') {
+    if (!/^\d{6,12}$/.test(mssv)) throw new Error('MSSV phải gồm 6–12 chữ số.');
+    trainee = await getTraineeById(mssv);
+    if (!trainee) throw new Error('MSSV không tồn tại trong danh sách Trainee.');
+    mssv = trainee.traineeId;
   }
+  if (!isAnonymous && !trainee) throw new Error('Vui lòng nhập MSSV hợp lệ hoặc chọn chế độ Ẩn danh.');
+  const fullName = isAnonymous ? 'Trainee ẩn danh' : trainee.fullName;
 
   const title = String(data.title || '').trim();
   const content = String(data.content || '').trim();
 
   if (!title) throw new Error('Vui lòng nhập Tiêu đề câu hỏi!');
-  if (!content || content.length < 5) throw new Error('Vui lòng nhập nội dung chi tiết câu hỏi (tối thiểu 5 ký tự)!');
+  if (!content || content.length < 10) throw new Error('Vui lòng nhập nội dung chi tiết câu hỏi (tối thiểu 10 ký tự)!');
 
   const randomNum = Math.floor(100 + Math.random() * 900);
   const code = `Q-2026-${Date.now().toString().slice(-3)}${randomNum.toString().slice(-1)}`;
 
   const newDoc = {
     code,
-    traineeId: String(data.traineeId || '').trim(),
+    traineeId: linkedTraineeId,
     mssv: isAnonymous ? 'Ẩn danh' : mssv,
-    realMssv: isAnonymous ? mssv : mssv,
+    realMssv: trainee?.traineeId || '',
     fullName: isAnonymous ? 'Trainee ẩn danh' : fullName,
     isAnonymous,
     category: data.category || 'Kỹ thuật & Code',
@@ -2626,26 +2668,33 @@ async function getAssignmentSubmissions(assignmentId) {
   }));
 }
 
-async function updateAssignmentSubmission(assignmentId, traineeId, data, reviewer) {
+async function updateAssignmentSubmission(assignmentId, traineeId, data = {}, reviewer) {
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const id = Number(assignmentId);
   if (!(await getAllAssignments()).some(item => item.assignmentId === id)) throw new Error('Không tìm thấy bài tập.');
   if (!(await getTraineeById(traineeId))) throw new Error('Không tìm thấy Trainee.');
   if (!['not_submitted', 'submitted', 'needs_revision', 'completed'].includes(data.status)) throw new Error('Trạng thái ghi nhận không hợp lệ.');
-  if (typeof data.responseId !== 'string' || data.responseId.length > 120 || typeof data.note !== 'string' || data.note.length > 2000) throw new Error('Mã phản hồi hoặc ghi chú không hợp lệ.');
-  const submittedAt = data.submittedAt ? new Date(data.submittedAt) : null;
-  if (submittedAt && !Number.isFinite(submittedAt.getTime())) throw new Error('Thời điểm nộp không hợp lệ.');
+  const responseId = data.responseId ?? '';
+  const note = data.note ?? '';
+  if (typeof responseId !== 'string' || responseId.length > 120 || typeof note !== 'string' || note.length > 2000) throw new Error('Mã phản hồi hoặc ghi chú không hợp lệ.');
   const record = {
     assignmentId: id, traineeId, status: data.status,
-    responseId: data.responseId.trim(), note: data.note.trim(), submittedAt,
+    responseId: responseId.trim(), note: note.trim(),
     reviewedBy: String(reviewer || 'admin'), reviewedAt: new Date()
   };
+  // Trạng thái "Chưa ghi nhận" không kèm dữ liệu nghĩa là chưa có gì để lưu; xóa bản ghi để không hiện như một hoạt động của Trainee.
+  if (record.status === 'not_submitted' && !record.responseId && !record.note) {
+    if (isMongoDBConnected) await AssignmentSubmission.deleteOne({ assignmentId: id, traineeId });
+    else inMemoryAssignmentSubmissions.delete(id + ':' + traineeId);
+    return { assignmentId: id, traineeId, status: 'not_submitted', responseId: '', note: '', reviewedAt: null };
+  }
   if (isMongoDBConnected) {
     return AssignmentSubmission.findOneAndUpdate({ assignmentId: id, traineeId }, { $set: record },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }).lean();
   }
-  inMemoryAssignmentSubmissions.set(id + ':' + traineeId, record);
-  return record;
+  const previous = inMemoryAssignmentSubmissions.get(id + ':' + traineeId);
+  inMemoryAssignmentSubmissions.set(id + ':' + traineeId, { ...previous, ...record });
+  return inMemoryAssignmentSubmissions.get(id + ':' + traineeId);
 }
 
 
@@ -2686,6 +2735,21 @@ async function pushNotifications(entries) {
     counts.set(item.traineeId, count);
     return count <= NOTIFICATION_MEMORY_LIMIT_PER_TRAINEE;
   });
+}
+
+async function notifyAdminsOfLeave(request) {
+  if (!request) return;
+  const admins = isMongoDBConnected
+    ? await Account.find({ role: 'admin', active: { $ne: false } }).select('_id').lean()
+    : [...inMemoryAccounts.values()].filter(account => account.role === 'admin' && account.active !== false);
+  await pushNotifications(admins.map(account => ({
+    traineeId: `account:${account._id}`,
+    type: 'leave',
+    title: `Đơn xin nghỉ mới: ${request.fullName}`.slice(0, 200),
+    body: `${request.scheduleTitle} · ${request.scheduleDate}`.slice(0, 300),
+    link: 'leave',
+    refKey: `leave:${request._id}`
+  })));
 }
 
 function formatVietnamDateTime(value) {
@@ -2745,9 +2809,9 @@ async function syncAssignmentReminders(traineeId) {
   })));
 }
 
-async function getNotifications(traineeId) {
+async function getNotifications(traineeId, includeAssignmentReminders = true) {
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
-  await syncAssignmentReminders(traineeId).catch(err => console.warn('Không tạo được nhắc hạn bài tập:', err.message));
+  if (includeAssignmentReminders) await syncAssignmentReminders(traineeId).catch(err => console.warn('Không tạo được nhắc hạn bài tập:', err.message));
   const now = new Date();
   const visible = item => item.type !== 'assignment' || (item.dueAt && new Date(item.dueAt) > now);
   const publicItem = item => ({
@@ -2788,13 +2852,12 @@ async function markNotificationsRead(traineeId, id) {
 }
 
 async function changeAccountPassword(user, currentPassword, newPassword) {
-  if (user.isOwner) throw new Error('Tài khoản gốc đổi mật khẩu qua ADMIN_PASSWORD trên máy chủ.');
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const account = isMongoDBConnected
     ? await Account.findById(user.id).select('+password')
     : inMemoryAccounts.get(user.id);
   if (!account || !verifyPassword(currentPassword, account.password)) throw new Error('Mật khẩu hiện tại không chính xác.');
-  const minLen = user.role === 'trainee' ? 6 : 12;
+  const minLen = 8;
   if (typeof newPassword !== 'string' || newPassword.trim().length < minLen || newPassword.length > 256) throw new Error(`Mật khẩu mới cần ${minLen}–256 ký tự.`);
   account.password = hashPassword(newPassword.trim());
   account.sessionVersion = (account.sessionVersion || 0) + 1;
@@ -2815,8 +2878,9 @@ async function adminResetPassword(identifier, newPassword = DEFAULT_TRAINEE_PASS
     account = inMemoryAccounts.get(clean) || [...inMemoryAccounts.values()].find(a => a.username === clean || a.traineeId === clean);
   }
   if (!account) throw new Error('Không tìm thấy tài khoản cần đặt lại mật khẩu.');
+  if (account.isOwner) throw new Error('Không đặt lại mật khẩu Quản trị gốc qua giao diện.');
   const password = String(newPassword || DEFAULT_TRAINEE_PASSWORD);
-  const minLength = account.role === 'trainee' ? 6 : 12;
+  const minLength = 8;
   if (password.length < minLength || password.length > 256) throw new Error(`Mật khẩu tạm thời cần ${minLength}–256 ký tự.`);
   account.password = hashPassword(password);
   account.sessionVersion = (account.sessionVersion || 0) + 1;
@@ -2844,9 +2908,6 @@ async function adminRequirePasswordChange(identifier) {
 async function adminToggleAccountActive(identifier, active) {
   if (isProduction && !isMongoDBConnected) throw new Error('Cơ sở dữ liệu chưa sẵn sàng.');
   const clean = String(identifier).trim().toLowerCase();
-  if (clean === ownerAccount().username || clean === 'owner') {
-    throw new Error('Không thể khóa tài khoản Quản trị gốc.');
-  }
   let account;
   if (isMongoDBConnected) {
     account = mongoose.isValidObjectId(clean)
@@ -2856,6 +2917,7 @@ async function adminToggleAccountActive(identifier, active) {
     account = inMemoryAccounts.get(clean) || [...inMemoryAccounts.values()].find(a => a.username === clean || a.traineeId === clean);
   }
   if (!account) throw new Error('Không tìm thấy tài khoản.');
+  if (account.isOwner) throw new Error('Không thể khóa tài khoản Quản trị gốc.');
   account.active = Boolean(active);
   account.sessionVersion = (account.sessionVersion || 0) + 1;
   if (isMongoDBConnected) await account.save();
@@ -3212,7 +3274,7 @@ async function getTraineeActivityHistory(traineeId) {
       ? await AssignmentSubmission.find({ traineeId: cleanId }).sort({ submittedAt: -1, reviewedAt: -1 }).limit(10).lean()
       : [...inMemoryAssignmentSubmissions.values()].filter(item => item.traineeId === cleanId).slice(-10).reverse();
     const assignments = await getAllAssignments();
-    const assignmentMap = new Map(assignments.map(item => [Number(item.id), item]));
+    const assignmentMap = new Map(assignments.map(item => [Number(item.assignmentId), item]));
     submissions.forEach(submission => {
       const assignment = assignmentMap.get(Number(submission.assignmentId));
       const labels = { not_submitted: 'Chưa nộp', submitted: 'Đã nộp', needs_revision: 'Cần bổ sung', completed: 'Hoàn thành' };
@@ -3295,10 +3357,11 @@ module.exports = {
   getTraineeActivityHistory,
   saveAttendanceEntry,
   resolveAccountSession,
+  createOwnerAccount,
   getAccounts,
   saveAccount,
   deleteAccount,
-  getPublicLeaveRequests,
+  getLeaveRequests,
   getAssignmentSubmissions,
   updateAssignmentSubmission,
   connectDB,

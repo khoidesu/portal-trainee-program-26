@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node scripts/seed.js",
+    "create-admin": "node scripts/create-admin.js",
+    "check-login": "node scripts/check-login.js",
     "build": "node scripts/assemble-components.js",
     "test": "node --test scripts/security-smoke.test.js",
     "build:components": "node scripts/assemble-components.js"

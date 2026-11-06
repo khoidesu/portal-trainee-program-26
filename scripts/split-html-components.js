@@ -185,7 +185,6 @@ const componentDefs = [
     links: 'public/js/modules/*.js, public/js/duolingo.js, public/css/style.css',
     tasks: [
       'Modal #traineeDetailModal: Xem chi tiết hồ sơ cá nhân và lịch sử học tập của sinh viên',
-      'Modal #mongoConfigModal: Xem trạng thái và cấu hình kết nối MongoDB Atlas (Admin)',
       'Modal #scheduleModal: Thêm / sửa thông tin buổi học và gán link MS Teams (Admin)',
       'Modal #createUserModal: Thêm tài khoản thực tập sinh mới vào hệ thống (Admin)',
       'Modal #editUserModal: Chỉnh sửa thông số KPI và sao từng buổi của sinh viên (Admin)',

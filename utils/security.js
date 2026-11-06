@@ -7,17 +7,19 @@ const crypto = require('crypto');
 
 // Secret key for JWT signing (falls back to persistent env or auto-generated strong key)
 const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+// Các mật khẩu từng xuất hiện trong mã nguồn/tài liệu: coi như đã lộ, cấm dùng ở production.
+const KNOWN_WEAK_PASSWORDS = new Set([
+  'admin@uit2026!', 'admin', 'admin123', 'traineeprogram', 'traineeprogram.',
+  'khmt@12345678', '1234', '12345678', 'password'
+].map(value => value.toLowerCase()));
 if (isProduction && (
   !process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 ||
-  /change|example|default|super_secret/i.test(process.env.JWT_SECRET) ||
-  !process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 12 ||
-  /^(1234|admin@UIT2026!|your[-_])/i.test(process.env.ADMIN_PASSWORD)
+  /change|example|default|super_secret/i.test(process.env.JWT_SECRET)
 )) {
-  throw new Error('Cần JWT_SECRET ngẫu nhiên tối thiểu 32 ký tự và ADMIN_PASSWORD riêng tối thiểu 12 ký tự.');
+  throw new Error('Cần JWT_SECRET ngẫu nhiên tối thiểu 32 ký tự.');
 }
 const JWT_SECRET = crypto.createHash('sha256')
   .update(process.env.JWT_SECRET || crypto.randomBytes(32))
-  .update(process.env.ADMIN_PASSWORD || '')
   .digest();
 const sessionCookie = isProduction ? '__Host-trainee_session' : 'trainee_session';
 const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: 'strict', path: '/' };
@@ -218,13 +220,13 @@ function requireAdmin(req, res, next) {
  * @param {number} maxRequests - Max allowed attempts
  * @param {number} windowMs - Time window in milliseconds
  */
-function createRateLimiter(maxRequests = 10, windowMs = 60000) {
+function createRateLimiter(maxRequests = 10, windowMs = 60000, keyFn = null) {
   const ipAttempts = new Map();
   const scope = `${maxRequests}:${windowMs}`;
   let indexesReady;
 
   return async (req, res, next) => {
-    const ip = req.ip || req.socket?.remoteAddress || 'unknown-ip';
+    const ip = keyFn ? keyFn(req) : (req.ip || req.socket?.remoteAddress || 'unknown-ip');
     const now = Date.now();
     const bucket = Math.floor(now / windowMs);
     let count;
@@ -301,6 +303,26 @@ function canViewMssv(user) {
   return false;
 }
 
+// Khách chỉ biết số thứ tự buổi học; tên bài giảng và trainer chỉ gửi cho tài khoản đã đăng nhập.
+function guestSessionLabel(title, code, index = 0) {
+  const byTitle = String(title || '').match(/^buổi\s*(\d+)/i);
+  if (byTitle) return `Buổi ${Number(byTitle[1])}`;
+  const byCode = String(code || '').match(/\.(\d+)/);
+  if (byCode) return `Buổi ${parseInt(byCode[1], 10)}`;
+  return `Buổi ${index + 1}`;
+}
+
+function maskScheduleForGuest(item, index = 0) {
+  return { ...item, title: guestSessionLabel(item.title, item.code, index), instructor: '' };
+}
+
+function maskSessionStarsForGuest(sessionStars) {
+  return (sessionStars || []).map((log, index) => {
+    const { trainerName, updatedBy, ...rest } = log;
+    return { ...rest, sessionTitle: guestSessionLabel(log.sessionTitle, log.sessionCode, index) };
+  });
+}
+
 function requirePermission(permission) {
   return async (req, res, next) => {
     await requireAuth(req, res, () => {
@@ -308,6 +330,19 @@ function requirePermission(permission) {
       next();
     });
   };
+}
+
+// Tài khoản đang dùng mật khẩu tạm/mặc định chỉ được phép đổi mật khẩu, xem /me hoặc đăng xuất.
+const PASSWORD_CHANGE_ALLOWED = new Set(['/auth/me', '/auth/logout', '/auth/change-password', '/ui']);
+function enforcePasswordChange(req, res, next) {
+  if (req.user && !req.user.isOwner && req.user.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.has(req.path)) {
+    return res.status(403).json({
+      success: false,
+      code: 'PASSWORD_CHANGE_REQUIRED',
+      message: 'Bạn cần đổi mật khẩu mặc định trước khi sử dụng hệ thống.'
+    });
+  }
+  next();
 }
 
 function setSession(res, user) {
@@ -334,9 +369,13 @@ function validateInput(req, res, next) {
 }
 
 module.exports = {
+  KNOWN_WEAK_PASSWORDS,
   CONTENT_PERMISSIONS,
   hasPermission,
   canViewMssv,
+  guestSessionLabel,
+  maskScheduleForGuest,
+  maskSessionStarsForGuest,
   requirePermission,
   signToken,
   verifyToken,
@@ -346,6 +385,7 @@ module.exports = {
   sanitizeUrl,
   requireAuth,
   requireAdmin,
+  enforcePasswordChange,
   createRateLimiter,
   optionalAuth,
   setSession,

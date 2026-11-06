@@ -866,6 +866,8 @@ body.dark-theme .duo-chart-axis-line {
 
 .duo-modal-card {
   max-height: calc(100dvh - 40px);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   overflow-y: auto;
   background: var(--bg-card, #ffffff);
   border-radius: 24px;
@@ -876,6 +878,12 @@ body.dark-theme .duo-chart-axis-line {
   border: 1px solid var(--border-color, #e2e8f0);
   position: relative;
   text-align: center;
+}
+
+.duo-modal-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .duo-modal-close-btn {
@@ -1301,3 +1309,161 @@ body.dark-theme .duo-countdown-bar-wrap {
 .duo-assignment-details { text-align: left; margin: 20px 0; padding: 16px; background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 12px; }
 .duo-assignment-details h4 { margin: 0 0 10px; color: var(--text-main); }
 #duoModalDetails { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+
+/* Duo Admin Quick Config Card */
+.duo-admin-config-card {
+  margin-top: 16px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.duo-admin-config-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.duo-admin-config-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #dc2626;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duo-admin-field-group {
+  margin-bottom: 12px;
+}
+
+.duo-admin-field-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.duo-admin-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.duo-admin-link-input {
+  flex: 1;
+  height: 36px !important;
+  font-size: 0.82rem !important;
+}
+
+.duo-admin-btn-save {
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+.duo-admin-deadline-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.duo-admin-date-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.duo-admin-date-col .uit-date-trigger {
+  height: 36px !important;
+  min-height: 36px !important;
+  font-size: 0.82rem !important;
+  padding: 0 10px !important;
+}
+
+.duo-admin-time-col {
+  width: 104px;
+  flex-shrink: 0;
+}
+
+.duo-admin-time-col .uit-time-trigger {
+  height: 36px !important;
+  min-height: 36px !important;
+  font-size: 0.82rem !important;
+  padding: 0 8px !important;
+}
+
+.duo-admin-time-col .uit-time-display {
+  font-size: 0.82rem !important;
+  font-weight: 600;
+  text-align: center;
+}
+
+.duo-admin-time-input {
+  height: 36px !important;
+  font-size: 0.82rem !important;
+  padding: 0 6px !important;
+  text-align: center;
+}
+
+.duo-admin-btn-deadline {
+  height: 36px !important;
+  padding: 0 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  background: #e11d48 !important;
+  border-color: #e11d48 !important;
+  color: #ffffff !important;
+}
+
+.duo-admin-btn-clear {
+  height: 36px !important;
+  padding: 0 10px !important;
+  white-space: nowrap !important;
+}
+
+.duo-admin-quick-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.duo-admin-quick-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.duo-admin-quick-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.duo-admin-quick-pills .btn-quick-set-deadline {
+  font-size: 0.7rem !important;
+  padding: 3px 8px !important;
+  border-radius: var(--radius-pill) !important;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .duo-admin-deadline-row {
+    flex-wrap: wrap;
+  }
+  .duo-admin-date-col {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .duo-admin-time-col {
+    flex: 1;
+  }
+}

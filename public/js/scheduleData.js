@@ -420,8 +420,33 @@ const ScheduleManager = {
   },
 
   // In / Xuất PDF lịch học
-  printSchedule() {
-    window.print();
+  printSchedule(month = this.selectedMonth, year = this.selectedYear) {
+    const items = this.cachedSchedules
+      .map(item => getScheduleTiming(item, Date.now() + this.clockOffset))
+      .filter(s => Number(s.month) === Number(month) && Number(s.year) === Number(year))
+      .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+    if (items.length === 0) {
+      if (window.showToast) window.showToast('Không có buổi học nào trong tháng này để in!', 'info');
+      return;
+    }
+    const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+    const statusLabel = status => status === 'live' ? 'Đang diễn ra' : status === 'completed' ? 'Đã diễn ra' : 'Sắp diễn ra';
+    window.printTable({
+      title: `Thời khóa biểu tháng ${month}/${year}`,
+      subtitle: 'Lịch học Trainee Program',
+      meta: [`Tổng số buổi: ${items.length}`, `Học online: ${items.filter(item => item.type !== 'Offline').length}`, 'Giờ học theo múi giờ Việt Nam (UTC+7)'],
+      landscape: true,
+      columns: [
+        { label: 'STT', align: 'center' }, { label: 'Mã buổi' }, { label: 'Ngày', align: 'center' }, { label: 'Thứ', align: 'center' },
+        { label: 'Giờ học', align: 'center' }, { label: 'Chuyên đề' }, { label: 'Trainer' },
+        { label: 'Hình thức', align: 'center' }, { label: 'Trạng thái', align: 'center' }, { label: 'Ghi chú' }
+      ],
+      rows: items.map((item, idx) => [
+        idx + 1, item.code || '', this.formatDateStr(item.date), item.dayOfWeekText || '',
+        `${item.startTime} - ${item.endTime}`, getScheduleDisplayTitle(item, idx, isGuest) || '',
+        isGuest ? '—' : getScheduleDisplayTrainer(item, isGuest), item.type || 'Online', statusLabel(item.status), item.note || ''
+      ])
+    });
   },
 
   // ==========================================

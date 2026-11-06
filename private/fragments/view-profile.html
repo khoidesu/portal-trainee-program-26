@@ -1,0 +1,317 @@
+        <!-- ======================================================== -->
+        <!-- TAB: HỒ SƠ CÁ NHÂN & CÀI ĐẶT TÀI KHOẢN -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewProfile">
+
+          <!-- Profile Page Header -->
+          <div class="profile-header-card">
+            <div class="profile-header-content">
+              <div class="profile-breadcrumb">
+                <span>Cổng Trainee Program</span>
+                <span class="breadcrumb-sep">&rsaquo;</span>
+                <span class="breadcrumb-current">Hồ sơ cá nhân</span>
+              </div>
+              <h2 class="profile-page-title">Hồ Sơ Cá Nhân & Quản Trị Tài Khoản</h2>
+              <p class="profile-page-desc">
+                Quản lý thông tin học viên, ảnh đại diện, tài khoản đăng nhập và theo dõi thành tích.
+              </p>
+            </div>
+          </div>
+
+          <!-- Profile Main Content Grid -->
+          <div class="profile-grid-container">
+
+            <!-- Left Column: Avatar, Program Badge & Account Security -->
+            <div class="profile-col-sidebar">
+              <!-- Card 1: Avatar -->
+              <div class="portal-card profile-avatar-card">
+                <div class="profile-card-header">
+                  <h3 class="card-title">Ảnh Đại Diện</h3>
+                </div>
+
+                <div class="profile-avatar-display-wrap">
+                  <div class="profile-avatar-large" id="profileAvatarLarge">
+                    <img id="profileAvatarImg" src="" alt="Ảnh đại diện" style="display: none;">
+                    <div id="profileAvatarInitials" class="profile-avatar-initials">SV</div>
+                  </div>
+
+                  <!-- Khung Xem Trước Ảnh Trước Khi Upload -->
+                  <div id="profileAvatarPreviewBox" style="display: none; width: 100%; padding: 12px; background: rgba(37,99,235,0.06); border: 1px dashed var(--primary-blue); border-radius: 10px; margin-top: 10px; text-align: center;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 8px;">Xem trước ảnh mới:</div>
+                    <img id="profileAvatarPreviewImg" src="" alt="Xem trước" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-blue); margin: 0 auto 10px auto; display: block;">
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                      <button type="button" class="btn btn-primary btn-xs" id="btnConfirmUploadAvatar" style="padding: 4px 12px; font-size: 12px;">Lưu ảnh này</button>
+                      <button type="button" class="btn btn-outline btn-xs" id="btnCancelAvatarPreview" style="padding: 4px 12px; font-size: 12px;">Hủy bỏ</button>
+                    </div>
+                  </div>
+
+                  <div class="avatar-upload-actions" id="avatarNormalActions">
+                    <input type="file" id="profileAvatarFileInput" accept="image/png, image/jpeg, image/webp" style="display: none;">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnUploadProfileAvatar">
+                      <span>Tải ảnh mới</span>
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" id="btnRemoveProfileAvatar" title="Gỡ ảnh về chữ viết tắt">
+                      <span>Gỡ ảnh</span>
+                    </button>
+                  </div>
+                  <p class="profile-avatar-hint">
+                    Hỗ trợ file JPG, PNG, WebP (tối đa 3MB).
+                  </p>
+                </div>
+
+                <div class="profile-badge-summary">
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Mã số sinh viên (MSSV):</span>
+                    <strong class="badge-value" id="profileBadgeId">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Vai trò:</span>
+                    <span class="badge badge-success" id="profileBadgeRole">Trainee UIT</span>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Trạng thái tham gia:</span>
+                    <span class="badge badge-primary" id="profileBadgeProgramStatus">Active</span>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Khóa đào tạo:</span>
+                    <strong class="badge-value" id="profileBadgeBatch">Trainee 2026</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Chuyên ban:</span>
+                    <strong class="badge-value" id="profileBadgeTrack">Khoa học Máy tính</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Mentor phụ trách:</span>
+                    <strong class="badge-value" id="profileBadgeMentor">Chưa công bố</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2: Thông tin tài khoản & bảo mật -->
+              <div class="portal-card profile-security-summary-card" style="margin-top: 20px;">
+                <div class="profile-card-header">
+                  <h3 class="card-title">Thông Tin Tài Khoản</h3>
+                </div>
+                <div class="profile-badge-summary" style="margin-top: 0; padding-top: 0; border-top: none;">
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Tên đăng nhập:</span>
+                    <strong class="badge-value" id="profileAccountUsername">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Trạng thái tài khoản:</span>
+                    <span class="badge badge-success" id="profileAccountStatusBadge">Đang hoạt động</span>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Ngày tạo tài khoản:</span>
+                    <strong class="badge-value" id="profileAccountCreatedAt" style="font-size: 0.8rem;">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Lần đăng nhập gần nhất:</span>
+                    <strong class="badge-value" id="profileAccountLastLogin" style="font-size: 0.8rem;">--</strong>
+                  </div>
+                  <div class="profile-badge-item">
+                    <span class="badge-label">Đổi MK gần nhất:</span>
+                    <strong class="badge-value" id="profileAccountLastPassChange" style="font-size: 0.8rem;">Chưa thay đổi</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Personal Info Form, Password Change, & Activities -->
+            <div class="profile-col-main">
+
+              <!-- Card 3: Chỉnh sửa thông tin cá nhân -->
+              <div class="portal-card profile-form-card">
+                <div class="profile-card-header">
+                  <div>
+                    <h3 class="card-title">Thông Tin Cá Nhân</h3>
+                  </div>
+                </div>
+
+                <form id="profileInfoForm" class="profile-form">
+                  <div class="profile-form-grid">
+                    <div class="form-group">
+                      <label for="profileInputFullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                      <input type="text" id="profileInputFullName" class="form-input" placeholder="Nhập họ và tên đầy đủ" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputId" class="form-label">Mã số sinh viên (MSSV) <span title="Định danh tài khoản không thể chỉnh sửa" style="cursor: help;"></span></label>
+                      <input type="text" id="profileInputId" class="form-input" readonly disabled style="opacity: 0.75; cursor: not-allowed; background: var(--bg-card-subtle);">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputEmail" class="form-label">Email liên hệ <span class="text-danger">*</span></label>
+                      <input type="email" id="profileInputEmail" class="form-input" placeholder="vidu@uit.edu.vn" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputPhone" class="form-label">Số điện thoại</label>
+                      <input type="tel" id="profileInputPhone" class="form-input" placeholder="Ví dụ: 0901234567">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputDob" class="form-label">Ngày sinh</label>
+                      <input type="date" id="profileInputDob" class="form-input">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileSelectGender" class="form-label">Giới tính</label>
+                      <select id="profileSelectGender" class="form-input">
+                        <option value="">Chưa chọn</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                      <label for="profileInputAddress" class="form-label">Địa chỉ</label>
+                      <input type="text" id="profileInputAddress" class="form-input" placeholder="Ví dụ: Ký túc xá Khu B, ĐHQG-HCM">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputFacebook" class="form-label">Link Facebook</label>
+                      <input type="url" id="profileInputFacebook" class="form-input" placeholder="https://facebook.com/username">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileInputLinkedin" class="form-label">Link LinkedIn</label>
+                      <input type="url" id="profileInputLinkedin" class="form-input" placeholder="https://linkedin.com/in/username">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                      <label for="profileTextareaBio" class="form-label">Giới thiệu bản thân (About Me)</label>
+                      <textarea id="profileTextareaBio" class="form-input" rows="3" placeholder="Chia sẻ đôi nét về mục tiêu, sở thích hoặc định hướng công nghệ của bạn..."></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Tùy chọn thông báo cá nhân -->
+                  <div style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
+                    <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Tùy chọn thông báo (Notification Preferences)</div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                        <input type="checkbox" id="profilePrefSchedule" checked> Nhận thông báo cập nhật lịch học & sự kiện mới
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                        <input type="checkbox" id="profilePrefAssignments" checked> Nhận thông báo bài tập & nhắc nhở hạn nộp bài
+                      </label>
+                      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; cursor: pointer;">
+                        <input type="checkbox" id="profilePrefQuestions" checked> Nhận thông báo khi câu hỏi Q&A được phản hồi
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group admin-only-element" id="profileMentorGroup" style="grid-column: 1 / -1; display: none;">
+                    <div style="background: rgba(37,99,235,0.05); border: 1px dashed rgba(37,99,235,0.3); border-radius: 8px; padding: 12px; margin-top: 4px;">
+                      <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary-blue); margin-bottom: 8px;">
+                        <i class="fas fa-user-tie"></i> Phân công Mentor (Chỉ Quản trị viên)
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                          <label for="profileInputMentorName" class="form-label" style="font-size: 0.8rem;">Tên Mentor</label>
+                          <input type="text" id="profileInputMentorName" class="form-input" placeholder="Để trống nếu chưa công bố" maxlength="150">
+                        </div>
+                        <div>
+                          <label for="profileInputMentorEmail" class="form-label" style="font-size: 0.8rem;">Email Mentor</label>
+                          <input type="email" id="profileInputMentorEmail" class="form-input" placeholder="mentor@uit.edu.vn" maxlength="254">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="profile-form-footer">
+                    <button type="submit" class="btn btn-primary" id="btnSaveProfileInfo">
+                      <span>Lưu thay đổi</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Card 4: Thông tin chương trình đào tạo (Chỉ đọc) -->
+              <div class="portal-card profile-form-card" style="margin-top: 20px;">
+                <div class="profile-card-header">
+                  <div>
+                    <h3 class="card-title">Thông Tin Chương Trình Đào Tạo</h3>
+                    <p class="card-subtitle">Thông tin tiến độ do Ban Quản trị quản lý</p>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Trạng thái học tập</div>
+                    <div id="profileProgStatusDisplay" style="font-size: 1rem; font-weight: 700; color: var(--primary-blue);">Đang học (Active)</div>
+                  </div>
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Khóa đào tạo</div>
+                    <div id="profileProgBatchDisplay" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Trainee 2026</div>
+                  </div>
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Tổng sao tích lũy</div>
+                    <div id="profileProgStarsDisplay" style="font-size: 1rem; font-weight: 700; color: #d97706;">0 sao</div>
+                  </div>
+                  <div style="padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Chuyên cần / Điểm danh</div>
+                    <div id="profileProgAttendanceDisplay" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">0 buổi</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 5: Đổi mật khẩu tài khoản -->
+              <div class="portal-card profile-form-card" id="profileSecurityCard" style="margin-top: 20px;">
+                <div class="profile-card-header">
+                  <div>
+                    <h3 class="card-title">Đổi Mật Khẩu Đăng Nhập</h3>
+                  </div>
+                </div>
+
+                <form id="profileSecurityForm" class="profile-form">
+                  <div class="profile-form-grid profile-security-grid">
+                    <div class="form-group">
+                      <label for="profileOldPass" class="form-label">Mật khẩu hiện tại <span class="text-danger">*</span></label>
+                      <input type="password" id="profileOldPass" class="form-input" placeholder="Mật khẩu đang dùng" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="profileNewPass" class="form-label">Mật khẩu mới <span class="text-danger">*</span></label>
+                      <input type="password" id="profileNewPass" class="form-input" placeholder="Tối thiểu 8 ký tự" required minlength="8">
+                    </div>
+                    <div class="form-group">
+                      <label for="profileConfirmPass" class="form-label">Xác nhận mật khẩu mới <span class="text-danger">*</span></label>
+                      <input type="password" id="profileConfirmPass" class="form-input" placeholder="Nhập lại mật khẩu mới" required minlength="8">
+                    </div>
+                  </div>
+
+                  <div class="profile-form-footer">
+                    <button type="submit" class="btn btn-secondary" id="btnSaveNewPassword">
+                      <span>Cập nhật mật khẩu</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Card 6: Quên mật khẩu & Gửi yêu cầu hỗ trợ Admin -->
+              <div class="portal-card profile-forgot-card" id="profileForgotCard" style="margin-top: 20px;">
+                <div class="forgot-card-inner">
+                  <div class="forgot-card-content">
+                    <h4 class="forgot-card-title">Bạn quên mật khẩu hoặc cần Admin đặt lại?</h4>
+                    <p class="forgot-card-desc">
+                      Nếu không nhớ mật khẩu cũ hoặc tài khoản bị khóa, bạn có thể gửi yêu cầu hỗ trợ. Ban Quản trị sẽ reset mật khẩu về mặc định <code>traineeprogram</code> cho bạn.
+                    </p>
+                  </div>
+                  <div class="forgot-card-action">
+                    <button type="button" class="btn btn-danger" id="btnProfileSendForgotReq">
+                      <span>Gửi yêu cầu</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 7: Hoạt động gần đây (Recent Activities) -->
+              <div class="portal-card profile-form-card" style="margin-top: 20px;">
+                <div class="profile-card-header" style="justify-content: space-between;">
+                  <div>
+                    <h3 class="card-title">Hoạt Động Gần Đây</h3>
+                    <p class="card-subtitle">Nhật ký đăng nhập, các bài tập đã nộp, đơn xin nghỉ và câu hỏi Q&A đã gửi.</p>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-xs" id="btnRefreshActivities" style="padding: 4px 10px;">Làm mới</button>
+                </div>
+                <div id="profileActivitiesContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding-right: 4px;">
+                  <div style="text-align: center; color: var(--text-muted); padding: 20px;">Đang tải lịch sử hoạt động...</div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>

@@ -131,7 +131,7 @@ router.post('/batch', requirePermission('assignments:manage'), async (req, res) 
     const updatedList = await batchUpdateAssignments(assignments);
     res.json({
       success: true,
-      message: `Đã cập nhật thành công ${updatedList.length} bài tập vào cơ sở dữ liệu!`,
+      message: `Đã cập nhật thành công ${updatedList.length} bài tập!`,
       data: updatedList
     });
   } catch (err) {

@@ -12,13 +12,19 @@ Production vẫn cần Turnstile để chống spam. Thời gian gửi hiển th
 
 ## Tài khoản và quyền sửa
 
-Tài khoản gốc từ `ADMIN_USERNAME`/`ADMIN_PASSWORD` quản lý tài khoản tại trang Quản trị. Quản trị nội dung được sửa các nghiệp vụ; Trainer được cấp từng quyền: hồ sơ Trainee, lịch, điểm danh/sao, bài tập, Q&A hoặc xin nghỉ. Không cấp quyền quản lý tài khoản cho các tài khoản nội dung. Khóa tài khoản, đổi quyền hay đổi mật khẩu làm hết hiệu lực phiên cũ. Quyền và trạng thái được đọc lại ở API trên mỗi yêu cầu, không tin role lưu trên trình duyệt.
+Tài khoản gốc từ Quản trị gốc (tạo bằng `npm run create-admin`, lưu trong database) quản lý tài khoản tại trang Quản trị. Quản trị nội dung được sửa các nghiệp vụ; Trainer được cấp từng quyền: hồ sơ Trainee, lịch, điểm danh/sao, bài tập, Q&A hoặc xin nghỉ. Không cấp quyền quản lý tài khoản cho các tài khoản nội dung. Khóa tài khoản, đổi quyền hay đổi mật khẩu làm hết hiệu lực phiên cũ. Quyền và trạng thái được đọc lại ở API trên mỗi yêu cầu, không tin role lưu trên trình duyệt.
 
 Chỉnh lịch tại Thời khóa biểu, thêm/xóa/sửa bài tập ở trang Bài tập, sửa Trainee tại Bảng xếp hạng, sửa điểm danh và điểm sao tại Bảng điểm, trả lời Q&A và duyệt xin nghỉ ngay tại trang tương ứng. Sau khi lưu điểm danh/sao, tổng điểm, chuyên cần và bảng xếp hạng được đọc lại từ dữ liệu đã lưu.
 
 Quyền `assignments:manage` cho phép thêm và xóa bài tập, không giới hạn 11 bài. Bài mới được cấp mã tự động, không đổi mã các bài cũ. Xóa bài sẽ ẩn khỏi lộ trình và giữ các xác nhận bài nộp để đối chiếu; danh mục rỗng không tự khôi phục bài mẫu khi tải trang.
 
 Bài chưa mở không cho khách/Trainee mở popup; API công khai cũng ẩn mô tả, chi tiết và link nộp. Người có quyền quản lý bài tập vẫn xem và chỉnh sửa được. Lịch học có link tài liệu tùy chọn, chỉ hiển thị khi được nhập URL http/https hợp lệ. Avatar Trainee dùng ảnh cá voi có sẵn trong project, chọn ổn định theo mã Trainee.
+
+## Giao diện và script chỉ dành cho tài khoản đăng nhập
+
+`public/index.html` chỉ chứa phần dành cho khách. Trang Quản trị, Hồ sơ, Bài tập, các hộp thoại sửa/xóa và nút quản lý nằm trong `private/fragments/`, còn `admin.js`/`profile.js` nằm trong `private/js/`; thư mục `private/` không được phục vụ tĩnh. Sau khi đăng nhập, frontend gọi `GET /api/ui`: máy chủ kiểm tra phiên và quyền của từng khối (bảng `SLOTS` trong `routes/uiRoutes.js`) rồi chỉ trả các khối được phép; script được tải qua `/api/ui/script/<tên>`. Khách không nhận khối nào, DevTools không thấy HTML hay script của Admin/Trainee. Thêm khối riêng mới: tạo `private/fragments/<tên>.html`, đặt `<template data-private-slot="<tên>"></template>` ở chỗ cần chèn trong `public/components/` và khai báo quyền trong `SLOTS`. Đổi quyền/đăng xuất sẽ tải lại trang để gỡ phần giao diện cũ.
+
+Khách cũng không nhận tên bài giảng và Trainer từ API: `/api/schedules`, `/api/trainees` (sao theo buổi) và `/api/requests/leave` trả `Buổi N` thay cho tên bài giảng và bỏ tên Trainer cho đến khi đăng nhập.
 
 ## Host: Vercel + MongoDB Atlas + Resend
 
@@ -34,8 +40,8 @@ Production không dùng fallback RAM: thiếu MongoDB hoặc kết nối lỗi t
    | --- | --- |
    | `MONGODB_URI` | URI Atlas, kèm tên database |
    | `JWT_SECRET` | Chuỗi ngẫu nhiên tối thiểu 32 ký tự |
-   | `ADMIN_USERNAME` | Tên đăng nhập admin bạn chọn |
-   | `ADMIN_PASSWORD` | Mật khẩu riêng tối thiểu 12 ký tự |
+| `TRAINEE_DEFAULT_PASSWORD` | Mật khẩu tạm cho Trainee, ngẫu nhiên tối thiểu 12 ký tự (bắt buộc ở production) |
+| *(không có biến admin)* | Chạy `npm run create-admin` để tạo Quản trị gốc trong database, không lưu mật khẩu trong `.env` |
    | `APP_ORIGIN` | URL HTTPS chính thức, ví dụ `https://ten-project.vercel.app`, không có dấu `/` cuối |
    | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Hai khóa widget cho hostname portal |
 
@@ -201,7 +207,7 @@ portal-tp-26/
 
 | Vai trò | Tên đăng nhập | Mật khẩu mặc định | Ghi chú |
 | :--- | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | `ADMIN_USERNAME` trong `.env` | `ADMIN_PASSWORD` trong `.env` | Không còn mật khẩu admin mặc định; phải đặt trước khi đăng nhập. |
+| **Quản trị viên (Admin)** | Tên đặt khi chạy `npm run create-admin` | Mật khẩu đặt khi chạy `npm run create-admin` (chỉ lưu hash trong database) | Không còn mật khẩu admin trong `.env` hay source code. |
 | **Sinh viên (Trainee)** | *Không cần đăng nhập* | — | Sinh viên có thể trực tiếp tra cứu điểm số, thời khóa biểu và thứ hạng. |
 
 ---

@@ -8,6 +8,8 @@ const AccountSchema = new mongoose.Schema({
   traineeId: { type: String, unique: true, sparse: true, trim: true }, // Linked MSSV when role is 'trainee'
   traineeRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainee', unique: true, sparse: true },
   permissions: [{ type: String, enum: ['trainees:manage', 'schedules:manage', 'attendance:manage', 'assignments:manage', 'questions:manage', 'leave:manage'] }],
+  // Quản trị gốc: chỉ được tạo bằng `npm run create-admin` (không có API nào ghi được trường này).
+  isOwner: { type: Boolean, default: false },
   active: { type: Boolean, default: true },
   sessionVersion: { type: Number, default: 0 },
   lastLoginAt: { type: Date },

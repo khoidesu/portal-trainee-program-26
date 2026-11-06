@@ -54,47 +54,71 @@ function compareTraineesForRank(a, b) {
   }
   const starDiff = (Number(b.accumulatedStars) || 0) - (Number(a.accumulatedStars) || 0);
   if (starDiff !== 0) return starDiff;
-  const scoreDiff = (Number(b.assignmentScore) || 0) - (Number(a.assignmentScore) || 0);
-  if (scoreDiff !== 0) return scoreDiff;
-  const attDiff = (Number(b.attendedSessions) || 0) - (Number(a.attendedSessions) || 0);
-  if (attDiff !== 0) return attDiff;
   return String(a.traineeId || '').localeCompare(String(b.traineeId || ''));
 }
 
+function buildLeaderboardRankMap(trainees) {
+  const sorted = trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort(compareTraineesForRank);
+  const ranks = new Map();
+  let previousStars;
+  let rank = 0;
+  sorted.forEach((trainee, index) => {
+    const stars = Number(trainee.accumulatedStars);
+    if (index === 0 || stars !== previousStars) rank = index + 1;
+    ranks.set(trainee.traineeId, rank);
+    previousStars = stars;
+  });
+  return ranks;
+}
+
 function renderPodium() {
-  // BẢNG XẾP HẠNG THUẦN TÚY DỰA TRÊN SỐ SAO TÍCH LŨY (KHÔNG LIÊN QUAN ĐẾN ĐIỂM KHÁC)
   const sorted = state.trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort(compareTraineesForRank);
-
   const section = document.getElementById('podiumSection');
-  if (section) section.style.display = sorted.length ? '' : 'none';
-  [elements.podiumRank1, elements.podiumRank2, elements.podiumRank3].forEach((card, index) => { if (card) card.style.display = sorted[index] ? '' : 'none'; });
+  if (!section) return;
+  section.replaceChildren();
+  section.style.display = sorted.length ? '' : 'none';
+  if (!sorted.length) return;
 
-  // Top 1 (Số sao nhiều nhất)
-  if (sorted[0]) {
-    elements.podium1Name.textContent = sorted[0].fullName;
-    elements.podium1Track.textContent = sorted[0].department || sorted[0].track;
-    elements.podium1Score.textContent = `${sorted[0].accumulatedStars || 0} sao`;
-    elements.podium1Avatar.src = getTraineeDicebearAvatar(sorted[0]);
-    elements.podiumRank1.onclick = () => openTraineeDetail(sorted[0].traineeId);
-  }
+  const highestStars = Number(sorted[0].accumulatedStars);
+  const leaders = sorted.filter(trainee => Number(trainee.accumulatedStars) === highestStars);
+  section.classList.toggle('single-leader', leaders.length === 1);
 
-  // Top 2
-  if (sorted[1]) {
-    elements.podium2Name.textContent = sorted[1].fullName;
-    elements.podium2Track.textContent = sorted[1].department || sorted[1].track;
-    elements.podium2Score.textContent = `${sorted[1].accumulatedStars || 0} sao`;
-    elements.podium2Avatar.src = getTraineeDicebearAvatar(sorted[1]);
-    elements.podiumRank2.onclick = () => openTraineeDetail(sorted[1].traineeId);
-  }
+  leaders.forEach(trainee => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'podium-card rank-1';
+    card.addEventListener('click', () => window.openTraineeDetail(trainee.traineeId));
 
-  // Top 3
-  if (sorted[2]) {
-    elements.podium3Name.textContent = sorted[2].fullName;
-    elements.podium3Track.textContent = sorted[2].department || sorted[2].track;
-    elements.podium3Score.textContent = `${sorted[2].accumulatedStars || 0} sao`;
-    elements.podium3Avatar.src = getTraineeDicebearAvatar(sorted[2]);
-    elements.podiumRank3.onclick = () => openTraineeDetail(sorted[2].traineeId);
-  }
+    const crown = document.createElement('div');
+    crown.className = 'podium-crown';
+    const medal = document.createElement('div');
+    medal.className = 'podium-medal';
+    medal.textContent = leaders.length > 1 ? 'Đồng hạng 1' : 'Hạng 1';
+    const avatarWrap = document.createElement('div');
+    avatarWrap.className = 'podium-avatar-wrap';
+    const avatar = document.createElement('img');
+    avatar.className = 'podium-avatar-img';
+    avatar.src = getTraineeDicebearAvatar(trainee);
+    avatar.alt = trainee.fullName || 'Trainee dẫn đầu';
+    avatarWrap.append(avatar);
+    const name = document.createElement('h4');
+    name.className = 'podium-name';
+    name.textContent = trainee.fullName || 'Trainee';
+    const meta = document.createElement('div');
+    meta.className = 'podium-meta';
+    meta.textContent = trainee.department || trainee.track || '';
+    const score = document.createElement('div');
+    score.className = 'podium-score-tag';
+    const scoreLabel = document.createElement('span');
+    scoreLabel.className = 'label';
+    scoreLabel.textContent = 'Sao tích lũy: ';
+    const scoreValue = document.createElement('span');
+    scoreValue.className = 'val highlight';
+    scoreValue.textContent = `${formatTraineeMetric(trainee.accumulatedStars)} sao`;
+    score.append(scoreLabel, scoreValue);
+    card.append(crown, medal, avatarWrap, name, meta, score);
+    section.append(card);
+  });
 }
 
 function renderLeaderboardTable() {
@@ -137,11 +161,7 @@ function renderLeaderboardTable() {
   }
 
   // Bảng xếp hạng theo số sao trên toàn bộ cơ sở dữ liệu
-  const starRankMap = new Map();
-  const allByStars = state.trainees.filter(trainee => Number.isFinite(trainee.accumulatedStars)).sort(compareTraineesForRank);
-  allByStars.forEach((t, i) => {
-    starRankMap.set(t.traineeId, i + 1);
-  });
+  const starRankMap = buildLeaderboardRankMap(state.trainees);
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
@@ -271,12 +291,12 @@ window.openTraineeDetail = async function(traineeId) {
       </p>
     </div>
 
-    <div style="margin-bottom: 20px;">
+    ${Array.isArray(trainee.skills) && trainee.skills.length ? `<div style="margin-bottom: 20px;">
       <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main);">Kỹ năng chuyên môn (Tech Stack):</h4>
       <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-        ${(Array.isArray(trainee.skills) ? trainee.skills : ['Node.js', 'React', 'MongoDB']).map(s => `<span class="badge-tag status-active">${escapeHtml(s)}</span>`).join('')}
+        ${trainee.skills.map(s => `<span class="badge-tag status-active">${escapeHtml(s)}</span>`).join('')}
       </div>
-    </div>
+    </div>` : ''}
 
     <div style="display: flex; justify-content: flex-end; gap: 10px;">
       <button class="btn btn-secondary" onclick="closeDetailModal()">Đóng</button>
@@ -297,4 +317,3 @@ function closeDetailModal() {
 // Expose to global window
 window.renderLeaderboard = renderLeaderboard;
 window.renderPodium = renderPodium;
-window.openTraineeDetail = openTraineeDetail;

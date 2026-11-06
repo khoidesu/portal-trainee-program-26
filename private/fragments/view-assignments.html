@@ -1,0 +1,82 @@
+        <!-- ======================================================== -->
+        <!-- TAB: BÀI TẬP RÈN LUYỆN (DUOLINGO LEARNING PATH STYLE) -->
+        <!-- ======================================================== -->
+        <section class="tab-view" id="viewAssignments">
+          <div class="duo-page-container">
+
+            <!-- Main Layout Grid -->
+            <div class="duo-main-grid">
+
+              <!-- Left Column: Unit Banner + Learning Path -->
+              <div class="duo-path-column">
+
+                <!-- Unit Banner (Green) -->
+                <div class="duo-unit-banner">
+                  <div class="duo-unit-left">
+                    <div class="duo-unit-tag" id="duoPathHeading">Lộ trình bài tập thực hành</div>
+                    <div class="duo-unit-desc">Các bài tập rèn luyện chuyên sâu Trainee Program UIT</div>
+                  </div>
+                  <button type="button" class="duo-guidebook-btn" id="duoGuidebookBtn"
+                    title="Xem sổ tay hướng dẫn bài tập">
+
+                    <span>Sổ tay bài tập</span>
+                  </button>
+                </div>
+
+                <!-- Learning Path Container -->
+                <div class="duo-path-wrapper">
+                  <!-- Winding SVG Path in background -->
+                  <svg class="duo-path-svg-bg" viewBox="0 0 320 1200" preserveAspectRatio="none">
+                    <path class="duo-path-curve"
+                      d="M 160 35 C 260 160, 260 350, 160 475 C 60 600, 60 790, 160 915 C 260 1010, 255 1070, 232 1115" />
+                  </svg>
+
+                  <div class="duo-mascot duo-mascot-left duo-whale-1" aria-hidden="true">
+                    <img src="assets/whale_1.png" alt="" width="1254" height="1254">
+                  </div>
+
+                  <div class="duo-mascot duo-mascot-right duo-whale-2" aria-hidden="true">
+                    <img src="assets/whale_2.png" alt="" width="1254" height="1254" loading="lazy">
+                  </div>
+
+                  <div class="duo-mascot duo-mascot-left duo-whale-3" aria-hidden="true">
+                    <img src="assets/whale_3.png" alt="" width="1254" height="1254" loading="lazy">
+                  </div>
+
+                  <div class="duo-mascot duo-mascot-right duo-whale-4" aria-hidden="true">
+                    <img src="assets/whale_4.png" alt="" width="1254" height="1254" loading="lazy">
+                  </div>
+
+                  <!-- Path Nodes container (Generated dynamically by duolingo.js) -->
+                  <div id="duoPathContainer"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+
+                </div>
+
+              </div>
+
+              <aside class="duo-sidebar" aria-label="Thông tin lộ trình bài tập">
+                <section class="duo-card">
+                  <div class="duo-card-header">
+                    <h3 class="duo-card-title">Trạng thái bài tập</h3>
+                  </div>
+                  <div id="duoAssignmentSummary" aria-live="polite">
+                    <p class="duo-sidebar-note">Đang tải dữ liệu bài tập…</p>
+                  </div>
+                  <p class="duo-sidebar-caption">Trạng thái chung của lộ trình do Ban Tổ chức cập nhật.</p>
+                </section>
+
+                <section class="duo-card">
+                  <div class="duo-card-header">
+                    <h3 class="duo-card-title">Hạn nộp sắp tới</h3>
+                  </div>
+                  <div id="duoUpcomingDeadlines">
+                    <p class="duo-sidebar-note">Đang tải hạn nộp…</p>
+                  </div>
+                </section>
+              </aside>
+            </div>
+
+          </div>
+        <template data-private-slot="assignments-manage"></template>
+</section>

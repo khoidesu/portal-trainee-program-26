@@ -27,41 +27,87 @@ function getAuthLandingTab(user) {
   return 'schedule';
 }
 
+let privateUiKey = null;
+
+function getPrivateUiKey(user) {
+  if (!user) return '';
+  return [user.username, user.role, user.isOwner ? 1 : 0, user.mustChangePassword ? 1 : 0, [...(user.permissions || [])].sort().join(',')].join('|');
+}
+
+function loadPrivateScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Không tải được tài nguyên.'));
+    document.head.appendChild(script);
+  });
+}
+
+// Giao diện và script dành riêng cho Trainee/Admin chỉ được máy chủ gửi sau khi xác thực đúng quyền.
+async function loadPrivateUi(user) {
+  privateUiKey = getPrivateUiKey(user);
+  if (!user) return;
+  const response = await fetch('/api/ui', { cache: 'no-store', credentials: 'same-origin' });
+  const result = await response.json();
+  if (!response.ok || !result.success) throw new Error(result.message || 'Không tải được giao diện.');
+  document.querySelectorAll('template[data-private-slot]').forEach(slot => {
+    const html = result.data.slots[slot.dataset.privateSlot];
+    if (!html) return;
+    const holder = document.createElement('template');
+    holder.innerHTML = html;
+    slot.replaceWith(holder.content);
+  });
+  for (const src of result.data.scripts) await loadPrivateScript(src);
+}
+
+async function bootstrapSession() {
+  let user = null;
+  try {
+    const response = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' });
+    const result = await response.json();
+    if (response.ok && result.success) user = result.user || null;
+  } catch {}
+  state.currentUser = user;
+  try {
+    await loadPrivateUi(user);
+  } catch {
+    window.showToast?.('Chưa tải được một số chức năng dành cho tài khoản. Vui lòng tải lại trang.', 'danger');
+  }
+  document.querySelectorAll('template[data-private-slot]').forEach(slot => slot.remove());
+}
+
 async function refreshAuthSession(redirectOnLogin = false) {
   if (authSessionSyncPromise) return authSessionSyncPromise;
   authSessionSyncPromise = (async () => {
     const previousUser = state.currentUser;
     let nextUser = previousUser || null;
     try {
-      const token = sessionStorage.getItem('uit_trainee_auth_token') || localStorage.getItem('uit_trainee_auth_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      // Chỉ tin vào phản hồi của máy chủ (cookie HttpOnly). Không dùng token/cache trong storage.
       const response = await fetch('/api/auth/me', {
         cache: 'no-store',
-        credentials: 'same-origin',
-        headers
+        credentials: 'same-origin'
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        if (result.user) {
-          nextUser = result.user;
-          try {
-            sessionStorage.setItem('uit_auth_user_cache', JSON.stringify(nextUser));
-            localStorage.setItem('uit_auth_user_cache', JSON.stringify(nextUser));
-          } catch {}
-        } else if (!token) {
-          nextUser = null;
-          try {
-            sessionStorage.removeItem('uit_auth_user_cache');
-            localStorage.removeItem('uit_auth_user_cache');
-            sessionStorage.removeItem('uit_trainee_auth_token');
-            localStorage.removeItem('uit_trainee_auth_token');
-          } catch {}
-        }
+        nextUser = result.user || null;
+      } else if (response.status === 401) {
+        nextUser = null;
       }
     } catch {}
+    clearLegacyAuthStorage();
+
+    if (state.authInitialized && getPrivateUiKey(nextUser) !== privateUiKey) {
+      window.location.reload();
+      return Boolean(nextUser);
+    }
 
     state.currentUser = nextUser;
     renderAuthState();
+
+    if (nextUser?.mustChangePassword && !nextUser.isOwner && typeof openChangePasswordModal === 'function') {
+      openChangePasswordModal();
+    }
 
     const identityChanged = nextUser && (!previousUser || previousUser.username !== nextUser.username || previousUser.role !== nextUser.role);
     if (redirectOnLogin && identityChanged && typeof switchTab === 'function') {
@@ -74,14 +120,18 @@ async function refreshAuthSession(redirectOnLogin = false) {
   return authSessionSyncPromise;
 }
 
-async function initAuth() {
+// Dọn token/cache cũ còn sót trong trình duyệt từ phiên bản trước.
+function clearLegacyAuthStorage() {
   try {
-    const cached = sessionStorage.getItem('uit_auth_user_cache') || localStorage.getItem('uit_auth_user_cache');
-    if (cached && !state.currentUser) {
-      state.currentUser = JSON.parse(cached);
-      renderAuthState();
+    for (const key of ['uit_trainee_auth_token', 'uit_auth_user_cache', 'uit_trainee_auth_user']) {
+      sessionStorage.removeItem(key);
+      localStorage.removeItem(key);
     }
   } catch {}
+}
+
+async function initAuth() {
+  clearLegacyAuthStorage();
   await refreshAuthSession(false);
   state.authInitialized = true;
   return Boolean(state.currentUser);
@@ -283,8 +333,12 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function openLoginModal() {
-  window.location.href = '/login';
+function openLoginModal(targetTab) {
+  const fromTab = targetTab || (window.state && window.state.activeTab) || window.location.hash.replace('#', '') || 'schedule';
+  try {
+    sessionStorage.setItem('uit_login_from_tab', fromTab);
+  } catch (e) {}
+  window.location.href = '/login?from=' + encodeURIComponent(fromTab);
 }
 
 function closeLoginModal() {
@@ -299,24 +353,44 @@ async function handleLogout() {
     window.showToast?.('Chưa đăng xuất được. Vui lòng thử lại.', 'danger');
     return;
   }
-  state.currentUser = null;
-  localStorage.removeItem('uit_trainee_auth_user');
-  localStorage.removeItem('uit_trainee_auth_token');
-  sessionStorage.removeItem('uit_trainee_auth_token');
+  clearLegacyAuthStorage();
   try {
-    sessionStorage.removeItem('uit_auth_user_cache');
-    localStorage.removeItem('uit_auth_user_cache');
     sessionStorage.removeItem('uit_portal_active_tab');
     history.replaceState(null, '', '#schedule');
   } catch (e) {}
-  await loadTrainees();
-  renderAuthState();
-  switchTab('schedule');
-  if (window.showToast) {
-    window.showToast('Đã đăng xuất khỏi tài khoản.', 'info');
-  }
+  window.location.reload();
 }
 
+
+function openChangePasswordModal() {
+  if (!elements.changePasswordModal) return;
+  elements.changePasswordForm?.reset();
+  elements.changePasswordModal.classList.add('open', 'show');
+  elements.changePassCurrent?.focus();
+}
+
+function closeChangePasswordModal() {
+  elements.changePasswordModal?.classList.remove('open', 'show');
+}
+
+async function handleChangePasswordSubmit(e) {
+  e.preventDefault();
+  const currentPass = elements.changePassCurrent?.value || '';
+  const newPass = elements.changePassNew?.value || '';
+  const confirmPass = elements.changePassConfirm?.value || '';
+  const minLen = 8;
+  const fail = message => window.showToast ? window.showToast(message, 'danger') : alert(message);
+
+  if (newPass !== confirmPass) return fail('Mật khẩu xác nhận không khớp với mật khẩu mới.');
+  if (newPass.length < minLen) return fail(`Mật khẩu mới cần tối thiểu ${minLen} ký tự.`);
+
+  const res = await window.API.changePassword(state.currentUser?.traineeId, currentPass, newPass);
+  if (!res?.success) return fail(res?.message || 'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.');
+
+  closeChangePasswordModal();
+  state.currentUser = null;
+  window.location.href = '/login';
+}
 
 function checkAdminAuth() {
   const u = state.currentUser;
@@ -329,9 +403,13 @@ function updateAuthUI() {
 
 // Expose to global window
 window.initAuth = initAuth;
+window.bootstrapSession = bootstrapSession;
 window.refreshAuthSession = refreshAuthSession;
 window.setupAuthSessionSync = setupAuthSessionSync;
 window.checkAdminAuth = checkAdminAuth;
+window.openChangePasswordModal = openChangePasswordModal;
+window.closeChangePasswordModal = closeChangePasswordModal;
+window.handleChangePasswordSubmit = handleChangePasswordSubmit;
 window.logout = handleLogout;
 window.handleLogout = handleLogout;
 window.updateAuthUI = updateAuthUI;

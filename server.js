@@ -24,11 +24,10 @@ if (!process.env.VERCEL) assembleHtmlComponents();
 
 const {
   connectDB,
-  getDatabaseStatus,
   getAnnouncements
 } = require('./config/db');
 
-const { requireAdmin, optionalAuth, validateInput, isProduction } = require('./utils/security');
+const { requireAdmin, optionalAuth, enforcePasswordChange, validateInput, isProduction } = require('./utils/security');
 
 // Nạp các Router Components
 const authRoutes = require('./routes/authRoutes');
@@ -40,6 +39,7 @@ const supportRoutes = require('./routes/supportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const uiRoutes = require('./routes/uiRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -89,15 +89,42 @@ app.use('/api', (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Nguồn gửi yêu cầu không được phép.' });
     }
     if (isProduction && !origin) return res.status(403).json({ success: false, message: 'Yêu cầu cần có Origin hợp lệ.' });
-    if (!/^application\/json(?:;|$)/i.test(req.get('content-type') || '')) return res.status(415).json({ success: false, message: 'Chỉ nhận dữ liệu JSON.' });
+    const contentType = req.get('content-type') || '';
+    const nativeLogin = req.method === 'POST' && req.path === '/auth/login' && /^application\/x-www-form-urlencoded(?:;|$)/i.test(contentType);
+    if (!nativeLogin && !/^application\/json(?:;|$)/i.test(contentType)) return res.status(415).json({ success: false, message: 'Chỉ nhận dữ liệu JSON.' });
   }
   next();
-}, validateInput, optionalAuth);
+}, validateInput, optionalAuth, enforcePasswordChange);
 app.use('/api', async (req, res, next) => {
   if (isProduction && !await connectDB()) {
     return res.status(503).json({ success: false, message: 'Cơ sở dữ liệu tạm thời không khả dụng. Vui lòng thử lại sau.' });
   }
   next();
+});
+
+app.use((req, res, next) => {
+  const requestPath = req.path.toLowerCase();
+  if (/^\/\.env(?:$|[./_-])/.test(requestPath) || /^\/\.git(?:$|\/)/.test(requestPath) ||
+      /\.(?:bak|backup|dump|sql|sqlite|db|zip|7z|tar|gz)(?:$|\/)/.test(requestPath)) {
+    return res.sendStatus(404);
+  }
+  next();
+});
+
+app.get('/robots.txt', (req, res) => {
+  const origin = allowedOrigins[0] || `${req.protocol}://${req.get('host')}`;
+  res.type('text/plain').send(`User-agent: *\nDisallow: /api/\nDisallow: /login\nSitemap: ${origin}/sitemap.xml\n`);
+});
+
+app.get(['/security.txt', '/.well-known/security.txt'], (req, res) => {
+  const origin = allowedOrigins[0] || `${req.protocol}://${req.get('host')}`;
+  const expires = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
+  res.type('text/plain').send(`Contact: https://github.com/khoidesu/portal-trainee-program-26/security/advisories/new\nExpires: ${expires}\nPreferred-Languages: vi, en\nCanonical: ${origin}/.well-known/security.txt\n`);
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const origin = allowedOrigins[0] || `${req.protocol}://${req.get('host')}`;
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${origin}/</loc></url></urlset>`);
 });
 
 // Phục vụ tài nguyên tĩnh từ thư mục public
@@ -116,13 +143,11 @@ app.use('/api/requests', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/ui', uiRoutes);
 
 // Kiểm tra trạng thái cơ sở dữ liệu
 app.get('/api/status', (req, res) => {
-  res.json({
-    success: true,
-    data: getDatabaseStatus()
-  });
+  res.json({ ok: true });
 });
 
 app.get('/api/public-config', (req, res) => {

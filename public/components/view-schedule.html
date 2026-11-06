@@ -41,17 +41,8 @@
 
                 <span>Google Calendar</span>
               </button>
-              <button type="button" class="btn btn-outline" id="btnDownloadSyllabus"
-                title="Tải toàn bộ đề cương môn học và hướng dẫn buổi học">
 
-                <span>Tải đề cương</span>
-              </button>
-              <!-- Nút Thêm / Chỉnh sửa lịch: CHỈ ADMIN MỚI THẤY VÀ CÓ QUYỀN SỬ DỤNG -->
-              <button type="button" class="btn btn-primary admin-only-element" id="btnOpenScheduleEditor"
-                style="display: none;" title="Thêm hoặc chỉnh sửa buổi học trong thời khóa biểu (Chỉ Admin)">
-
-                <span>+ Thêm buổi học mới</span>
-              </button>
+              <template data-private-slot="schedule-add-button"></template>
             </div>
           </div>
 

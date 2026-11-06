@@ -1,0 +1,56 @@
+  <!-- ==================== MODAL: MONGODB CONFIGURATION ==================== -->
+  <div class="modal-overlay" id="mongoConfigModal">
+    <div class="modal-card mongo-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+
+          <h3 class="modal-title">Cấu Hình Kết Nối MongoDB</h3>
+        </div>
+        <button class="modal-close-btn" id="closeMongoModalBtn">Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Current Status Banner -->
+        <div class="db-status-banner" id="modalDbStatusBanner">
+          <div class="status-indicator-row">
+            <span class="status-pulse-dot" id="modalStatusDot"></span>
+            <div class="status-info-text">
+              <strong id="modalStatusTitle">Chế độ hiện tại: MOCK DATABASE</strong>
+              <p id="modalStatusDesc">Hệ thống đang phục vụ dữ liệu mẫu an toàn, không cần cài đặt gì thêm.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Setup Form -->
+        <div class="config-instructions">
+          <h4>Cách gắn link MongoDB Atlas của bạn:</h4>
+          <ol class="step-list">
+            <li>Tạo 1 cluster miễn phí trên <strong>MongoDB Atlas</strong> (hoặc chạy MongoDB local).</li>
+            <li>Copy chuỗi kết nối <code>mongodb+srv://...</code></li>
+            <li>Dán vào ô bên dưới rồi nhấn <strong>Lưu & Kết Nối</strong> (hoặc sửa trực tiếp biến
+              <code>MONGODB_URI</code> trong file <code>.env</code>).
+            </li>
+          </ol>
+        </div>
+
+        <form id="mongoConnectForm" class="mongo-form">
+          <label for="mongoUriInput" class="form-label">Chuỗi kết nối (Connection String):</label>
+          <div class="input-action-group">
+            <input type="text" id="mongoUriInput" class="form-input"
+              placeholder="mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/trainee_portal?retryWrites=true&w=majority"
+              required>
+          </div>
+          <div class="form-help-text">
+            * Hệ thống sẽ tự động cập nhật vào file <code>.env</code> và nạp dữ liệu mẫu vào database MongoDB của bạn.
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancelMongoBtn">Đóng</button>
+            <button type="submit" class="btn btn-primary" id="saveMongoBtn">
+              <span class="btn-text">Lưu & Kết Nối Ngay</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>

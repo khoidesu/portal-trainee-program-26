@@ -23,7 +23,27 @@ const app = require('../server');
 const security = require('../utils/security');
 const database = require('../config/db');
 const server = app.listen(0, '127.0.0.1');
-const ready = new Promise(resolve => server.on('listening', resolve));
+const listening = new Promise(resolve => server.on('listening', resolve));
+let ownerId;
+const ownerReady = database.createOwnerAccount({ username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD }).then(account => { ownerId = account.id; });
+const ready = Promise.all([listening, ownerReady]);
+const ownerSession = async () => { await ready; return 'trainee_session=' + security.signToken({ accountId: ownerId, username: process.env.ADMIN_USERNAME, sessionVersion: 0 }); };
+const traineeSessionCache = new Map();
+async function traineeSession(traineeId) {
+  if (traineeSessionCache.has(traineeId)) return traineeSessionCache.get(traineeId);
+  const password = 'Fixture trainee password 2026';
+  let authenticated = await database.authenticateUser(traineeId, password);
+  if (!authenticated.success) {
+    const initial = await database.authenticateUser(traineeId, 'traineeprogram');
+    assert.equal(initial.success, true);
+    await database.changeAccountPassword(initial.user, 'traineeprogram', password);
+    authenticated = await database.authenticateUser(traineeId, password);
+  }
+  assert.equal(authenticated.success, true);
+  const session = 'trainee_session=' + security.signToken({ accountId: authenticated.user.id, username: authenticated.user.username, sessionVersion: authenticated.user.sessionVersion });
+  traineeSessionCache.set(traineeId, session);
+  return session;
+}
 const nativeFetch = global.fetch;
 let cookie;
 
@@ -99,6 +119,48 @@ test('missing session data stays missing and model defaults do not invent result
   assert.equal(result.accumulatedStars, 0);
 });
 
+test('trainees with equal stars share the same competition rank regardless of list sorting', async () => {
+  const list = await database.getAllTrainees({ sort: 'name_asc' });
+  const rankedFixtures = list.filter(item => fixtureTrainees.some(fixture => fixture.traineeId === item.traineeId));
+  assert.equal(rankedFixtures.length, 2);
+  assert.deepEqual(rankedFixtures.map(item => item.currentRank), [1, 1]);
+  assert.deepEqual(rankedFixtures.map(item => item.rankClassification), ['🥇 Quán quân Trainee', '🥇 Quán quân Trainee']);
+  assert.ok(rankedFixtures.every(item => item.rankNote.startsWith('Đồng hạng 1 /')));
+});
+
+test('leaderboard highlights every first-place tie and keeps competition ranks 1, 1, 3', () => {
+  const vm = require('node:vm');
+  const section = {
+    children: [], style: {}, classes: new Set(),
+    replaceChildren() { this.children = []; },
+    append(...nodes) { this.children.push(...nodes); },
+    classList: { toggle(name, enabled) { enabled ? section.classes.add(name) : section.classes.delete(name); } }
+  };
+  const makeNode = tag => ({
+    tag, children: [], className: '', textContent: '', style: {},
+    append(...nodes) { this.children.push(...nodes); },
+    addEventListener(event, handler) { this[event] = handler; }
+  });
+  const trainees = [
+    { traineeId: '2', fullName: 'Đồng hạng B', accumulatedStars: 16, assignmentScore: 100, attendedSessions: 10 },
+    { traineeId: '1', fullName: 'Đồng hạng A', accumulatedStars: 16, assignmentScore: 0, attendedSessions: 0 },
+    { traineeId: '3', fullName: 'Hạng ba', accumulatedStars: 14 }
+  ];
+  const context = vm.createContext({
+    window: {}, state: { trainees }, elements: {},
+    document: { getElementById: id => id === 'podiumSection' ? section : null, createElement: makeNode },
+    getTraineeDicebearAvatar: trainee => `/avatar/${trainee.traineeId}.png`,
+    formatTraineeMetric: value => String(value)
+  });
+  vm.runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/js/modules/leaderboard.js'), 'utf8'), context);
+  const ranks = context.buildLeaderboardRankMap(trainees);
+  assert.deepEqual(trainees.map(trainee => ranks.get(trainee.traineeId)), [1, 1, 3]);
+  context.renderPodium();
+  assert.equal(section.children.length, 2);
+  assert.deepEqual(section.children.map(card => card.children[1].textContent), ['Đồng hạng 1', 'Đồng hạng 1']);
+  assert.deepEqual(section.children.map(card => card.children[3].textContent), ['Đồng hạng A', 'Đồng hạng B']);
+});
+
 test('attendance import preserves penalties, recorded zeros and missing rows for stopped trainees', () => {
   const { validateDataset } = require('./seed');
   const stopped = ['26521358', '26521694', '26521910'];
@@ -138,7 +200,7 @@ test('grade matrix displays negative and zero points, keeps zero cumulative tota
     window: {}, document: { getElementById: id => nodes[id] || null, querySelectorAll: () => [], querySelector: () => null },
     console
   });
-  for (const name of ['core', 'profile', 'grades']) vm.runInContext(fs.readFileSync(require('node:path').join(__dirname, '../public/js/modules/' + name + '.js'), 'utf8'), context);
+  for (const file of ['public/js/modules/core.js', 'private/js/profile.js', 'public/js/modules/grades.js']) vm.runInContext(fs.readFileSync(require('node:path').join(__dirname, '..', file), 'utf8'), context);
   const first = { sessionCode: 'ONE', sessionTitle: 'First', sessionDate: '2026-10-28' };
   const second = { sessionCode: 'TWO', sessionTitle: 'Second', sessionDate: '2026-10-30' };
   context.window.gradesState.uniqueSessions = [first, second];
@@ -172,8 +234,41 @@ test('public APIs do not reveal private contact details, scores or connection st
   const stars = await (await request('/api/trainees/25520918/session-stars')).json();
   assert.equal(stars.data.trainee.email, undefined);
   const status = await (await request('/api/status')).json();
-  assert.equal(status.data.uri, undefined);
+  assert.deepEqual(status, { ok: true });
   assert.equal(response.headers.get('cache-control'), 'no-store');
+});
+
+test('hardening routes reject invalid schedule filters and sensitive-looking paths', async () => {
+  for (const query of ['month=99&year=9999', 'month=-1&year=-1', 'month=1.5&year=2026']) {
+    const response = await request('/api/schedules?' + query);
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).success, false);
+  }
+  assert.equal((await request('/api/schedules?month=10&year=2026')).status, 200);
+  assert.equal((await request('/.env')).status, 404);
+  assert.equal((await request('/.git/config')).status, 404);
+  assert.equal((await request('/database.sql')).status, 404);
+  assert.equal((await request('/robots.txt')).status, 200);
+  assert.equal((await request('/security.txt')).status, 200);
+  assert.equal((await request('/.well-known/security.txt')).status, 200);
+  assert.equal((await request('/sitemap.xml')).status, 200);
+});
+
+test('login and wide data tables expose safe accessible fallbacks', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+  const login = read('public/login.html');
+  const grades = read('public/components/view-grades.html');
+  const questions = read('public/components/view-questions.html');
+  const serverSource = read('server.js');
+  assert.match(login, /<form id="loginForm" method="post" action="\/api\/auth\/login"/);
+  assert.match(login, /id="loginAlert"[^>]*role="alert"[^>]*aria-live="assertive"/);
+  assert.match(serverSource, /application\\\/x-www-form-urlencoded/);
+  assert.match(grades, /id="selectGradesTrack"[^>]*aria-label=/);
+  assert.match(grades, /grades-table-responsive"[^>]*role="region"[^>]*tabindex="0"/);
+  assert.match(questions, /table-responsive"[^>]*role="region"[^>]*tabindex="0"/);
+  assert.match(read('public/css/style.css'), /@media \(max-width: 768px\)[\s\S]*?\.table-scroll-hint\s*\{[\s\S]*?display: block/);
 });
 
 test('requires server-authenticated session; blocks query tokens, foreign origins and query operators', async () => {
@@ -204,26 +299,41 @@ test('login uses HttpOnly session cookie, supports configured username, and logo
   assert.match(logout.headers.get('set-cookie'), /Expires=Thu, 01 Jan 1970/i);
 });
 
-test('leave request validates roster and session, records server time and publishes only safe fields', async () => {
+test('leave requests require a trainee session, ignore spoofed identity and stay scoped to the owner', async () => {
   const previousAbsences = (await database.getTraineeById(leave.traineeId)).absentExcused;
-  const invalid = await request('/api/requests/leave', { method: 'POST', body: { ...leave, fullName: 'Wrong student' } });
+  const adminSession = await ownerSession();
+  const ownSession = await traineeSession(leave.traineeId);
+  const otherSession = await traineeSession('25520104');
+  assert.equal((await request('/api/requests/leave')).status, 401);
+  assert.equal((await request('/api/requests/leave', { method: 'POST', body: leave })).status, 401);
+  const invalid = await request('/api/requests/leave', { method: 'POST', session: ownSession, body: { ...leave, scheduleCode: 'missing' } });
   assert.equal(invalid.status, 400);
-  const first = await (await request('/api/requests/leave', { method: 'POST', body: leave })).json();
+  const first = await (await request('/api/requests/leave', { method: 'POST', session: ownSession, body: { ...leave, traineeId: '25520104', fullName: 'Wrong student' } })).json();
   assert.equal(first.success, true);
   assert.equal(first.data.status, 'pending');
   assert.equal(first.data.emailStatus, undefined);
-  assert.equal(first.data.publicVisible, true);
+  assert.equal(first.data.publicVisible, undefined);
   assert.ok(Number.isFinite(Date.parse(first.data.submittedAt)));
-  const duplicate = await (await request('/api/requests/leave', { method: 'POST', body: leave })).json();
+  const duplicate = await (await request('/api/requests/leave', { method: 'POST', session: ownSession, body: leave })).json();
   assert.equal(duplicate.data.id, first.data.id);
-  const list = await (await request('/api/requests', { session: cookie })).json();
+  const ownList = await (await request('/api/requests/leave', { session: ownSession })).json();
+  assert.equal(ownList.data.length, 1);
+  assert.equal(ownList.data[0].traineeId, leave.traineeId);
+  assert.equal(ownList.data[0].fullName, leave.fullName);
+  assert.equal((await (await request('/api/requests/leave', { session: otherSession })).json()).data.length, 0);
+  const adminLeaveList = await (await request('/api/requests/leave', { session: adminSession })).json();
+  assert.equal(adminLeaveList.data.some(item => item.id === first.data.id), true);
+  const list = await (await request('/api/requests', { session: adminSession })).json();
   assert.equal(list.data.filter(item => item.type === 'leave').length, 1);
   assert.equal(list.data[0].message, leave.reason);
-  const approved = await request('/api/requests/' + first.data.id, { method: 'PUT', session: cookie, body: { status: 'resolved' } });
+  const adminNotifications = await (await request('/api/notifications', { session: adminSession })).json();
+  assert.equal(adminNotifications.data.items.some(item => item.type === 'leave' && item.link === 'leave'), true);
+  const approved = await request('/api/requests/' + first.data.id, { method: 'PUT', session: adminSession, body: { status: 'resolved' } });
   assert.equal((await approved.json()).data.status, 'resolved');
+  assert.equal((await request('/api/requests/' + first.data.id, { method: 'PUT', session: ownSession, body: { status: 'resolved' } })).status, 403);
   const student = await database.getTraineeById(leave.traineeId);
   assert.equal(student.absentExcused, previousAbsences);
-  assert.equal((await request('/api/requests/' + first.data.id, { method: 'DELETE', session: cookie })).status, 400);
+  assert.equal((await request('/api/requests/' + first.data.id, { method: 'DELETE', session: adminSession })).status, 400);
 });
 
 test('admin star updates target the requested trainee and reject invalid mass-update payloads', async () => {
@@ -238,27 +348,33 @@ test('admin star updates target the requested trainee and reject invalid mass-up
   assert.equal(other.sessionStars.some(item => item.sessionCode === body.scheduleCode), false);
 });
 
-test('leave board is public, keeps original timestamp and never sends email even with legacy email settings', async () => {
+test('leave history is private per trainee, visible to admin and never sends legacy email', async () => {
   Object.assign(process.env, { RESEND_API_KEY: 'test-key', EMAIL_FROM: 'test@example.invalid', LEAVE_NOTIFY_EMAIL: 'test@example.invalid' });
   let externalCalls = 0;
   global.fetch = async () => { externalCalls++; throw new Error('No external email call allowed'); };
   try {
+    const adminSession = await ownerSession();
+    const ownSession = await traineeSession('25520104');
     const result = await (await request('/api/requests/leave', { method: 'POST', body: {
       ...leave, traineeId: '25520104', fullName: 'Lê Hoàng Minh Quân',
       email: 'must-not-be-public@example.invalid', submittedAt: '2000-01-01T00:00:00Z'
-    } })).json();
+    }, session: ownSession })).json();
     assert.equal(result.success, true);
     assert.equal(externalCalls, 0);
-    const list = await (await request('/api/requests/leave')).json();
+    assert.equal((await request('/api/requests/leave')).status, 401);
+    const list = await (await request('/api/requests/leave', { session: ownSession })).json();
     const entry = list.data.find(item => item.id === result.data.id);
     assert.equal(entry.fullName, 'Lê Hoàng Minh Quân');
     assert.equal(entry.reason, leave.reason);
     assert.equal(entry.submittedAt, result.data.submittedAt);
     assert.notEqual(entry.submittedAt, '2000-01-01T00:00:00Z');
     for (const field of ['email', 'phone', 'submissionKey', 'resolvedPassword', 'emailStatus']) assert.equal(entry[field], undefined);
-    const duplicate = await (await request('/api/requests/leave', { method: 'POST', body: { ...leave, traineeId: '25520104', fullName: 'Lê Hoàng Minh Quân' } })).json();
+    const firstSession = await traineeSession(leave.traineeId);
+    assert.equal((await (await request('/api/requests/leave', { session: firstSession })).json()).data.some(item => item.id === result.data.id), false);
+    assert.equal((await (await request('/api/requests/leave', { session: adminSession })).json()).data.some(item => item.id === result.data.id), true);
+    const duplicate = await (await request('/api/requests/leave', { method: 'POST', session: ownSession, body: { ...leave, traineeId: leave.traineeId, fullName: leave.fullName } })).json();
     assert.equal(duplicate.data.submittedAt, result.data.submittedAt);
-    assert.equal((await request('/api/requests/' + result.data.id + '/retry-email', { method: 'POST', session: cookie, body: {} })).status, 404);
+    assert.equal((await request('/api/requests/' + result.data.id + '/retry-email', { method: 'POST', session: adminSession, body: {} })).status, 404);
   } finally { global.fetch = nativeFetch; }
 });
 
@@ -277,7 +393,7 @@ test('production fails closed without MongoDB, and refuses default secrets', () 
     if (response.status !== 503) process.exitCode = 1;
     server.close();
   });`;
-  const env = { ...process.env, NODE_ENV: 'production', VERCEL: '1', MONGODB_URI: 'mongodb://127.0.0.1:1/test', APP_ORIGIN: 'https://portal.example.com' };
+  const env = { ...process.env, NODE_ENV: 'production', VERCEL: '1', MONGODB_URI: 'mongodb://127.0.0.1:1/test', APP_ORIGIN: 'https://portal.example.com', TRAINEE_DEFAULT_PASSWORD: crypto.randomBytes(18).toString('base64url') };
   const result = spawnSync(process.execPath, ['-e', probe], { cwd: require('node:path').resolve(__dirname, '..'), env, timeout: 15000, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   const unsafe = spawnSync(process.execPath, ['-e', "require('./utils/security')"], { cwd: require('node:path').resolve(__dirname, '..'), env: { ...env, JWT_SECRET: '', ADMIN_PASSWORD: '1234' }, encoding: 'utf8' });
@@ -344,27 +460,25 @@ test('production rate limit persists across independent limiter instances (mocke
   assert.equal(result.status, 0, result.stderr);
 });
 
-test('leave form saves receipts only after API success and shows API failure without false approval', async () => {
+test('leave form uses the authenticated identity and shows API failure without false approval', async () => {
   const vm = require('node:vm');
   const fs = require('node:fs');
   const elements = new Map();
   const listeners = {};
-  for (const id of ['leaveApplicationForm', 'leaveSelectSchedule', 'leaveInputReason', 'leaveSuccessAlert', 'btnDismissLeaveSuccess', 'btnResetLeaveForm', 'btnSubmitLeave', 'leaveInputMssv', 'leaveInputFullName', 'leaveCheckCommit', 'leaveFeedback', 'leaveSuccessDesc', 'leaveSuccessMeta', 'leaveHistoryTableBody', 'leaveHistoryCountBadge']) {
+  for (const id of ['leaveApplicationForm', 'leaveSelectSchedule', 'leaveInputReason', 'leaveSuccessAlert', 'btnDismissLeaveSuccess', 'btnResetLeaveForm', 'btnSubmitLeave', 'leaveCheckCommit', 'leaveFeedback', 'leaveSuccessDesc', 'leaveSuccessMeta', 'leaveHistoryTableBody', 'leaveHistoryCountBadge']) {
     elements.set(id, { dataset: {}, style: {}, addEventListener(type, callback) { listeners[id + ':' + type] = callback; }, setAttribute() {}, removeAttribute() {}, scrollIntoView() {} });
   }
   elements.get('leaveSelectSchedule').selectedOptions = [{ value: leave.scheduleCode, dataset: { date: leave.scheduleDate, title: 'Training' } }];
-  elements.get('leaveInputMssv').value = leave.traineeId;
-  elements.get('leaveInputFullName').value = leave.fullName;
   elements.get('leaveInputReason').value = leave.reason;
   elements.get('leaveCheckCommit').checked = true;
-  const storage = new Map();
   let fail = true;
   const context = vm.createContext({
-    window: {}, document: { getElementById: id => elements.get(id), querySelectorAll: () => [] },
-    localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
+    window: { state: { currentUser: { role: 'trainee', traineeId: leave.traineeId, fullName: leave.fullName } } }, state: { currentUser: { role: 'trainee', traineeId: leave.traineeId, fullName: leave.fullName } },
+    document: { getElementById: id => elements.get(id), querySelectorAll: () => [] },
     escapeHtml: value => String(value || '').replace(/</g, '&lt;'),
     API: { async submitLeave(body) {
-      assert.equal(body.traineeId, leave.traineeId);
+      assert.equal(body.traineeId, undefined);
+      assert.equal(body.fullName, undefined);
       if (fail) throw new Error('Máy chủ chưa tiếp nhận đơn.');
       return { success: true, message: 'Đang chờ xem xét.', data: { id: 'receipt-test', submittedAt: new Date().toISOString(), status: 'pending', emailStatus: 'sent' } };
     } }
@@ -372,14 +486,11 @@ test('leave form saves receipts only after API success and shows API failure wit
   vm.runInContext(fs.readFileSync(require('node:path').join(__dirname, '../public/js/modules/leave.js'), 'utf8'), context);
   context.window.initLeaveModule();
   await listeners['leaveApplicationForm:submit']({ preventDefault() {} });
-  assert.equal(storage.size, 0);
   assert.match(elements.get('leaveFeedback').textContent, /chưa tiếp nhận/);
   assert.equal(elements.get('btnSubmitLeave').disabled, false);
   fail = false;
   await listeners['leaveApplicationForm:submit']({ preventDefault() {} });
-  const receipt = JSON.parse(storage.get('uit_trainee_leave_receipts_v2'))[0];
-  assert.equal(receipt.status, 'Chờ xem xét khi gửi');
-  assert.equal(receipt.reason, undefined);
+  assert.match(elements.get('leaveSuccessMeta').textContent, new RegExp(leave.traineeId));
   assert.equal(elements.get('leaveSuccessAlert').style.display, 'flex');
 });
 
@@ -589,7 +700,7 @@ test('Microsoft Forms confirmations require admin, remain private and do not com
   assert.equal((await request('/api/assignments/1/submissions/' + leave.traineeId, { method: 'PUT', body: {} })).status, 401);
   const details = 'Requirements\nSubmit a repository link via Microsoft Forms.';
   assert.equal((await request('/api/assignments/1', { method: 'PUT', session: cookie, body: { details, status: 'active' } })).status, 200);
-  const body = { status: 'submitted', responseId: 'Forms-response-42', submittedAt: '2026-10-30T21:30:00+07:00', note: 'Verified in exported responses' };
+  const body = { status: 'submitted', responseId: 'Forms-response-42', note: 'Verified in exported responses' };
   const submit = await request('/api/assignments/1/submissions/' + leave.traineeId, { method: 'PUT', session: cookie, body });
   assert.equal(submit.status, 200);
   assert.equal((await submit.json()).data.reviewedBy, 'coordinator');
@@ -609,28 +720,34 @@ test('Microsoft Forms confirmations require admin, remain private and do not com
   }
   assert.equal((await request('/api/assignments/1/submissions/' + leave.traineeId, { method: 'PUT', session: cookie, body: { ...body, status: 'invalid' } })).status, 400);
   assert.equal((await request('/api/assignments/1/submissions/unknown', { method: 'PUT', session: cookie, body })).status, 400);
-  assert.equal((await request('/api/assignments/1/submissions/' + leave.traineeId, { method: 'PUT', session: cookie, body: { ...body, submittedAt: 'invalid' } })).status, 400);
   const reset = await (await request('/api/assignments/reset', { method: 'POST', session: cookie, body: {} })).json();
   assert.equal(reset.success, false);
+  const cleared = await request('/api/assignments/1/submissions/' + leave.traineeId, { method: 'PUT', session: cookie, body: { status: 'not_submitted', responseId: '', note: '' } });
+  assert.equal(cleared.status, 200);
+  assert.equal((await cleared.json()).data.status, 'not_submitted');
+  const afterClear = (await (await request('/api/assignments/1/submissions', { session: cookie })).json()).data.find(item => item.traineeId === leave.traineeId);
+  assert.equal(afterClear.status, 'not_submitted');
+  assert.equal(afterClear.reviewedAt, undefined);
+  assert.equal((await request('/api/assignments/1/submissions/' + leave.traineeId, { method: 'PUT', session: cookie, body: { status: 'submitted', note: 'x'.repeat(2001) } })).status, 400);
 });
 
-test('admin confirmation UI escapes response data and saves Vietnam submission time only on explicit confirmation', async () => {
+test('admin confirmation UI escapes response data and saves only the reviewed fields on explicit confirmation', async () => {
   const vm = require('node:vm');
   let saveHandler;
   let savedPayload;
   const audit = {};
   const inputs = {
     '.review-status': { value: 'completed' },
-    '.review-response': { value: '42' },
-    '.review-date': { value: '2026-10-31T21:30' },
+    '.review-response': { value: ' 42 ' },
     '.review-note': { value: 'Reviewed by Trainer' },
-    '.review-audit': audit
+    '.review-audit': audit,
+    '.review-save': {}
   };
-  const row = { dataset: { traineeId: leave.traineeId }, querySelector: selector => inputs[selector] };
+  const row = { dataset: { traineeId: leave.traineeId }, classList: { remove() {}, toggle() {} }, querySelector: selector => inputs[selector] };
   const button = { closest: () => row, addEventListener: (event, handler) => { saveHandler = handler; } };
   const nodes = {
-    adminReviewAssignment: { value: '1' }, assignmentReviewFeedback: {}, adminReviewFormLink: {},
-    adminAssignmentSubmissionsBody: { querySelectorAll: () => [button] }
+    adminReviewAssignment: { value: '1', dataset: {} }, assignmentReviewFeedback: {}, adminReviewFormLink: {},
+    adminAssignmentSubmissionsBody: { querySelector: () => null, querySelectorAll: selector => selector === '.review-save' ? [button] : [] }
   };
   const context = vm.createContext({
     window: { API: {
@@ -639,23 +756,24 @@ test('admin confirmation UI escapes response data and saves Vietnam submission t
         assert.equal(id, '1');
         assert.equal(traineeId, leave.traineeId);
         savedPayload = data;
-        return { reviewedAt: new Date().toISOString() };
+        return { reviewedAt: new Date().toISOString(), reviewedBy: 'coordinator' };
       }
     } },
-    document: { getElementById: id => nodes[id] },
+    document: { getElementById: id => nodes[id], querySelectorAll: () => [] },
     escapeHtml: value => String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   });
-  vm.runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/js/modules/admin.js'), 'utf8'), context);
+  vm.runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../private/js/admin.js'), 'utf8'), context);
   vm.runInContext("adminAssignmentsList = [{ assignmentId: 1, link: 'https://forms.office.com/example' }]", context);
   await context.renderAssignmentSubmissions();
   assert.equal(savedPayload, undefined);
+  assert.equal(nodes.assignmentReviewFeedback.textContent, '');
   assert.doesNotMatch(nodes.adminAssignmentSubmissionsBody.innerHTML, /<img|<script/);
   assert.match(nodes.adminAssignmentSubmissionsBody.innerHTML, /&lt;img/);
+  assert.doesNotMatch(nodes.adminAssignmentSubmissionsBody.innerHTML, /review-date|datetime-local/);
   await saveHandler();
-  assert.equal(savedPayload.submittedAt, '2026-10-31T14:30:00.000Z');
-  assert.equal(savedPayload.status, 'completed');
-  assert.equal(button.disabled, false);
-  assert.ok(audit.textContent);
+  assert.equal(JSON.stringify(savedPayload), JSON.stringify({ status: 'completed', responseId: '42', note: 'Reviewed by Trainer' }));
+  assert.equal(button.disabled, true);
+  assert.match(audit.textContent, /coordinator/);
 });
 
 test('schedule edits derive month from date and sample reset cannot delete a different month', async () => {
@@ -750,16 +868,16 @@ test('concurrent attendance edits reject stale writes instead of losing another 
   assert.equal(trainee.accumulatedStars, trainee.sessionStars.reduce((sum, log) => sum + log.starsAwarded, 0));
 });
 
-test('public leave board escapes posted content and renders the server submission time without local receipts', async () => {
+test('private leave history escapes server content and renders the submission time', async () => {
   const vm = require('node:vm');
   const nodes = {
     leaveHistoryTableBody: { innerHTML: '', querySelectorAll: () => [] },
     leaveHistoryCountBadge: {}
   };
   const context = vm.createContext({
-    window: { canManage: () => false },
+    window: { state: { currentUser: { role: 'trainee', traineeId: '70000000' } } },
     document: { getElementById: id => nodes[id] },
-    API: { getPublicLeave: async () => [{ id: 'leave-one', traineeId: '70000000', fullName: 'Fixture', reason: '<img src=x onerror=bad()>', submittedAt: '2026-10-31T13:00:00Z', scheduleTitle: 'Fixture lesson', status: 'pending' }] },
+    API: { getLeaveRequests: async () => [{ id: 'leave-one', traineeId: '70000000', fullName: 'Fixture', reason: '<img src=x onerror=bad()>', submittedAt: '2026-10-31T13:00:00Z', scheduleTitle: 'Fixture lesson', status: 'pending' }] },
     escapeHtml: value => String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   });
   vm.runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/js/modules/leave.js'), 'utf8'), context);
@@ -770,7 +888,7 @@ test('public leave board escapes posted content and renders the server submissio
   assert.equal(nodes.leaveHistoryCountBadge.textContent, '1 đơn');
 });
 
-test('MongoDB account revocation, attendance totals and public leave projection use persisted records (mocked driver)', async () => {
+test('MongoDB account revocation, attendance totals and scoped leave projection use persisted records (mocked driver)', async () => {
   const mongoose = require('mongoose');
   const Account = require('../models/Account');
   const Trainee = require('../models/Trainee');
@@ -821,15 +939,15 @@ test('MongoDB account revocation, attendance totals and public leave projection 
     assert.equal(attendance.email, undefined);
     assert.equal(trainee.sessionStars[0].updatedBy, 'fixture_admin');
     Support.find = filter => {
-      assert.deepEqual(filter, { type: 'leave', publicVisible: true });
+      assert.deepEqual(filter, { type: 'leave', traineeId: '70000000' });
       return { sort: () => ({ limit: size => {
         assert.equal(size, 100);
         return { lean: async () => [{ _id: 'leave-fixture', traineeId: '70000000', fullName: 'Fixture', message: 'Public reason', createdAt: new Date(), email: 'private@example.invalid', phone: 'private', submissionKey: 'private', resolvedPassword: 'private' }] };
       } }) };
     };
-    const publicList = await database.getPublicLeaveRequests();
-    assert.equal(publicList[0].reason, 'Public reason');
-    for (const key of ['email', 'phone', 'submissionKey', 'resolvedPassword']) assert.equal(publicList[0][key], undefined);
+    const leaveList = await database.getLeaveRequests('70000000');
+    assert.equal(leaveList[0].reason, 'Public reason');
+    for (const key of ['email', 'phone', 'submissionKey', 'resolvedPassword']) assert.equal(leaveList[0][key], undefined);
   } finally {
     mongoose.connect = original.connect; Account.init = original.init; Account.create = original.create; Account.findById = original.byId; Account.findOne = original.byName; Account.findByIdAndUpdate = original.accountUpdate;
     Trainee.findOne = original.traineeFind; Trainee.findOneAndUpdate = original.traineeUpdate; Trainee.find = original.traineeList; Schedule.find = original.scheduleFind; Support.find = original.supportFind;
@@ -839,7 +957,7 @@ test('MongoDB account revocation, attendance totals and public leave projection 
 });
 
 test('assignment catalog supports adding and deleting beyond eleven with server-side permissions', async () => {
-  const session = 'trainee_session=' + security.signToken({ root: true, username: process.env.ADMIN_USERNAME });
+  const session = await ownerSession();
   const baseline = await database.getAllAssignments();
   const ids = [];
   const account = await database.saveAccount(null, { username: 'catalog_viewer_fixture', fullName: 'Viewer', password: 'A sufficiently long fixture password', role: 'trainer', permissions: [], active: true });
@@ -969,7 +1087,7 @@ test('assignment page creates, edits and deletes in place, keeping the modal ope
     canManage: () => true, confirm: () => confirmed, console,
     document: { getElementById: id => nodes[id] }, escapeHtml: value => String(value || '').replace(/</g, '&lt;')
   });
-  vm.runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/js/modules/admin.js'), 'utf8'), context);
+  vm.runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../private/js/admin.js'), 'utf8'), context);
   context.openAdminEditAssignmentModal();
   assert.equal(nodes.editAssignmentIdHidden.value, '');
   assert.equal(nodes.editAssignmentModalTitle.textContent, 'Thêm bài tập');
@@ -998,7 +1116,7 @@ test('assignment page creates, edits and deletes in place, keeping the modal ope
 });
 
 test('locked assignment content is hidden from public APIs while editors retain access', async () => {
-  const session = 'trainee_session=' + security.signToken({ root: true, username: process.env.ADMIN_USERNAME });
+  const session = await ownerSession();
   const item = await database.createAssignment({ title: 'Locked fixture', desc: 'Hidden summary', details: 'Hidden requirements', link: 'https://forms.office.com/secret-fixture', status: 'locked' });
   try {
     const publicItem = (await (await request('/api/assignments')).json()).data.find(row => row.assignmentId === item.assignmentId);
@@ -1058,7 +1176,7 @@ test('locked assignment nodes and direct modal calls deny guests, allow editors 
 });
 
 test('optional schedule documents are validated, saved, published and cleared in fallback mode', async () => {
-  const session = 'trainee_session=' + security.signToken({ root: true, username: process.env.ADMIN_USERNAME });
+  const session = await ownerSession();
   const body = { title: 'Document fixture', code: 'DOCUMENT-FIXTURE', date: '2027-02-10', startTime: '20:00', endTime: '22:30', documentUrl: ' https://example.invalid/training-document?part=1&lang=vi ' };
   assert.equal((await request('/api/schedules', { method: 'POST', body })).status, 401);
   for (const documentUrl of ['javascript:alert(1)', 'data:text/html,test', 'not-a-url', 'https://example.invalid/' + 'a'.repeat(2048)]) {
@@ -1181,6 +1299,34 @@ test('Q&A answers require scoped access, use the authenticated Trainer and persi
   assert.equal((await request(path, { method: 'PUT', session: mint(permitted), body: { answer: '   ' } })).status, 400);
   assert.equal((await request('/api/questions/' + question.code, { method: 'DELETE', session: mint(permitted) })).status, 200);
   assert.ok(!(await database.getAllQuestions()).some(item => item.code === question.code));
+});
+
+test('Q&A validates trimmed content and resolves a numeric MSSV from the roster', async () => {
+  await assert.rejects(
+    database.createQuestion({ mssv: 'abc123', title: 'Invalid MSSV', content: 'Nội dung đủ dài để kiểm tra.', isAnonymous: false }),
+    /6–12 chữ số/
+  );
+  await assert.rejects(
+    database.createQuestion({ mssv: fixtureTrainees[0].traineeId, title: 'Blank content', content: '          ', isAnonymous: false }),
+    /tối thiểu 10 ký tự/
+  );
+  const question = await database.createQuestion({
+    mssv: fixtureTrainees[0].traineeId,
+    fullName: 'Tên giả',
+    title: 'Roster identity',
+    content: 'Nội dung hợp lệ để kiểm tra danh tính.',
+    isAnonymous: false
+  });
+  assert.equal(question.mssv, fixtureTrainees[0].traineeId);
+  assert.equal(question.fullName, fixtureTrainees[0].fullName);
+  await database.deleteQuestion(question.code);
+});
+
+test('admin trainee rows warn about duplicate names and classes while retaining MSSV identity', () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../private/js/admin.js'), 'utf8');
+  assert.match(source, /duplicateProfileCounts/);
+  assert.match(source, /Trùng tên\/lớp · kiểm tra MSSV/);
+  assert.match(source, /MSSV: <strong>\$\{escapeHtml\(t\.traineeId\)\}/);
 });
 
 test('Q&A details open with the shared modal classes and answers update only after API success', async () => {
@@ -1340,10 +1486,11 @@ test('MongoDB assignment confirmations upsert one record per trainee and preserv
 
 test('MongoDB persistence branch uses atomic upsert, schema validation and atomic mail claim (mocked driver)', async () => {
   const mongoose = require('mongoose');
+  const Account = require('../models/Account');
   const Trainee = require('../models/Trainee');
   const Schedule = require('../models/Schedule');
   const Support = require('../models/SupportRequest');
-  const original = { connect: mongoose.connect, traineeFind: Trainee.findOne, scheduleFind: Schedule.find, init: Support.init, upsert: Support.findOneAndUpdate };
+  const original = { connect: mongoose.connect, accountFind: Account.find, traineeFind: Trainee.findOne, scheduleFind: Schedule.find, init: Support.init, upsert: Support.findOneAndUpdate };
   let record;
   try {
     mongoose.connect = async () => {};
@@ -1352,6 +1499,7 @@ test('MongoDB persistence branch uses atomic upsert, schema validation and atomi
     assert.equal(await database.connectDB(true), true);
     Trainee.findOne = () => ({ select: () => ({ lean: async () => ({ traineeId: leave.traineeId, fullName: leave.fullName, email: 'student@example.invalid' }) }) });
     Schedule.find = () => ({ sort: () => ({ lean: async () => [{ code: leave.scheduleCode, title: 'Training session', date: leave.scheduleDate, startTime: '19:30', endTime: '21:30' }] }) });
+    Account.find = () => ({ select: () => ({ lean: async () => [] }) });
     Support.init = async () => {};
     Support.findOneAndUpdate = (filter, update, options) => ({ lean: async () => {
       if (update.$setOnInsert) {
@@ -1365,8 +1513,8 @@ test('MongoDB persistence branch uses atomic upsert, schema validation and atomi
       }
       return { ...record };
     } });
-    const first = await database.createLeaveRequest(leave);
-    const again = await database.createLeaveRequest(leave);
+    const first = await database.createLeaveRequest(leave, leave.traineeId);
+    const again = await database.createLeaveRequest(leave, leave.traineeId);
     assert.equal(first._id, again._id);
     assert.equal(first.status, 'pending');
     assert.equal((await database.updateLeaveRequest(first._id, { emailStatus: 'sending' }, true)).emailStatus, 'sending');
@@ -1374,6 +1522,7 @@ test('MongoDB persistence branch uses atomic upsert, schema validation and atomi
     assert.ok(new Support({ type: 'leave', traineeId: '123456', emailStatus: 'invalid' }).validateSync());
   } finally {
     mongoose.connect = original.connect;
+    Account.find = original.accountFind;
     Trainee.findOne = original.traineeFind;
     Schedule.find = original.scheduleFind;
     Support.init = original.init;
@@ -1386,7 +1535,10 @@ test('MongoDB persistence branch uses atomic upsert, schema validation and atomi
 test('notifications: schedule, Q&A and assignment events reach only opted-in trainees in fallback mode', async () => {
   const mint = user => 'trainee_session=' + security.signToken({ accountId: user.id, username: user.username, sessionVersion: user.sessionVersion });
   const login = async traineeId => {
-    const auth = await database.authenticateUser(traineeId, 'traineeprogram');
+    const first = await database.authenticateUser(traineeId, 'traineeprogram');
+    assert.equal(first.success, true);
+    await database.changeAccountPassword(first.user, 'traineeprogram', 'Fixture changed password 123');
+    const auth = await database.authenticateUser(traineeId, 'Fixture changed password 123');
     assert.equal(auth.success, true);
     return mint(auth.user);
   };
@@ -1557,8 +1709,136 @@ test('notification bell renders server text safely, shows the assignment countdo
   assert.deepEqual(switched, ['assignments']);
   assert.deepEqual(marked, ['a']);
   assert.equal(nodes.get('notificationBadge').hidden, true);
+  context.state.currentUser = { role: 'admin', id: 'owner-fixture' };
+  context.window.syncNotificationBell();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.get('notificationWrapper').style.display, 'inline-flex');
   context.state.currentUser = null;
   context.window.syncNotificationBell();
   assert.equal(nodes.get('notificationWrapper').style.display, 'none');
   assert.equal(nodes.get('notificationList').children[0].textContent, 'Đang tải thông báo...');
+});
+
+test('auth hardening: no source-code passwords, no token in body, default password is change-only', async () => {
+  const owner = security.hashPassword ? process.env.ADMIN_USERNAME : '';
+  for (const leaked of ['admin', 'admin@UIT2026!', 'admin123', 'traineeprogram', 'KHMT@12345678']) {
+    assert.equal((await database.authenticateUser(owner, leaked)).success, false, leaked);
+  }
+  await database.createTrainee({ traineeId: '29990201', fullName: 'Hardening Fixture', email: 'hardening@example.invalid' });
+  // Các test trước đã dùng hết hạn mức đăng nhập của IP này; lùi đồng hồ để vào khung thời gian mới.
+  const realNow = Date.now;
+  Date.now = () => realNow() - 3 * 60000;
+  let response;
+  try { response = await request('/api/auth/login', { method: 'POST', body: { username: '29990201', password: 'traineeprogram' } }); }
+  finally { Date.now = realNow; }
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.sessionToken, undefined);
+  assert.equal(body.token, undefined);
+  assert.equal(body.user.mustChangePassword, true);
+  const session = response.headers.get('set-cookie').split(';')[0];
+  assert.equal((await request('/api/auth/me', { session })).status, 200);
+  const blocked = await request('/api/notifications', { session });
+  assert.equal(blocked.status, 403);
+  assert.equal((await blocked.json()).code, 'PASSWORD_CHANGE_REQUIRED');
+});
+
+test('production needs no admin password in env and refuses default trainee/JWT secrets', () => {
+  const cwd = require('node:path').resolve(__dirname, '..');
+  const base = { ...process.env, NODE_ENV: 'production', VERCEL: '1', MONGODB_URI: 'mongodb://127.0.0.1:1/test', APP_ORIGIN: 'https://portal.example.com',
+    JWT_SECRET: crypto.randomBytes(32).toString('hex'), TRAINEE_DEFAULT_PASSWORD: crypto.randomBytes(18).toString('base64url') };
+  delete base.ADMIN_PASSWORD; delete base.ADMIN_USERNAME; // admin không còn đến từ biến môi trường
+  const run = (extra, code) => spawnSync(process.execPath, ['-e', code], { cwd, env: { ...base, ...extra }, encoding: 'utf8' });
+  assert.equal(run({}, "require('./utils/security'); require('./config/db')").status, 0);
+  // Mật khẩu chung 'traineeprogram' được phép vì trainee bị ép đổi ở lần đăng nhập đầu.
+  assert.equal(run({ TRAINEE_DEFAULT_PASSWORD: 'traineeprogram' }, "require('./config/db')").status, 0);
+  assert.notEqual(run({ TRAINEE_DEFAULT_PASSWORD: 'short' }, "require('./config/db')").status, 0);
+  assert.notEqual(run({ TRAINEE_DEFAULT_PASSWORD: '' }, "require('./config/db')").status, 0);
+});
+
+test('owner lives in the database: hashed, not editable through the API, old env/root tokens are dead', async () => {
+  await ready;
+  const listing = await (await request('/api/auth/accounts', { session: await ownerSession() })).json();
+  const owner = listing.data.find(item => item.isOwner);
+  assert.equal(owner.username, process.env.ADMIN_USERNAME);
+  assert.equal(owner.password, undefined);
+  // Token kiểu cũ (root:true, không accountId) không còn được chấp nhận
+  const legacy = 'trainee_session=' + security.signToken({ root: true, username: process.env.ADMIN_USERNAME });
+  assert.equal((await request('/api/auth/accounts', { session: legacy })).status, 401);
+  // Không sửa / khóa / xóa / reset Quản trị gốc qua API
+  const session = await ownerSession();
+  const body = { fullName: 'Hacked', role: 'trainer', active: true, permissions: [] };
+  assert.equal((await request('/api/auth/accounts/' + owner.id, { method: 'PUT', session, body })).status, 400);
+  assert.equal((await request('/api/auth/accounts/' + owner.id, { method: 'DELETE', session })).status, 400);
+  assert.equal((await request('/api/auth/admin/toggle-active/' + owner.id, { method: 'PUT', session, body: { active: false } })).status, 400);
+  assert.equal((await request('/api/auth/admin/reset-password', { method: 'POST', session, body: { id: owner.id, password: 'A completely new long password' } })).status, 400);
+  // Không có API nào tạo thêm owner
+  const created = await request('/api/auth/accounts', { method: 'POST', session, body: { username: 'sneaky_owner', fullName: 'Sneaky', role: 'admin', active: true, permissions: [], password: 'A long enough password 123', isOwner: true } });
+  const sneaky = (await created.json()).data;
+  assert.equal(sneaky?.isOwner, false);
+  assert.equal(sneaky?.permissions.includes('accounts:manage'), false);
+  // Chỉ có một owner
+  await assert.rejects(() => database.createOwnerAccount({ username: 'second_owner', password: 'Another long password 1234' }), /Đã có/);
+});
+
+test('private HTML, scripts and lecture details are withheld from guests and sent only to permitted accounts', async () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const index = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+  for (const marker of ['viewAdmin', 'viewProfile', 'viewAssignments', 'viewLeave', 'leaveApplicationForm', 'accountEditorForm', 'scheduleModal', 'createTraineeModal', 'adminEditAssignmentModal', 'duoAssignmentModal', 'qModalReplyBox', 'data-permission', 'admin-only-element']) {
+    assert.equal(index.includes(marker), false, `index.html still contains ${marker}`);
+  }
+  for (const file of ['modules/admin.js', 'modules/profile.js']) assert.equal((await request('/js/' + file)).status, 404);
+  assert.equal((await request('/api/ui')).status, 401);
+  assert.equal((await request('/api/ui/script/admin.js')).status, 401);
+
+  const owner = await ownerSession();
+  const ownerUi = await (await request('/api/ui', { session: owner })).json();
+  for (const slot of ['view-admin', 'view-profile', 'view-assignments', 'view-leave', 'modal-schedule', 'modal-trainee-edit', 'leaderboard-manage', 'grades-manage', 'nav-admin-list']) assert.ok(ownerUi.data.slots[slot], slot);
+  assert.match(ownerUi.data.slots['view-assignments'], /assignmentReviewHeading/);
+  assert.ok(ownerUi.data.scripts.includes('/api/ui/script/admin.js'));
+  const script = await request('/api/ui/script/admin.js', { session: owner });
+  assert.equal(script.status, 200);
+  assert.match(script.headers.get('content-type'), /javascript/);
+  assert.match(await script.text(), /renderAdminView/);
+
+  const traineeId = '29990002';
+  await database.createTrainee({ traineeId, fullName: 'Private UI Fixture', email: 'private.ui@example.invalid' });
+  const firstLogin = await database.authenticateUser(traineeId, 'traineeprogram');
+  const mint = user => 'trainee_session=' + security.signToken({ accountId: user.id, username: traineeId, sessionVersion: user.sessionVersion });
+  const mustChange = await (await request('/api/ui', { session: mint(firstLogin.user) })).json();
+  assert.deepEqual(Object.keys(mustChange.data.slots), ['modal-change-password']);
+  assert.deepEqual(mustChange.data.scripts, []);
+  assert.equal((await request('/api/ui/script/profile.js', { session: mint(firstLogin.user) })).status, 403);
+  await database.changeAccountPassword(firstLogin.user, 'traineeprogram', 'Private UI fixture password 2026');
+  const login = await database.authenticateUser(traineeId, 'Private UI fixture password 2026');
+  const traineeSession = mint(login.user);
+  const traineeUi = await (await request('/api/ui', { session: traineeSession })).json();
+  assert.deepEqual(Object.keys(traineeUi.data.slots).sort(), ['header-trainee-badge', 'modal-assignment', 'modal-change-password', 'modal-profile-forgot', 'nav-profile-label', 'nav-profile-list', 'view-assignments', 'view-leave', 'view-profile']);
+  assert.doesNotMatch(traineeUi.data.slots['view-assignments'], /assignmentReviewHeading/);
+  assert.doesNotMatch(traineeUi.data.slots['modal-assignment'], /duoAdminQuickEditBox/);
+  assert.deepEqual(traineeUi.data.scripts, ['/api/ui/script/profile.js']);
+  assert.equal((await request('/api/ui/script/admin.js', { session: traineeSession })).status, 404);
+
+  const guestSchedules = await (await request('/api/schedules?all=true')).json();
+  assert.ok(guestSchedules.data.length);
+  guestSchedules.data.forEach((item, index) => {
+    assert.match(item.title, /^Buổi \d+$/);
+    assert.equal(item.instructor, '');
+    assert.equal(JSON.stringify(item).includes('Fixture session'), false, `lecture name leaked in item ${index}`);
+  });
+  const memberSchedules = await (await request('/api/schedules?all=true', { session: traineeSession })).json();
+  assert.ok(memberSchedules.data.some(item => /^Fixture session/.test(item.title)));
+
+  await request('/api/admin/attendance/25520918/TP-M10.01', { method: 'PUT', session: owner, body: { sessionDate: '2026-10-06', attendanceStatus: 'present', starsAwarded: 2, note: 'ok' } });
+  const guestStars = await (await request('/api/trainees/25520918/session-stars')).json();
+  for (const log of guestStars.data.sessionStars) {
+    assert.match(log.sessionTitle, /^Buổi \d+$/);
+    assert.equal(log.trainerName, undefined);
+    assert.equal(log.updatedBy, undefined);
+  }
+  const guestList = await (await request('/api/trainees')).json();
+  assert.equal(JSON.stringify(guestList).includes('Fixture session'), false);
+  const memberStars = await (await request('/api/trainees/25520918/session-stars', { session: traineeSession })).json();
+  assert.ok(memberStars.data.sessionStars.some(log => /^Fixture session/.test(log.sessionTitle)));
 });

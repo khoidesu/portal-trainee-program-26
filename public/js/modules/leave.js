@@ -2,21 +2,6 @@ let leaveChallengeWidget;
 let leaveChallengeToken = '';
 let leaveConfigPromise;
 
-function getSavedLeaveHistory() {
-  try {
-    const list = JSON.parse(localStorage.getItem('uit_trainee_leave_receipts_v2') || '[]');
-    return Array.isArray(list) ? list.slice(0, 20) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLeaveHistory(list) {
-  try {
-    localStorage.setItem('uit_trainee_leave_receipts_v2', JSON.stringify(list.slice(0, 20)));
-  } catch {}
-}
-
 function leaveFeedback(message, isError = false) {
   const element = document.getElementById('leaveFeedback');
   if (element) {
@@ -57,19 +42,25 @@ async function renderLeaveView() {
   const select = document.getElementById('leaveSelectSchedule');
   const submit = document.getElementById('btnSubmitLeave');
   if (!select) return;
+  const user = window.state?.currentUser;
+  if (!user) {
+    if (typeof openLoginModal === 'function') openLoginModal('leave');
+    return;
+  }
+  const isTrainee = user.role === 'trainee' && user.traineeId;
+  const formCard = document.getElementById('leaveFormCard');
+  if (formCard) formCard.style.display = isTrainee ? '' : 'none';
+  const identityMssv = document.getElementById('leaveIdentityMssv');
+  const identityFullName = document.getElementById('leaveIdentityFullName');
+  if (identityMssv) identityMssv.textContent = user.traineeId || '—';
+  if (identityFullName) identityFullName.textContent = user.fullName || user.username || '';
+  if (!isTrainee) {
+    renderLeaveHistoryTable();
+    return;
+  }
   submit.disabled = true;
   leaveFeedback('Đang tải lịch học…');
   try {
-    const mssvInput = document.getElementById('leaveInputMssv');
-    const nameInput = document.getElementById('leaveInputFullName');
-    const loggedInTrainee = (window.state?.currentUser?.role === 'trainee' && window.state.currentUser?.traineeId) ? window.state.currentUser : null;
-    if (mssvInput && !mssvInput.value.trim() && loggedInTrainee?.traineeId) {
-      mssvInput.value = loggedInTrainee.traineeId;
-    }
-    if (nameInput && !nameInput.value.trim() && loggedInTrainee?.fullName) {
-      nameInput.value = loggedInTrainee.fullName;
-    }
-
     let response = await fetch('/api/schedules?all=true');
     let result = await response.json();
     if (!response.ok || !result.success || !result.data?.length) {
@@ -106,7 +97,7 @@ async function renderLeaveView() {
     select.innerHTML = optionsHtml;
     select.value = selected;
     await loadLeaveChallenge();
-    leaveFeedback(upcomingSessions.length ? 'Mỗi Trainee chỉ gửi một đơn cho mỗi buổi học. Đơn mới được hiển thị công khai và chờ Ban Tổ chức xem xét.' : (allSessions.length ? 'Các buổi học đã kết thúc, hiện chưa có buổi học sắp diễn ra để xin nghỉ.' : 'Chưa có lịch học trong cơ sở dữ liệu.'));
+    leaveFeedback(upcomingSessions.length ? 'Mỗi Trainee chỉ gửi một đơn cho mỗi buổi học. Đơn sẽ chờ Admin xem xét.' : (allSessions.length ? 'Các buổi học đã kết thúc, hiện chưa có buổi học sắp diễn ra để xin nghỉ.' : 'Chưa có lịch học.'));
     submit.disabled = upcomingSessions.length === 0;
   } catch (error) {
     leaveFeedback(error.message || 'Không tải được biểu mẫu. Vui lòng tải lại trang.', true);
@@ -126,7 +117,7 @@ function updateLeaveSchedulePreview() {
   const values = {
     previewSessionCode: selected.value, previewSessionTitle: selected.dataset.title,
     previewSessionTime: `${selected.dataset.date} · ${selected.dataset.time}`,
-    previewSessionInstructor: selected.dataset.instructor
+    previewSessionInstructor: state.currentUser ? selected.dataset.instructor : 'Đăng nhập để xem'
   };
   Object.entries(values).forEach(([id, value]) => { const element = document.getElementById(id); if (element) element.textContent = value || ''; });
   box.style.display = 'flex';
@@ -137,7 +128,10 @@ async function renderLeaveHistoryTable() {
   const body = document.getElementById('leaveHistoryTableBody');
   const badge = document.getElementById('leaveHistoryCountBadge');
   if (!body) return;
-  const showMssv = Boolean(window.canViewMssv && window.canViewMssv());
+  const canReview = Boolean(typeof canManage === 'function' ? canManage('leave:manage') : false) || window.state?.currentUser?.role === 'admin' || Boolean(window.state?.currentUser?.isOwner);
+  const showMssv = Boolean(typeof canViewMssv === 'function' ? canViewMssv() : canReview);
+  const title = document.getElementById('leaveHistoryTitle');
+  if (title) title.textContent = canReview ? 'Tất cả đơn xin nghỉ' : 'Đơn xin nghỉ của bạn';
   const colMssv = document.getElementById('leaveColMssv');
   if (colMssv) colMssv.style.display = showMssv ? '' : 'none';
   const colSpan = showMssv ? 7 : 6;
@@ -145,17 +139,17 @@ async function renderLeaveHistoryTable() {
   const request = ++leaveBoardRequest;
   body.innerHTML = `<tr><td colspan="${colSpan}">Đang tải bảng xin nghỉ…</td></tr>`;
   try {
-    const list = await API.getPublicLeave();
+    const list = await API.getLeaveRequests();
     if (request !== leaveBoardRequest) return;
     if (badge) badge.textContent = list.length + ' đơn';
-    if (!list.length) { body.innerHTML = `<tr><td colspan="${colSpan}">Chưa có đơn xin nghỉ công khai.</td></tr>`; return; }
+    if (!list.length) { body.innerHTML = `<tr><td colspan="${colSpan}">${canReview ? 'Chưa có đơn xin nghỉ.' : 'Bạn chưa gửi đơn xin nghỉ nào.'}</td></tr>`; return; }
     body.innerHTML = list.map((item, index) => `<tr>
       <td>${index + 1}</td>${showMssv ? `<td>${escapeHtml(item.traineeId || '')}</td>` : ''}<td>${escapeHtml(item.fullName)}</td>
       <td><strong>${escapeHtml(item.scheduleTitle)}</strong><br>${escapeHtml(item.scheduleDate)} · ${escapeHtml(item.scheduleTime)}</td>
       <td class="leave-public-reason">${escapeHtml(item.reason)}</td>
       <td><time datetime="${escapeHtml(item.submittedAt)}">${escapeHtml(new Date(item.submittedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }))}</time></td>
       <td><span>${({ pending: 'Chờ xem xét', resolved: 'Đã duyệt', rejected: 'Từ chối' })[item.status] || 'Chờ xem xét'}</span>
-      ${window.canManage?.('leave:manage') && item.status === 'pending' ? `<div class="context-actions"><button type="button" class="btn btn-primary btn-xs leave-review" data-id="${escapeHtml(item.id)}" data-status="resolved">Duyệt</button><button type="button" class="btn btn-outline btn-xs leave-review" data-id="${escapeHtml(item.id)}" data-status="rejected">Từ chối</button></div>` : ''}</td>
+      ${canReview && item.status === 'pending' ? `<div class="context-actions"><button type="button" class="btn btn-primary btn-xs leave-review" data-id="${escapeHtml(item.id)}" data-status="resolved">Duyệt</button><button type="button" class="btn btn-outline btn-xs leave-review" data-id="${escapeHtml(item.id)}" data-status="rejected">Từ chối</button></div>` : ''}</td>
     </tr>`).join('');
     body.querySelectorAll('.leave-review').forEach(button => button.addEventListener('click', async () => {
       button.disabled = true;
@@ -199,11 +193,6 @@ function setupLeaveFormEvents() {
   document.getElementById('btnResetLeaveForm')?.addEventListener('click', () => {
     form.reset();
     banner.style.display = 'none';
-    const loggedInTrainee = (window.state?.currentUser?.role === 'trainee' && window.state.currentUser?.traineeId) ? window.state.currentUser : null;
-    const mssvInput = document.getElementById('leaveInputMssv');
-    if (mssvInput) mssvInput.value = loggedInTrainee?.traineeId || '';
-    const nameInput = document.getElementById('leaveInputFullName');
-    if (nameInput) nameInput.value = loggedInTrainee?.fullName || '';
     updateLeaveSchedulePreview();
     leaveFeedback('');
   });
@@ -214,12 +203,15 @@ function setupLeaveFormEvents() {
     const submit = document.getElementById('btnSubmitLeave');
     if (submit.disabled) return;
     banner.style.display = 'none';
-    const mssv = document.getElementById('leaveInputMssv').value.trim();
-    const fullName = document.getElementById('leaveInputFullName').value.trim();
+    const user = window.state?.currentUser;
+    if (user?.role !== 'trainee' || !user.traineeId) {
+      leaveFeedback('Vui lòng đăng nhập bằng tài khoản Trainee.', true);
+      return;
+    }
     const selected = select.selectedOptions[0];
     const reason = reasonInput.value.trim();
-    if (!/^\d{6,12}$/.test(mssv) || !fullName || !selected?.value || reason.length < 10 || reason.length > 3000 || !document.getElementById('leaveCheckCommit').checked) {
-      leaveFeedback('Vui lòng nhập đầy đủ MSSV, họ tên, buổi học, lý do (10–3000 ký tự) và xác nhận cam kết.', true);
+    if (!selected?.value || reason.length < 10 || reason.length > 3000 || !document.getElementById('leaveCheckCommit').checked) {
+      leaveFeedback('Vui lòng chọn buổi học, nhập lý do (10–3000 ký tự) và xác nhận cam kết.', true);
       return;
     }
     if (leaveChallengeWidget !== undefined && !leaveChallengeToken) {
@@ -231,15 +223,14 @@ function setupLeaveFormEvents() {
     leaveFeedback('Đang gửi đơn xin nghỉ…');
     try {
       const result = await API.submitLeave({
-        traineeId: mssv, fullName, scheduleCode: selected.value, scheduleDate: selected.dataset.date,
+        scheduleCode: selected.value, scheduleDate: selected.dataset.date,
         reason, commit: true, turnstileToken: leaveChallengeToken
       });
       const receipt = {
-        id: result.data.id, mssv, fullName, scheduleCode: selected.value, scheduleTitle: selected.dataset.title,
+        id: result.data.id, mssv: user.traineeId, fullName: user.fullName, scheduleCode: selected.value, scheduleTitle: selected.dataset.title,
         submittedAt: result.data.submittedAt,
         status: result.data.status === 'resolved' ? 'Đã duyệt' : result.data.status === 'rejected' ? 'Từ chối' : 'Chờ xem xét khi gửi'
       };
-      saveLeaveHistory([receipt, ...getSavedLeaveHistory().filter(item => item.id !== receipt.id)]);
       document.getElementById('leaveSuccessDesc').textContent = result.message;
       document.getElementById('leaveSuccessMeta').textContent = `Mã đơn: ${receipt.id} · ${receipt.fullName} (${receipt.mssv}) · ${receipt.scheduleCode}`;
       banner.style.display = 'flex';
@@ -263,5 +254,3 @@ function setupLeaveFormEvents() {
 function initLeaveModule() { setupLeaveFormEvents(); }
 window.initLeaveModule = initLeaveModule;
 window.renderLeaveView = renderLeaveView;
-window.getSavedLeaveHistory = getSavedLeaveHistory;
-window.saveLeaveHistory = saveLeaveHistory;

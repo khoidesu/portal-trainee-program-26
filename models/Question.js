@@ -22,6 +22,11 @@ const QuestionSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  realMssv: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   isAnonymous: {
     type: Boolean,
     default: false
@@ -34,12 +39,15 @@ const QuestionSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    maxlength: 200
   },
   content: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    minlength: 10,
+    maxlength: 5000
   },
   status: {
     type: String,

@@ -1,0 +1,86 @@
+  <!-- ================= Modal: Xem & Mở Link Bài Tập Duolingo ================= -->
+  <div class="duo-modal-overlay" id="duoAssignmentModal" role="dialog" aria-modal="true" aria-labelledby="duoModalTitle">
+    <div class="duo-modal-card" tabindex="-1">
+      <button type="button" class="duo-modal-close-btn" id="duoModalCloseBtn" aria-label="Đóng">Đóng</button>
+
+      <div class="duo-modal-badge green" id="duoModalBadge"> BÀI HỌC TIẾP THEO</div>
+      <h3 class="duo-modal-title" id="duoModalTitle">Bài 1: Làm quen Git &amp; GitHub Workflow</h3>
+      <p class="duo-modal-desc" id="duoModalDesc">
+        Làm quen với các lệnh Git cơ bản: clone, checkout, commit, push và mở Pull Request chuẩn UIT.
+      </p>
+
+      <section class="duo-assignment-details" aria-labelledby="duoDetailsHeading">
+        <h4 id="duoDetailsHeading">Chi tiết bài tập</h4>
+        <p id="duoModalDetails"></p>
+        <p class="duo-sidebar-caption">Nộp bài qua Microsoft Forms. Trainer sẽ đối chiếu phản hồi để xác nhận hoàn thành; kết quả và điểm bài tập được quản lý riêng.</p>
+      </section>
+
+      <template data-private-slot="duo-edit-button"></template>
+      <!-- ĐẾM NGƯỢC THỜI HẠN NỘP BÀI (DEADLINE COUNTDOWN) -->
+      <div id="duoDeadlineCountdown" style="display:none; margin: 0 0 14px 0; border-radius: 14px; overflow: hidden;">
+        <div class="duo-countdown-box">
+          <div class="duo-countdown-header">
+
+            <span class="duo-countdown-label">THỜI HẠN NỘP BÀI</span>
+            <span class="duo-countdown-deadline-text" id="duoCountdownDeadlineText"></span>
+          </div>
+          <div class="duo-countdown-segments" id="duoCountdownSegments">
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdDays">00</span>
+              <span class="duo-countdown-unit">ngày</span>
+            </div>
+            <div class="duo-countdown-colon">:</div>
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdHours">00</span>
+              <span class="duo-countdown-unit">giờ</span>
+            </div>
+            <div class="duo-countdown-colon">:</div>
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdMinutes">00</span>
+              <span class="duo-countdown-unit">phút</span>
+            </div>
+            <div class="duo-countdown-colon">:</div>
+            <div class="duo-countdown-seg">
+              <span class="duo-countdown-num" id="cdSeconds">00</span>
+              <span class="duo-countdown-unit">giây</span>
+            </div>
+          </div>
+          <div class="duo-countdown-bar-wrap">
+            <div class="duo-countdown-bar-fill" id="duoCountdownBarFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ĐÃ HẾT HẠN banner -->
+      <div id="duoDeadlineExpired" style="display:none; margin: 0 0 14px 0; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 14px; padding: 14px 16px; text-align: center;">
+        <div style="font-size: 22px; margin-bottom: 4px;"></div>
+        <div style="font-weight: 800; color: #dc2626; font-size: 14px;">ĐÃ HẾT THỜI HẠN NỘP BÀI</div>
+        <div style="font-size: 12px; color: #ef4444; margin-top: 4px;" id="duoExpiredDeadlineText"></div>
+      </div>
+
+      <!-- Ô HIỂN THỊ ĐƯỜNG LINK BÀI TẬP ĐÃ GÁN TỪ ADMIN -->
+      <div class="duo-assignment-link-showcase" id="duoAssignmentLinkShowcase" style="margin: 18px 0; background: var(--bg-card-subtle); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px;">
+
+            <span>ĐƯỜNG LINK BÀI TẬP</span>
+          </span>
+          <span class="badge badge-success" id="duoLinkOfficialBadge" style="font-size: 0.68rem;">Link Chính Thức</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="duoDisplayLink" readonly class="form-input" style="font-family: monospace; font-size: 0.82rem; background: var(--bg-card); cursor: text; font-weight: 600; color: var(--primary-blue);" placeholder="Chưa có link được gán">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyDuoLink" title="Sao chép đường link" style="white-space: nowrap; padding: 7px 12px; font-weight: 700;">
+            <span> Copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Nút mở trực tiếp đường link -->
+      <a href="#" class="duo-btn-launch green" id="duoBtnLaunch" target="_blank" style="margin-bottom: 12px;">
+        <span> TRUY CẬP ĐƯỜNG LINK BÀI TẬP (TAB MỚI)</span>
+      </a>
+
+      <template data-private-slot="duo-quick-edit"></template>
+
+    </div>
+  </div>

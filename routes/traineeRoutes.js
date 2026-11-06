@@ -15,7 +15,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { requirePermission, hasPermission } = require('../utils/security');
+const { requirePermission, hasPermission, maskSessionStarsForGuest } = require('../utils/security');
 const {
   getAllTrainees,
   getTraineeById,
@@ -27,11 +27,14 @@ const {
 
 function visibleTrainee(trainee, req) {
   if (hasPermission(req.user, 'trainees:manage')) return trainee;
+  const guest = !req.user;
   const fields = ['traineeId', 'fullName', 'avatar', 'batch', 'track', 'department', 'status', 'accumulatedStars',
     'starClassification', 'attendedSessions', 'totalSessions', 'absentExcused', 'absentUnexcused',
     'attendanceRate',
     'currentRank', 'rank', 'totalStudentsInRank', 'rankClassification', 'sessionStars', 'starHistory', 'skills', 'bio'];
-  return Object.fromEntries(fields.filter(field => trainee[field] !== undefined).map(field => [field, trainee[field]]));
+  const visible = Object.fromEntries(fields.filter(field => trainee[field] !== undefined).map(field => [field, trainee[field]]));
+  if (guest && visible.sessionStars) visible.sessionStars = maskSessionStarsForGuest(visible.sessionStars);
+  return visible;
 }
 
 // Lấy danh sách chi tiết sao từng buổi học của sinh viên
@@ -39,6 +42,7 @@ router.get('/:id/session-stars', async (req, res) => {
   try {
     const data = await getSessionStars(req.params.id);
     data.trainee = visibleTrainee(data.trainee, req);
+    if (!req.user) data.sessionStars = maskSessionStarsForGuest(data.sessionStars);
     res.json({
       success: true,
       data
