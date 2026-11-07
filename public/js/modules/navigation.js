@@ -15,7 +15,49 @@
 // ==========================================
 // EVENT LISTENERS
 // ==========================================
+function setupMobileNavbarAutoHide() {
+  const navbar = document.querySelector('.top-navbar');
+  if (!navbar || navbar.dataset.autoHideReady === 'true') return;
+
+  navbar.dataset.autoHideReady = 'true';
+  const mobileViewport = window.matchMedia('(max-width: 640px)');
+  let scrollAnchor = Math.max(0, window.scrollY);
+  let animationFrame = 0;
+
+  const updateNavbar = () => {
+    animationFrame = 0;
+    const scrollTop = Math.max(0, window.scrollY);
+    const scrollDelta = scrollTop - scrollAnchor;
+
+    if (!mobileViewport.matches || scrollTop <= 16) {
+      navbar.classList.remove('mobile-nav-hidden');
+      scrollAnchor = scrollTop;
+    } else if (scrollDelta >= 10) {
+      navbar.classList.add('mobile-nav-hidden');
+      scrollAnchor = scrollTop;
+    } else if (scrollDelta <= -6) {
+      navbar.classList.remove('mobile-nav-hidden');
+      scrollAnchor = scrollTop;
+    }
+  };
+
+  const queueNavbarUpdate = () => {
+    if (animationFrame) return;
+    animationFrame = window.requestAnimationFrame(updateNavbar);
+  };
+
+  const resetNavbar = () => {
+    scrollAnchor = Math.max(0, window.scrollY);
+    navbar.classList.remove('mobile-nav-hidden');
+  };
+
+  window.addEventListener('scroll', queueNavbarUpdate, { passive: true });
+  mobileViewport.addEventListener('change', resetNavbar);
+}
+
 function setupEventListeners() {
+  setupMobileNavbarAutoHide();
+
   // Navigation Tabs
   if (elements.navDashboard) {
     elements.navDashboard.addEventListener('click', (e) => {
@@ -118,6 +160,7 @@ function setupEventListeners() {
   if (elements.mobileMenuBtn && elements.sidebar) {
     elements.mobileMenuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      document.querySelector('.top-navbar')?.classList.remove('mobile-nav-hidden');
       elements.sidebar.classList.toggle('mobile-open');
     });
 
@@ -133,6 +176,13 @@ function setupEventListeners() {
           elements.sidebar.classList.remove('mobile-open');
         }
       }
+    });
+  }
+
+  const sidebarMobileCloseBtn = document.getElementById('sidebarMobileCloseBtn');
+  if (sidebarMobileCloseBtn && elements.sidebar) {
+    sidebarMobileCloseBtn.addEventListener('click', () => {
+      elements.sidebar.classList.remove('mobile-open');
     });
   }
 

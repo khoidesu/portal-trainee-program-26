@@ -453,6 +453,45 @@ const ScheduleManager = {
   // RENDER GIAO DIỆN LỊCH HỌC CHUNG THEO THÁNG
   // ==========================================
 
+  renderMonthlySummary(items) {
+    const summaryTarget = document.getElementById('scheduleMonthSummary');
+    if (!summaryTarget) return;
+
+    summaryTarget.innerHTML = `
+      <div class="monthly-summary-banner">
+        <div class="summary-banner-info">
+          <div class="summary-banner-badge">
+            <span class="pulse-dot"></span>
+            <span>LỊCH HỌC TRỰC TUYẾN CHUNG TOÀN THÁNG</span>
+          </div>
+          <h3 class="summary-banner-title">Thời Khóa Biểu Tháng ${this.selectedMonth} Năm ${this.selectedYear}</h3>
+          <p class="summary-banner-desc">
+            Toàn bộ các buổi học lý thuyết, thực hành và chuyên đề đào tạo trong Tháng ${this.selectedMonth} được tổng hợp trong danh sách dưới đây.
+            Trainee nhấn nút <strong>"Vào học"</strong> để tham gia phòng học trực tuyến Microsoft Teams.
+          </p>
+          <p class="summary-banner-desc summary-banner-desc-mobile">
+            Xem các buổi học trong tháng và tham gia phòng học Microsoft Teams.
+          </p>
+        </div>
+
+        <div class="summary-banner-stats">
+          <div class="summary-stat-box">
+            <span class="stat-number">${items.length}</span>
+            <span class="stat-text">Tổng số buổi</span>
+          </div>
+          <div class="summary-stat-box highlight-online">
+            <span class="stat-number">${items.length ? Math.round(items.filter(item => item.type !== 'Offline').length / items.length * 100) : 0}%</span>
+            <span class="stat-text">Học Online</span>
+          </div>
+          <div class="summary-stat-box">
+            <span class="stat-number">${items.filter(item => item.teamsUrl).length}/${items.length}</span>
+            <span class="stat-text">Đã có link Teams</span>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
   // 1. Chế độ Danh sách tháng ("để hết trong 1 lần" theo yêu cầu)
   renderMonthlyAgenda(container, options = {}) {
     if (!container) return;
@@ -460,50 +499,12 @@ const ScheduleManager = {
     const items = this.cachedSchedules.map(item => getScheduleTiming(item, Date.now() + this.clockOffset)).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
     container.innerHTML = '';
-
-    // Khung tổng quan tháng
-    const summaryCard = document.createElement('div');
-    summaryCard.className = 'monthly-summary-banner';
-    summaryCard.innerHTML = `
-      <div class="summary-banner-info">
-        <div class="summary-banner-badge">
-          <span class="pulse-dot"></span>
-          <span>LỊCH HỌC TRỰC TUYẾN CHUNG TOÀN THÁNG</span>
-        </div>
-        <h3 class="summary-banner-title">Thời Khóa Biểu Tháng ${this.selectedMonth} Năm ${this.selectedYear}</h3>
-        <p class="summary-banner-desc">
-          Toàn bộ các buổi học lý thuyết, thực hành và chuyên đề đào tạo trong Tháng ${this.selectedMonth} được tổng hợp trong danh sách dưới đây.
-          Trainee nhấn nút <strong>"Vào học"</strong> để tham gia phòng học trực tuyến Microsoft Teams.
-        </p>
-      </div>
-
-      <div class="summary-banner-stats">
-        <div class="summary-stat-box">
-          <span class="stat-number">${items.length}</span>
-          <span class="stat-text">Tổng số buổi</span>
-        </div>
-        <div class="summary-stat-box highlight-online">
-          <span class="stat-number">${items.length ? Math.round(items.filter(item => item.type !== 'Offline').length / items.length * 100) : 0}%</span>
-          <span class="stat-text">Học Online</span>
-        </div>
-        <div class="summary-stat-box">
-          <span class="stat-number">${items.filter(i => i.teamsUrl).length}/${items.length}</span>
-          <span class="stat-text">Đã có link Teams</span>
-        </div>
-      </div>
-    `;
-    container.appendChild(summaryCard);
+    this.renderMonthlySummary(items);
 
     // Thanh công cụ Action: Tải xuống cho mọi user & Thêm/Reset cho Admin
     const actionToolbar = document.createElement('div');
     actionToolbar.className = 'schedule-month-toolbar';
     actionToolbar.innerHTML = `
-      <div class="toolbar-left">
-        <div class="month-pill-badge">
-           <strong>Tháng ${this.selectedMonth}/${this.selectedYear}</strong> · ${items.length} buổi học
-        </div>
-      </div>
-
       <div class="toolbar-right">
         <!-- Nút Download dành cho tất cả người dùng -->
         <button type="button" class="btn btn-outline btn-sm btn-download-excel" id="btnExportExcel" title="Tải toàn bộ lịch học tháng dạng file Excel/CSV">
@@ -788,6 +789,7 @@ const ScheduleManager = {
     const month = this.selectedMonth;
 
     container.innerHTML = '';
+    this.renderMonthlySummary(items);
 
     const calCard = document.createElement('div');
     calCard.className = 'month-calendar-card';

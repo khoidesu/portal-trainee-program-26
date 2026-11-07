@@ -157,26 +157,15 @@ function updateGradesKpis(trainees, sessions) {
   const elTopStudent = document.getElementById('kpiTopStudent');
   const elLatestDate = document.getElementById('kpiLatestSessionDate');
 
-  if (elTotalTrainees) {
-    elTotalTrainees.innerHTML = `<span class="kpi-val-num">${trainees.length}</span><span class="kpi-val-unit"> Trainee</span>`;
-  }
-  if (elTotalSessions) {
-    elTotalSessions.innerHTML = sessions.length
-      ? `<span class="kpi-val-num">${sessions.length}</span><span class="kpi-val-unit"> buổi</span>`
-      : 'Chưa có dữ liệu';
-  }
+  if (elTotalTrainees) elTotalTrainees.textContent = `${trainees.length} Trainee`;
+  if (elTotalSessions) elTotalSessions.textContent = sessions.length ? `${sessions.length} buổi học` : 'Chưa có dữ liệu';
 
   // Tính tổng số sao toàn khóa
   let totalStars = 0;
   trainees.forEach(t => {
     totalStars += Number(t.accumulatedStars) || 0;
   });
-  if (elTotalStars) {
-    const hasStars = trainees.some(trainee => Number.isFinite(trainee.accumulatedStars));
-    elTotalStars.innerHTML = hasStars
-      ? `<span class="kpi-val-num">${totalStars}</span><span class="kpi-val-unit"> sao</span>`
-      : '—';
-  }
+  if (elTotalStars) elTotalStars.textContent = trainees.some(trainee => Number.isFinite(trainee.accumulatedStars)) ? `${totalStars}` : '—';
 
   // Buổi học gần nhất
   if (sessions.length > 0 && elLatestDate) {

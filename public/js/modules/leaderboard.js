@@ -41,7 +41,7 @@ function renderSummaryStats() {
     </div>
     <div class="stat-pill-item">
       <span class="stat-pill-num">${formatTraineeMetric(avgStars)} </span>
-      <span class="stat-pill-label">Sao trung bình</span>
+      <span class="stat-pill-label">Số sao trung bình</span>
     </div>
   `;
 }

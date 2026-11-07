@@ -24,61 +24,52 @@
                 <span class="breadcrumb-current">Thời khóa biểu trực tuyến</span>
               </div>
               <h2 class="schedule-page-title">Thời Khóa Biểu & Lịch Học Trực Tuyến</h2>
-              <p class="schedule-page-desc">
-                Lịch đào tạo trực tuyến qua Microsoft Teams của chương trình Trainee Program. Lịch được tổng hợp
-                chung theo tháng, Trainee bấm nút <strong>"Vào học"</strong> để tham gia lớp học trực tuyến.
-              </p>
-            </div>
-            <div class="schedule-header-actions">
-              <!-- Nút tải dữ liệu: Cho phép TẤT CẢ người dùng (Trainee, Khách, Admin) tải về -->
-              <button type="button" class="btn btn-outline" id="btnDownloadScheduleExcel"
-                title="Tải toàn bộ lịch học tháng dạng file Excel/CSV">
-
-                <span>Tải Excel</span>
-              </button>
-              <button type="button" class="btn btn-outline" id="btnGoogleCalendar"
-                title="Đồng bộ lịch học tháng vào Google Calendar / Tải iCal (.ics)">
-
-                <span>Google Calendar</span>
-              </button>
-
-              <template data-private-slot="schedule-add-button"></template>
             </div>
           </div>
 
-          <!-- Bộ lọc Tháng & Năm học -->
-          <div class="schedule-filter-card">
-            <div class="filter-card-header">
+          <div class="schedule-overview-card">
+            <div class="schedule-filter-card">
+              <div class="filter-card-header">
 
-              <span>Chọn Tháng & Chế độ xem</span>
-            </div>
-
-            <form class="filter-controls-form" id="scheduleFilterForm">
-              <div class="filter-control-item">
-                <label for="filterScheduleMonth" class="filter-control-label">Tháng xem lịch</label>
-                <input type="month" id="filterScheduleMonth" class="form-input" min="2000-01" max="2100-12" value="2026-11" required>
+                <span>Chọn Tháng & Chế độ xem</span>
               </div>
-              <button type="button" class="btn btn-outline" id="btnSchedulePrevious">Tháng trước</button>
-              <button type="button" class="btn btn-outline" id="btnScheduleToday">Tháng hiện tại</button>
-              <button type="button" class="btn btn-outline" id="btnScheduleNext">Tháng sau</button>
-              <p class="schedule-timezone-note">Giờ Việt Nam (UTC+7). Trạng thái buổi học tự cập nhật theo ngày và giờ.</p>
-            </form>
-          </div>
 
-          <!-- Dòng Chuyển chế độ xem & Chú thích -->
-          <div class="schedule-toolbar-row">
-            <div class="schedule-mode-toggle">
-              <button type="button" class="mode-toggle-btn active" id="btnModeAgenda" data-mode="agenda"
-                title="Hiển thị tất cả buổi học của tháng trong 1 lần">
-
-                <span>Toàn bộ buổi học tháng</span>
-              </button>
-              <button type="button" class="mode-toggle-btn" id="btnModeCalendar" data-mode="calendar"
-                title="Xem theo dạng lưới lịch 31 ngày">
-
-                <span>Lưới lịch tháng</span>
-              </button>
+              <form class="filter-controls-form" id="scheduleFilterForm">
+                <div class="filter-control-item">
+                  <label for="filterScheduleMonth" class="filter-control-label">Tháng xem lịch</label>
+                  <input type="month" id="filterScheduleMonth" class="form-input" min="2000-01" max="2100-12" value="2026-11" required>
+                </div>
+                <button type="button" class="btn btn-outline" id="btnSchedulePrevious" aria-label="Xem tháng trước">
+                  <span class="schedule-control-text">Tháng trước</span><span class="schedule-control-icon" aria-hidden="true">‹</span>
+                </button>
+                <button type="button" class="btn btn-outline" id="btnScheduleToday">
+                  <span class="schedule-control-text">Tháng hiện tại</span><span class="schedule-control-mobile">Hôm nay</span>
+                </button>
+                <button type="button" class="btn btn-outline" id="btnScheduleNext" aria-label="Xem tháng sau">
+                  <span class="schedule-control-text">Tháng sau</span><span class="schedule-control-icon" aria-hidden="true">›</span>
+                </button>
+              </form>
             </div>
+
+            <div class="schedule-toolbar-row">
+              <div class="schedule-mode-control">
+                <span class="schedule-mode-label">Chế độ</span>
+                <div class="schedule-mode-toggle">
+                  <button type="button" class="mode-toggle-btn active" id="btnModeAgenda" data-mode="agenda"
+                    title="Hiển thị tất cả buổi học của tháng trong 1 lần">
+
+                    <span>Toàn bộ buổi học tháng</span>
+                  </button>
+                  <button type="button" class="mode-toggle-btn" id="btnModeCalendar" data-mode="calendar"
+                    title="Xem theo dạng lưới lịch 31 ngày">
+
+                    <span>Lưới lịch tháng</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="schedule-month-summary" id="scheduleMonthSummary"></div>
           </div>
 
           <!-- Khung hiển thị Lịch học theo tháng chính (Tất cả buổi học trong 1 lần) -->

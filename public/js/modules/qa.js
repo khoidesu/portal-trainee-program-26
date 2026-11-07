@@ -414,7 +414,6 @@ function setupQuestionEvents() {
       if (anonBox) anonBox.classList.add('active');
       if (anonIcon) anonIcon.textContent = '';
       if (anonTitle) anonTitle.textContent = 'Công khai MSSV & Họ tên';
-      if (anonDesc) anonDesc.textContent = 'Đã bật: Hiển thị công khai MSSV và họ tên trên diễn đàn.';
       if (mssvStar) mssvStar.style.display = 'inline';
       if (mssvInput) {
         mssvInput.required = true;
@@ -425,7 +424,6 @@ function setupQuestionEvents() {
       if (anonBox) anonBox.classList.remove('active');
       if (anonIcon) anonIcon.textContent = '';
       if (anonTitle) anonTitle.textContent = 'Chế độ Ẩn danh';
-      if (anonDesc) anonDesc.textContent = 'Mặc định gửi ẩn danh (không hiện MSSV). Gạt công tắc bên phải nếu muốn công khai MSSV.';
       if (mssvStar) mssvStar.style.display = 'none';
       if (mssvInput) {
         mssvInput.required = false;
