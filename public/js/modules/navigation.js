@@ -448,7 +448,15 @@ function setupEventListeners() {
         e.preventDefault();
         const topModal = openModals[openModals.length - 1];
 
-        if (topModal.id === 'scheduleModal' && typeof window.closeScheduleModal === 'function') {
+        if (topModal.id === 'sessionDetailModal') {
+          if (typeof window.closeSessionDetailModal === 'function') {
+            window.closeSessionDetailModal();
+          } else if (window.ScheduleManager?.closeSessionDetailModal) {
+            window.ScheduleManager.closeSessionDetailModal();
+          } else {
+            topModal.classList.remove('open', 'show', 'active');
+          }
+        } else if (topModal.id === 'scheduleModal' && typeof window.closeScheduleModal === 'function') {
           window.closeScheduleModal();
         } else if (topModal.id === 'questionDetailModal' && typeof window.closeQuestionDetailModal === 'function') {
           window.closeQuestionDetailModal();

@@ -30,6 +30,27 @@
   </div>
 
 
+  <!-- ==================== MODAL: CHI TIẾT BUỔI HỌC, LINK VÀO HỌC & LINK RECORD ==================== -->
+  <div class="modal-overlay" id="sessionDetailModal" role="dialog" aria-modal="true" aria-labelledby="sessionDetailModalTitle" tabindex="-1">
+    <div class="modal-card session-detail-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <div class="modal-header-badge-icon">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="sessionDetailModalTitle">Thông Tin Buổi Học</h3>
+            <span class="modal-subtitle" id="sessionDetailModalSubtitle">Chi tiết lịch học và liên kết truy cập</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeSessionDetailModalBtn" aria-label="Đóng">Đóng</button>
+      </div>
+      <div class="modal-body" id="sessionDetailModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
   <template data-private-slot="modal-schedule"></template>
 
   <!-- Trang đăng nhập là 1 trang riêng biệt tại /login (public/login.html) -->

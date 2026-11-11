@@ -10,7 +10,6 @@
   <meta name="description"
     content="Cổng thông tin theo dõi sinh viên và thực tập sinh trong chương trình Trainee Program UIT. Bảng xếp hạng, tiến độ học tập và đánh giá năng lực.">
 
-  
   <script>
     (function () {
       try {
@@ -34,27 +33,22 @@
     })();
   </script>
 
-  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700&amp;family=Source+Sans+3:wght@400;500;600;700;800&amp;display=swap"
     rel="stylesheet">
 
-  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/duolingo.css">
 </head>
 
 <body class="dark-theme">
 
-  
   <div class="app-layout" id="appLayout">
 
-    
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="brand-logo">
@@ -166,10 +160,8 @@
       </div>
     </aside>
 
-    
     <div class="main-wrapper">
 
-      
       <header class="top-navbar">
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position: absolute; overflow: hidden;" aria-hidden="true" focusable="false">
 <metadata>Lucide Icons: https://lucide.dev
@@ -263,12 +255,10 @@ SOFTWARE.
             </div>
           </div>
 
-          
           <div class="theme-mode-wrapper" id="themeModeWrapper">
             <button class="header-action-btn theme-toggle-btn" id="themeToggleBtn" title="Chế độ giao diện (Sáng / Tối)"
               aria-label="Chế độ giao diện" aria-expanded="false" aria-controls="themeDropdownMenu"><svg class="theme-toggle-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#theme-icon-monitor"></use></svg></button>
 
-            
             <div class="theme-dropdown-menu" id="themeDropdownMenu">
               <div class="theme-dropdown-header">CHẾ ĐỘ GIAO DIỆN</div>
               <div class="theme-options-list">
@@ -297,14 +287,12 @@ SOFTWARE.
             </div>
           </div>
 
-          
           <a href="/login" class="header-action-btn login-header-btn" id="openLoginModalBtn"
             title="Đăng nhập tài khoản Trainee hoặc Quản trị viên"
             style="text-decoration: none; padding: 7px 16px; font-weight: 600; font-size: 13.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: var(--primary-blue); color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
             <span class="btn-text">Đăng nhập</span>
           </a>
 
-          
           <div id="headerUserStatus" style="display: none; align-items: center; gap: 8px;">
             <template data-private-slot="header-admin-badge"></template>
             <template data-private-slot="header-trainee-badge"></template>
@@ -324,15 +312,10 @@ SOFTWARE.
         </div>
       </header>
 
-      
       <main class="main-body" id="mainContent">
 
-        
-        
-        
         <section class="tab-view" id="viewDashboard" style="display: none !important;">
 
-          
           <div class="student-profile-card" id="studentProfileCard">
             <div class="profile-left">
               <div class="student-avatar-wrap">
@@ -364,7 +347,6 @@ SOFTWARE.
             </div>
           </div>
 
-          
           <div class="metrics-grid">
             
             <div class="metric-card" id="cardMetricStars">
@@ -388,7 +370,6 @@ SOFTWARE.
               </div>
             </div>
 
-            
             <div class="metric-card" id="cardMetricAttendance">
               <div class="metric-content">
                 <div class="metric-header-row">
@@ -411,7 +392,6 @@ SOFTWARE.
               </div>
             </div>
 
-            
             <div class="metric-card" id="cardMetricRank">
               <div class="metric-content">
                 <div class="metric-header-row">
@@ -431,13 +411,10 @@ SOFTWARE.
             </div>
           </div>
 
-          
           <div class="content-dashboard-grid">
 
-            
             <div class="grid-col left-col">
 
-              
               <div class="portal-card" id="cardSchedule">
                 <div class="card-header">
                   <div class="header-left">
@@ -455,7 +432,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="portal-card" id="cardPendingServices">
                 <div class="card-header">
                   <div class="header-left">
@@ -475,10 +451,8 @@ SOFTWARE.
 
             </div>
 
-            
             <div class="grid-col right-col">
 
-              
               <div class="portal-card" id="cardMentor">
                 <div class="card-header">
                   <div class="header-left">
@@ -509,7 +483,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="portal-card" id="cardGpaChart">
                 <div class="card-header">
                   <div class="header-left">
@@ -530,7 +503,6 @@ SOFTWARE.
                     <div class="chart-tooltip" id="chartTooltip"></div>
                   </div>
 
-                  
                   <div class="chart-legend">
                     <div class="legend-item">
                       <span class="legend-line solid-line" style="background:#3b82f6;"></span>
@@ -544,7 +516,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="portal-card" id="cardNews">
                 <div class="card-header">
                   <div class="header-left">
@@ -830,13 +801,10 @@ SOFTWARE.
         </section>
         <template data-private-slot="view-assignments"></template>
         <template data-private-slot="view-leave"></template>
-        
-        
-        
+
         <section class="tab-view" id="viewQuestions">
           <div class="question-page-container">
 
-            
             <div class="question-header-card">
               <div class="question-header-content">
                 <h2 class="question-main-title">Hỏi đáp Trainee Program</h2>
@@ -847,7 +815,6 @@ SOFTWARE.
 
             </div>
 
-            
             <div class="question-notice-card">
 
               <div class="question-notice-body">
@@ -859,7 +826,6 @@ SOFTWARE.
               </div>
             </div>
 
-            
             <div class="question-success-banner" id="questionSuccessAlert" style="display: none;">
 
               <div class="question-success-content">
@@ -875,7 +841,6 @@ SOFTWARE.
               <button type="button" class="question-success-close-btn" id="btnDismissQuestionSuccess" title="Đóng thông báo">Đóng</button>
             </div>
 
-            
             <div class="question-form-card">
               <div class="question-form-header">
                 <div class="question-form-title-wrap">
@@ -890,7 +855,6 @@ SOFTWARE.
 
               <form id="questionSubmitForm" class="question-form-body" novalidate>
 
-                
                 <div class="question-form-grid-2">
                   <div class="form-group">
                     <label for="questionInputMssv" class="form-label">
@@ -903,7 +867,6 @@ SOFTWARE.
                     <span class="form-help-text" id="questionMssvHelpText" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; display: block;">Mặc định ẩn danh: không hiện MSSV ra diễn đàn.</span>
                   </div>
 
-                  
                   <div class="form-group">
                     <label class="form-label" for="questionCheckPublic">
                       <span>2. Chế độ hiển thị danh tính</span>
@@ -923,7 +886,6 @@ SOFTWARE.
                   </div>
                 </div>
 
-                
                 <div class="question-form-grid-2" style="margin-top: 14px;">
                   <div class="form-group">
                     <label for="questionSelectCategory" class="form-label">
@@ -954,7 +916,6 @@ SOFTWARE.
                   </div>
                 </div>
 
-                
                 <div class="form-group" style="margin-top: 14px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <label for="questionInputContent" class="form-label" style="margin-bottom: 0;">
@@ -968,10 +929,8 @@ SOFTWARE.
                     required></textarea>
                 </div>
 
-                
                 <div id="questionFormFeedback" role="alert" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; line-height: 1.4;"></div>
 
-                
                 <div class="question-actions-row">
                   <button type="button" class="btn btn-secondary" id="btnResetQuestionForm">
 
@@ -987,9 +946,6 @@ SOFTWARE.
               </form>
             </div>
 
-            
-            
-            
             <div class="question-board-card">
               <div class="question-board-header">
                 <div class="question-board-title-wrap">
@@ -1008,7 +964,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <div class="question-toolbar">
                 <div class="question-search-box">
 
@@ -1024,7 +979,6 @@ SOFTWARE.
                 </div>
               </div>
 
-              
               <p class="table-scroll-hint" id="questionTableScrollHint">Vuốt hoặc dùng phím mũi tên để xem các cột bên phải.</p>
               <div class="table-responsive" role="region" aria-label="Bảng câu hỏi và giải đáp" aria-describedby="questionTableScrollHint" tabindex="0">
                 <table class="question-table">
@@ -1055,8 +1009,6 @@ SOFTWARE.
 
   </div>
 
-
-  
   <div class="modal-overlay" id="traineeDetailModal" role="dialog" aria-modal="true" aria-label="Hồ Sơ Chi Tiết Trainee" tabindex="-1">
     <div class="modal-card">
       <div class="modal-header">
@@ -1064,6 +1016,26 @@ SOFTWARE.
         <button class="modal-close-btn" id="closeDetailModalBtn">Đóng</button>
       </div>
       <div class="modal-body" id="traineeDetailModalBody">
+        
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="sessionDetailModal" role="dialog" aria-modal="true" aria-labelledby="sessionDetailModalTitle" tabindex="-1">
+    <div class="modal-card session-detail-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <div class="modal-header-badge-icon">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+          <div>
+            <h3 class="modal-title" id="sessionDetailModalTitle">Thông Tin Buổi Học</h3>
+            <span class="modal-subtitle" id="sessionDetailModalSubtitle">Chi tiết lịch học và liên kết truy cập</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeSessionDetailModalBtn" aria-label="Đóng">Đóng</button>
+      </div>
+      <div class="modal-body" id="sessionDetailModalBody">
         
       </div>
     </div>
@@ -1220,7 +1192,6 @@ SOFTWARE.
     </div>
   </div>
 
-  
   <script src="js/api.js"></script>
   <script src="js/chart.js"></script>
   <script src="js/scheduleData.js"></script>

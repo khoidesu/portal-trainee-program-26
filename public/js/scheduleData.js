@@ -317,6 +317,382 @@ const ScheduleManager = {
   },
 
   // ==========================================
+  // MODAL CHI TIẾT BUỔI HỌC, LINK HỌC & LINK RECORD
+  // ==========================================
+  closeSessionDetailModal() {
+    const modal = document.getElementById('sessionDetailModal');
+    if (modal) {
+      modal.classList.remove('open', 'show', 'active');
+    }
+  },
+
+  openSessionDetailModal(targetSession, options = {}) {
+    const modal = document.getElementById('sessionDetailModal');
+    const titleEl = document.getElementById('sessionDetailModalTitle');
+    const subtitleEl = document.getElementById('sessionDetailModalSubtitle');
+    const bodyEl = document.getElementById('sessionDetailModalBody');
+    if (!modal || !bodyEl) return;
+
+    const isAdmin = Boolean(options.isAdmin ?? (typeof canManage === 'function' && canManage('schedules:manage')));
+    const onEdit = options.onEdit || ((course) => window.openScheduleModal?.(course));
+    const isGuest = Boolean(window.state ? !window.state.currentUser : false);
+
+    const dateKey = options.dateKey || (targetSession ? targetSession.date : '');
+    const daySessions = Array.isArray(options.daySessions) && options.daySessions.length > 0
+      ? options.daySessions
+      : (targetSession ? [targetSession] : []);
+
+    let activeIndex = 0;
+    if (targetSession && daySessions.length > 0) {
+      const foundIdx = daySessions.findIndex(s => (s._id || s.id) === (targetSession._id || targetSession.id));
+      if (foundIdx !== -1) activeIndex = foundIdx;
+    }
+
+    const renderModalContent = (session, currentIdx) => {
+      // Trường hợp ngày không có buổi học
+      if (!session) {
+        if (titleEl) titleEl.textContent = `Lịch Học Ngày ${this.formatDateStr(dateKey) || 'Đã Chọn'}`;
+        if (subtitleEl) subtitleEl.textContent = 'Không có buổi học nào được lên lịch vào ngày này';
+        bodyEl.innerHTML = `
+          <div class="session-detail-empty-state">
+            <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+            <h4>Không có buổi học nào</h4>
+            <p>Hiện chưa có buổi đào tạo hoặc chuyên đề nào được lên lịch vào ngày <strong>${escapeHtmlSchedule(this.formatDateStr(dateKey))}</strong>.</p>
+            ${isAdmin ? `
+              <div class="empty-admin-actions">
+                <button type="button" class="btn-primary-portal" id="btnDetailAddSessionToday">
+                  <i class="fas fa-plus"></i> <span>Thêm buổi học vào ngày này</span>
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+        if (isAdmin) {
+          bodyEl.querySelector('#btnDetailAddSessionToday')?.addEventListener('click', () => {
+            this.closeSessionDetailModal();
+            if (typeof onEdit === 'function') {
+              onEdit({ date: dateKey });
+            } else if (typeof window.openScheduleModal === 'function') {
+              window.openScheduleModal({ date: dateKey });
+            }
+          });
+        }
+        return;
+      }
+
+      const displayTitle = getScheduleDisplayTitle(session, currentIdx, isGuest);
+      if (titleEl) titleEl.textContent = displayTitle;
+      if (subtitleEl) {
+        subtitleEl.textContent = `${session.dayOfWeekText || ''} - Ngày ${this.formatDateStr(session.date)} (${session.startTime} - ${session.endTime})`;
+      }
+
+      // Huy hiệu trạng thái
+      const statusBadge = session.status === 'live'
+        ? `<span class="session-badge status-live"><i class="fas fa-satellite-dish"></i> Đang diễn ra</span>`
+        : session.status === 'completed'
+          ? `<span class="session-badge status-completed"><i class="fas fa-circle-check"></i> Đã diễn ra</span>`
+          : `<span class="session-badge status-upcoming"><i class="fas fa-clock"></i> Sắp diễn ra</span>`;
+
+      const typeBadge = session.type === 'Offline'
+        ? `<span class="session-badge badge-offline"><i class="fas fa-location-dot"></i> Trực tiếp (Offline)</span>`
+        : `<span class="session-badge badge-online"><i class="fas fa-video"></i> Trực tuyến (MS Teams)</span>`;
+
+      const codeBadge = session.code
+        ? `<span class="session-badge badge-code"><i class="fas fa-hashtag"></i> ${escapeHtmlSchedule(session.code)}</span>`
+        : '';
+
+      const deptBadge = session.department
+        ? `<span class="session-badge badge-dept">${escapeHtmlSchedule(session.department)}</span>`
+        : '';
+
+      // Tabs nếu ngày đó có nhiều buổi học
+      let tabsHtml = '';
+      if (daySessions.length > 1) {
+        tabsHtml = `
+          <div class="session-detail-tabs">
+            ${daySessions.map((s, idx) => `
+              <button type="button" class="session-tab-btn ${idx === currentIdx ? 'active' : ''}" data-idx="${idx}">
+                <i class="fas fa-chalkboard-user"></i> Buổi ${idx + 1} (${escapeHtmlSchedule(s.startTime)})
+              </button>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Danh sách tài liệu
+      let docs = Array.isArray(session.documents) && session.documents.length > 0
+        ? session.documents
+        : (session.documentUrl ? [{ title: 'Tài liệu buổi học', url: session.documentUrl }] : []);
+      docs = docs.filter(d => d && d.url && /^https?:\/\//i.test(String(d.url).trim()));
+
+      const hasTeams = Boolean(session.teamsUrl && String(session.teamsUrl).trim());
+      const hasRecord = Boolean(session.recordUrl && String(session.recordUrl).trim());
+      const cleanTeamsUrl = hasTeams ? String(session.teamsUrl).trim() : '';
+      const cleanRecordUrl = hasRecord ? String(session.recordUrl).trim() : '';
+
+      bodyEl.innerHTML = `
+        ${tabsHtml}
+        
+        <div class="session-detail-meta-card">
+          <div class="session-detail-badges-row">
+            ${codeBadge}
+            ${deptBadge}
+            ${typeBadge}
+            ${statusBadge}
+          </div>
+          <h3 class="session-detail-heading">${escapeHtmlSchedule(displayTitle)}</h3>
+          
+          <div class="session-detail-grid">
+            <div class="meta-item">
+              <span class="meta-label"><i class="fas fa-calendar-day"></i> Thời gian:</span>
+              <span class="meta-val"><strong>${escapeHtmlSchedule(session.startTime)} – ${escapeHtmlSchedule(session.endTime)}</strong> (${escapeHtmlSchedule(session.periods || 'Tiết 1 - 4')})</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label"><i class="fas fa-user-tie"></i> Giảng viên / Mentor:</span>
+              <span class="meta-val">${isGuest ? '<span class="text-muted">Đăng nhập để xem</span>' : `<strong>${escapeHtmlSchedule(session.instructor || 'TS. Dương Việt Hằng')}</strong>`}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label"><i class="fas fa-location-dot"></i> Hình thức / Phòng:</span>
+              <span class="meta-val">${session.type === 'Offline' ? `<strong class="text-warning">${escapeHtmlSchedule(session.room && session.room !== 'MS Teams Trực Tuyến' ? session.room : 'Phòng học trực tiếp')}</strong>` : 'MS Teams Trực Tuyến'}</span>
+            </div>
+            ${session.note ? `
+              <div class="meta-item meta-full-width">
+                <span class="meta-label"><i class="fas fa-circle-info"></i> Ghi chú:</span>
+                <span class="meta-val note-text">${escapeHtmlSchedule(session.note)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          ${docs.length > 0 ? `
+            <div class="session-detail-docs-block">
+              <span class="meta-label"><i class="fas fa-folder-open"></i> Tài liệu đính kèm:</span>
+              <div class="detail-docs-list">
+                ${docs.map(d => `
+                  <a href="${escapeHtmlSchedule(sanitizeUrlSchedule(d.url))}" target="_blank" rel="noopener noreferrer" class="detail-doc-chip" title="${escapeHtmlSchedule(d.title)}">
+                    <i class="fas fa-file-arrow-down"></i> <span>${escapeHtmlSchedule(d.title || 'Tài liệu')}</span>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- LINK VÀO HỌC (MS TEAMS) -->
+        <div class="session-link-card teams-link-box ${hasTeams ? 'is-ready' : 'is-empty'}">
+          <div class="session-link-header">
+            <div class="link-header-left">
+              <div class="link-icon-badge teams-badge-icon">
+                <i class="fas fa-video"></i>
+              </div>
+              <div>
+                <h4 class="link-card-title">Đường Dẫn Vào Phòng Học (MS Teams)</h4>
+                <p class="link-card-sub">${hasTeams ? 'Phòng học trực tuyến chính thức qua Microsoft Teams' : 'Chưa được gán đường link phòng học'}</p>
+              </div>
+            </div>
+            ${hasTeams ? `
+              <div class="link-header-actions">
+                <a href="${escapeHtmlSchedule(sanitizeUrlSchedule(cleanTeamsUrl))}" target="_blank" rel="noopener noreferrer" class="btn-quick-access btn-join-teams" title="Mở phòng học trong tab mới">
+                  <i class="fas fa-arrow-up-right-from-square"></i> <span>Vào học ngay</span>
+                </a>
+                <button type="button" class="btn-copy-url" data-url="${escapeHtmlSchedule(cleanTeamsUrl)}" data-label="link vào học MS Teams" title="Sao chép liên kết vào bộ nhớ tạm">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            ` : ''}
+          </div>
+          ${hasTeams ? `
+            <div class="session-url-container">
+              <span class="url-label">URL:</span>
+              <a href="${escapeHtmlSchedule(sanitizeUrlSchedule(cleanTeamsUrl))}" target="_blank" rel="noopener noreferrer" class="session-url-text">${escapeHtmlSchedule(cleanTeamsUrl)}</a>
+            </div>
+          ` : `
+            <div class="session-empty-link-notice">
+              <i class="fas fa-clock-rotate-left"></i>
+              <span>Quản trị viên / Trainer sẽ cập nhật đường link phòng học MS Teams trước giờ diễn ra buổi học.</span>
+            </div>
+          `}
+        </div>
+
+        <!-- LINK RECORD BUỔI HỌC (VIDEO GHI HÌNH) -->
+        <div class="session-link-card record-link-box ${hasRecord ? 'is-ready' : 'is-empty'}">
+          <div class="session-link-header">
+            <div class="link-header-left">
+              <div class="link-icon-badge record-badge-icon">
+                <i class="fas fa-circle-play"></i>
+              </div>
+              <div>
+                <h4 class="link-card-title">Video Record Buổi Học (Ghi Hình)</h4>
+                <p class="link-card-sub">${hasRecord ? 'Xem lại toàn bộ video bài giảng và nội dung thảo luận' : 'Chưa có video record cho buổi học này'}</p>
+              </div>
+            </div>
+            ${hasRecord ? `
+              <div class="link-header-actions">
+                <a href="${escapeHtmlSchedule(sanitizeUrlSchedule(cleanRecordUrl))}" target="_blank" rel="noopener noreferrer" class="btn-quick-access btn-watch-record" title="Xem video ghi hình trong tab mới">
+                  <i class="fas fa-play"></i> <span>Xem Record</span>
+                </a>
+                <button type="button" class="btn-copy-url" data-url="${escapeHtmlSchedule(cleanRecordUrl)}" data-label="link video record" title="Sao chép liên kết vào bộ nhớ tạm">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            ` : ''}
+          </div>
+          ${hasRecord ? `
+            <div class="session-url-container">
+              <span class="url-label">URL:</span>
+              <a href="${escapeHtmlSchedule(sanitizeUrlSchedule(cleanRecordUrl))}" target="_blank" rel="noopener noreferrer" class="session-url-text">${escapeHtmlSchedule(cleanRecordUrl)}</a>
+            </div>
+          ` : `
+            <div class="session-empty-link-notice">
+              <i class="fas fa-film"></i>
+              <span>Video record bài giảng sẽ được cập nhật tại đây sau khi buổi học kết thúc để Trainee tiện ôn tập hoặc học bù.</span>
+            </div>
+          `}
+        </div>
+
+        <!-- DÀNH CHO ADMIN: CHỈNH SỬA NHANH ĐƯỜNG DẪN -->
+        ${isAdmin ? `
+          <div class="session-admin-quick-edit">
+            <div class="admin-quick-edit-top">
+              <div class="admin-quick-title-wrap">
+                <span class="admin-pill-badge"><i class="fas fa-shield-halved"></i> Quản trị viên</span>
+                <h4 class="admin-quick-heading">Chỉnh sửa liên kết buổi học</h4>
+              </div>
+              <button type="button" class="btn-text-action btn-full-edit-open" title="Mở form chỉnh sửa đầy đủ thông tin">
+                <i class="fas fa-pen-to-square"></i> <span>Sửa đầy đủ</span>
+              </button>
+            </div>
+            
+            <form class="admin-quick-links-form" id="adminQuickLinksForm">
+              <div class="admin-input-group">
+                <label for="quickInputTeamsUrl" class="admin-input-label">
+                  <i class="fas fa-video text-primary"></i> <span>Đường dẫn MS Teams (Link vào học)</span>
+                </label>
+                <div class="admin-input-with-icon">
+                  <input type="url" id="quickInputTeamsUrl" class="form-input" value="${escapeHtmlSchedule(session.teamsUrl || '')}" placeholder="https://teams.microsoft.com/...">
+                </div>
+              </div>
+
+              <div class="admin-input-group">
+                <label for="quickInputRecordUrl" class="admin-input-label">
+                  <i class="fas fa-circle-play text-danger"></i> <span>Đường dẫn Video Record (Ghi hình)</span>
+                </label>
+                <div class="admin-input-with-icon">
+                  <input type="url" id="quickInputRecordUrl" class="form-input" value="${escapeHtmlSchedule(session.recordUrl || '')}" placeholder="https://drive.google.com/... hoặc link Stream, YouTube...">
+                </div>
+              </div>
+
+              <div class="admin-quick-footer">
+                <button type="submit" class="btn-primary-portal btn-save-quick-links" id="btnSaveQuickLinks">
+                  <i class="fas fa-floppy-disk"></i> <span>Lưu thay đổi liên kết</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        ` : ''}
+      `;
+
+      // 1. Gắn sự kiện chuyển tab
+      bodyEl.querySelectorAll('.session-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-idx'), 10);
+          if (!isNaN(idx) && daySessions[idx]) {
+            renderModalContent(daySessions[idx], idx);
+          }
+        });
+      });
+
+      // 2. Gắn sự kiện sao chép liên kết
+      bodyEl.querySelectorAll('.btn-copy-url').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const url = btn.getAttribute('data-url');
+          const label = btn.getAttribute('data-label') || 'liên kết';
+          if (!url) return;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(url);
+            } else {
+              const ta = document.createElement('textarea');
+              ta.value = url;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              ta.remove();
+            }
+            window.showToast?.(`Đã sao chép ${label}!`, 'success');
+          } catch (e) {
+            window.showToast?.('Không thể tự động sao chép liên kết.', 'danger');
+          }
+        });
+      });
+
+      // 3. Xử lý Admin lưu link nhanh và sửa đầy đủ
+      if (isAdmin) {
+        const quickForm = bodyEl.querySelector('#adminQuickLinksForm');
+        const fullEditBtn = bodyEl.querySelector('.btn-full-edit-open');
+
+        if (fullEditBtn) {
+          fullEditBtn.addEventListener('click', () => {
+            this.closeSessionDetailModal();
+            if (typeof onEdit === 'function') {
+              onEdit(session);
+            } else if (typeof window.openScheduleModal === 'function') {
+              window.openScheduleModal(session);
+            }
+          });
+        }
+
+        if (quickForm) {
+          quickForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnSave = quickForm.querySelector('#btnSaveQuickLinks');
+            const teamsInp = quickForm.querySelector('#quickInputTeamsUrl');
+            const recordInp = quickForm.querySelector('#quickInputRecordUrl');
+
+            const newTeamsUrl = (teamsInp?.value || '').trim();
+            const newRecordUrl = (recordInp?.value || '').trim();
+
+            if (btnSave) {
+              btnSave.disabled = true;
+              btnSave.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Đang lưu...</span>`;
+            }
+
+            try {
+              const updatedData = {
+                ...session,
+                teamsUrl: newTeamsUrl,
+                recordUrl: newRecordUrl
+              };
+              const saved = await this.saveSchedule(updatedData);
+              if (saved) {
+                session.teamsUrl = saved.teamsUrl ?? newTeamsUrl;
+                session.recordUrl = saved.recordUrl ?? newRecordUrl;
+                daySessions[currentIdx] = session;
+
+                window.showToast?.('Đã cập nhật link vào học và link record thành công!', 'success');
+                renderModalContent(session, currentIdx);
+
+                if (typeof window.renderScheduleView === 'function') window.renderScheduleView(false);
+                if (typeof window.renderSchedule === 'function') window.renderSchedule();
+                if (typeof window.renderAdminScheduleTable === 'function') window.renderAdminScheduleTable();
+              }
+            } catch (err) {
+              console.error('Lỗi khi lưu link nhanh:', err);
+              window.showToast?.('Có lỗi xảy ra khi lưu liên kết.', 'danger');
+              if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = `<i class="fas fa-floppy-disk"></i> <span>Lưu thay đổi liên kết</span>`;
+              }
+            }
+          });
+        }
+      }
+    };
+
+    renderModalContent(daySessions[activeIndex] || null, activeIndex);
+    modal.classList.add('open', 'show', 'active');
+  },
+
+  // ==========================================
   // XUẤT DỮ LIỆU: EXCEL / CSV, PDF, ICAL
   // ==========================================
 
@@ -734,6 +1110,11 @@ const ScheduleManager = {
             <span>${joinBtnText}</span>
           </button>
 
+          <!-- NÚT XEM CHI TIẾT & RECORD -->
+          <button type="button" class="btn-session-detail" data-id="${item._id || item.id}" title="Xem link học, video record và thông tin buổi học">
+            <i class="fas fa-circle-play"></i> <span>Chi tiết & Record</span>
+          </button>
+
           <!-- NÚT ADMIN: SỬA & XÓA (CHỈ HIỂN THỊ KHI LÀ ADMIN) -->
           ${isAdmin ? `
             <div class="session-admin-controls">
@@ -754,10 +1135,28 @@ const ScheduleManager = {
       if (joinBtn) {
         joinBtn.addEventListener('click', () => {
           if (isCompleted) {
-            window.showToast?.('Buổi học này đã kết thúc!', 'info');
+            this.openSessionDetailModal(item, { daySessions: [item], dateKey: item.date, isAdmin, onEdit });
             return;
           }
           this.handleJoinClass(item, isAdmin, onEdit);
+        });
+      }
+
+      // Gắn sự kiện nút "Chi tiết & Record"
+      const detailBtn = card.querySelector('.btn-session-detail');
+      if (detailBtn) {
+        detailBtn.addEventListener('click', () => {
+          this.openSessionDetailModal(item, { daySessions: [item], dateKey: item.date, isAdmin, onEdit });
+        });
+      }
+
+      // Bấm vào date box để xem chi tiết
+      const dateBox = card.querySelector('.session-date-box');
+      if (dateBox) {
+        dateBox.style.cursor = 'pointer';
+        dateBox.title = 'Bấm để xem chi tiết, link học và video record';
+        dateBox.addEventListener('click', () => {
+          this.openSessionDetailModal(item, { daySessions: [item], dateKey: item.date, isAdmin, onEdit });
         });
       }
 
@@ -823,7 +1222,7 @@ const ScheduleManager = {
       const isToday = (day === curDate.day && month === curDate.month && year === curDate.year);
 
       gridHtml += `
-        <div class="month-cal-cell ${isToday ? 'is-today' : ''} ${daySessions.length > 0 ? 'has-sessions' : ''}" data-date="${dateKey}">
+        <div class="month-cal-cell ${isToday ? 'is-today' : ''} ${daySessions.length > 0 ? 'has-sessions' : ''}" data-date="${dateKey}" title="${daySessions.length > 0 ? `Bấm để xem ${daySessions.length} buổi học & link record` : 'Bấm để xem lịch ngày này'}">
           <div class="cal-cell-header">
             <span class="cal-day-num ${isToday ? 'today-pill' : ''}">${day}</span>
             ${daySessions.length > 0 ? `<span class="session-count-dot">${daySessions.length} buổi</span>` : ''}
@@ -833,7 +1232,7 @@ const ScheduleManager = {
               const isGuest = Boolean(window.state ? !window.state.currentUser : false);
               const chipTitle = getScheduleDisplayTitle(s, sIdx, isGuest);
               return `
-              <div class="cal-event-chip ${s.status === 'live' ? 'event-live' : ''}" data-id="${s._id || s.id}" title="${escapeHtmlSchedule(chipTitle)}">
+              <div class="cal-event-chip ${s.status === 'live' ? 'event-live' : ''}" data-id="${s._id || s.id}" title="${escapeHtmlSchedule(chipTitle)} - Bấm xem link vào học & video record">
                 <div class="cal-chip-time">${escapeHtmlSchedule(s.startTime)}</div>
                 <div class="cal-chip-title">${escapeHtmlSchedule(chipTitle)}</div>
                 <div class="cal-chip-status">${s.isTentative ? 'Lịch dự kiến' : s.type === 'Offline' ? 'Trực tiếp' : s.teamsUrl ? 'MS Teams' : 'Chưa có link'}</div>
@@ -855,7 +1254,22 @@ const ScheduleManager = {
     gridHtml += `</div>`;
     calCard.innerHTML = gridHtml;
 
-    // Click vào chip event để xem hoặc vào học
+    // Click vào ô ngày để mở popup chi tiết buổi học & link record
+    calCard.querySelectorAll('.month-cal-cell:not(.is-empty)').forEach(cell => {
+      cell.addEventListener('click', (e) => {
+        if (e.target.closest?.('.session-document-link')) return;
+        const dateKey = cell.getAttribute('data-date');
+        const daySessions = items.filter(s => s.date === dateKey);
+        this.openSessionDetailModal(daySessions.length > 0 ? daySessions[0] : null, {
+          daySessions,
+          dateKey,
+          isAdmin,
+          onEdit
+        });
+      });
+    });
+
+    // Click vào chip event để xem chi tiết buổi học cụ thể
     calCard.querySelectorAll('.cal-event-chip').forEach(chip => {
       chip.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -863,7 +1277,13 @@ const ScheduleManager = {
         const id = chip.getAttribute('data-id');
         const session = items.find(s => (s._id || s.id) === id);
         if (session) {
-          this.handleJoinClass(session, isAdmin, onEdit);
+          const daySessions = items.filter(s => s.date === session.date);
+          this.openSessionDetailModal(session, {
+            daySessions,
+            dateKey: session.date,
+            isAdmin,
+            onEdit
+          });
         }
       });
     });

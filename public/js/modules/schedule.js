@@ -248,6 +248,22 @@ function initScheduleModule() {
     });
   }
 
+  // 6b. Đóng modal chi tiết buổi học (Session Detail Modal)
+  const closeDetailBtn = elements.closeSessionDetailModalBtn || document.getElementById('closeSessionDetailModalBtn');
+  if (closeDetailBtn) {
+    closeDetailBtn.addEventListener('click', () => {
+      window.ScheduleManager?.closeSessionDetailModal();
+    });
+  }
+  const sessionDetailModalEl = elements.sessionDetailModal || document.getElementById('sessionDetailModal');
+  if (sessionDetailModalEl) {
+    sessionDetailModalEl.addEventListener('click', (e) => {
+      if (e.target === sessionDetailModalEl) {
+        window.ScheduleManager?.closeSessionDetailModal();
+      }
+    });
+  }
+
   // 7. Xử lý lưu buổi học (và lưu link MS Teams)
   if (elements.scheduleCourseForm) {
     elements.scheduleCourseForm.addEventListener('submit', handleSaveCourse);
@@ -507,6 +523,8 @@ function openScheduleModal(course = null) {
     if (elements.courseTypeSelect) elements.courseTypeSelect.value = course.type || 'Online';
     if (elements.courseInstructorInput) elements.courseInstructorInput.value = course.instructor || '';
     if (elements.courseTeamsUrl) elements.courseTeamsUrl.value = course.teamsUrl || '';
+    const recordInp = elements.courseRecordUrl || document.getElementById('courseRecordUrl');
+    if (recordInp) recordInp.value = course.recordUrl || '';
     if (elements.courseNoteInput) elements.courseNoteInput.value = course.note || '';
 
     const roomInp = elements.courseRoomInput || document.getElementById('courseRoomInput');
@@ -537,6 +555,8 @@ function openScheduleModal(course = null) {
     if (elements.courseTypeSelect) elements.courseTypeSelect.value = 'Online';
     if (elements.courseInstructorInput) elements.courseInstructorInput.value = '';
     if (elements.courseTeamsUrl) elements.courseTeamsUrl.value = '';
+    const recordInp = elements.courseRecordUrl || document.getElementById('courseRecordUrl');
+    if (recordInp) recordInp.value = '';
     if (elements.courseNoteInput) elements.courseNoteInput.value = '';
 
     const roomInp = elements.courseRoomInput || document.getElementById('courseRoomInput');
@@ -615,6 +635,7 @@ async function handleSaveCourse(e) {
       return 'MS Teams Trực Tuyến';
     })(),
     teamsUrl: (elements.courseTeamsUrl ? elements.courseTeamsUrl.value : '').trim(),
+    recordUrl: ((elements.courseRecordUrl || document.getElementById('courseRecordUrl'))?.value || '').trim(),
     documents: getDocumentsFromForm(),
     documentUrl: (() => {
       const docs = getDocumentsFromForm();
@@ -685,4 +706,6 @@ async function handleResetDefaultSchedule() {
 window.initScheduleModule = initScheduleModule;
 window.openScheduleModal = openScheduleModal;
 window.closeScheduleModal = closeScheduleModal;
+window.openSessionDetailModal = (...args) => window.ScheduleManager?.openSessionDetailModal(...args);
+window.closeSessionDetailModal = () => window.ScheduleManager?.closeSessionDetailModal();
 window.renderScheduleView = renderScheduleView;

@@ -170,6 +170,7 @@ const elements = {
   get courseTypeSelect() { return document.getElementById('courseTypeSelect'); },
   get courseInstructorInput() { return document.getElementById('courseInstructorInput'); },
   get courseTeamsUrl() { return document.getElementById('courseTeamsUrl'); },
+  get courseRecordUrl() { return document.getElementById('courseRecordUrl'); },
   get courseDocumentUrl() { return document.getElementById('courseDocumentUrl'); },
   get courseRoomInput() { return document.getElementById('courseRoomInput'); },
   get courseOfflineLocationGroup() { return document.getElementById('courseOfflineLocationGroup'); },
@@ -178,6 +179,13 @@ const elements = {
   get btnAddDocRowBtn() { return document.getElementById('btnAddDocRowBtn'); },
   get courseNoteInput() { return document.getElementById('courseNoteInput'); },
   get scheduleModalTitle() { return document.getElementById('scheduleModalTitle'); },
+
+  // Session Detail Modal (Link vào học MS Teams & Link Record)
+  get sessionDetailModal() { return document.getElementById('sessionDetailModal'); },
+  get closeSessionDetailModalBtn() { return document.getElementById('closeSessionDetailModalBtn'); },
+  get sessionDetailModalTitle() { return document.getElementById('sessionDetailModalTitle'); },
+  get sessionDetailModalSubtitle() { return document.getElementById('sessionDetailModalSubtitle'); },
+  get sessionDetailModalBody() { return document.getElementById('sessionDetailModalBody'); },
 
   // Admin Schedule Table Elements
   get adminScheduleTableBody() { return document.getElementById('adminScheduleTableBody'); },

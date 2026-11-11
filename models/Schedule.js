@@ -16,6 +16,7 @@ const ScheduleSchema = new mongoose.Schema({
   instructor: { type: String, default: 'TS. Dương Việt Hằng' }, // Giảng viên / Mentor
   room: { type: String, default: 'MS Teams Trực Tuyến' }, // Phòng học
   teamsUrl: { type: String, default: '' }, // Link Microsoft Teams (có thể để trống để gán sau)
+  recordUrl: { type: String, default: '', maxlength: 2048 }, // Link Video Record buổi học
   documentUrl: { type: String, default: '', maxlength: 2048 },
   documents: [{
     title: { type: String, default: 'Tài liệu buổi học' },

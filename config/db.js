@@ -1222,6 +1222,7 @@ async function createSchedule(data) {
     instructor: data.instructor || 'Trainer',
     room: data.room ? String(data.room).trim() : (data.type === 'Offline' ? 'Phòng học trực tiếp' : 'MS Teams Trực Tuyến'),
     teamsUrl: data.teamsUrl ? String(data.teamsUrl).trim() : '',
+    recordUrl: data.recordUrl ? String(data.recordUrl).trim() : '',
     documentUrl: (() => {
       const docs = sanitizeScheduleDocuments(data.documents);
       if (docs.length > 0) return docs[0].url;
@@ -1264,7 +1265,7 @@ async function updateSchedule(id, data) {
   const requestedIsTentative = data.isTentative;
   const requestedDocumentUrl = data.documentUrl;
   const requestedDocuments = data.documents;
-  const fields = ['title', 'code', 'date', 'startTime', 'endTime', 'periods', 'type', 'instructor', 'room', 'teamsUrl', 'note', 'department'];
+  const fields = ['title', 'code', 'date', 'startTime', 'endTime', 'periods', 'type', 'instructor', 'room', 'teamsUrl', 'recordUrl', 'note', 'department'];
   data = Object.fromEntries(fields.filter(field => data[field] !== undefined).map(field => [field, String(data[field]).trim()]));
   if (requestedDocuments !== undefined) {
     const docs = sanitizeScheduleDocuments(requestedDocuments);
